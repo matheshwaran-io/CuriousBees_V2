@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "prisma generate && nest build",
-    "vercel-build": "prisma generate && nest build",
+    "vercel-build": "cd ../../packages/types && tsc && cd ../shared-utils && tsc && cd ../../apps/api && prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/src/main",

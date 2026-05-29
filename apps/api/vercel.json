@@ -5,7 +5,12 @@
       "src": "dist/src/main.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["dist/**", "node_modules/.prisma/**", "node_modules/@prisma/client/**"]
+        "includeFiles": [
+          "dist/**/*.js",
+          "node_modules/.prisma/**",
+          "node_modules/@prisma/client/**",
+          "node_modules/@srm-recollab/**"
+        ]
       }
     }
   ],
