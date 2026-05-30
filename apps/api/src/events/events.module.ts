@@ -18,7 +18,7 @@ import { AuthModule } from '../auth/auth.module';
         attempts: 4,
         backoff: {
           type: 'exponential',
-          delay: 5000,
+          delay: 30000,
         },
         removeOnComplete: true,
         removeOnFail: false,
