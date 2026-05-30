@@ -14,7 +14,7 @@ dotenv.config({ path: envPath });
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
@@ -26,8 +26,13 @@ async function createApp(expressInstance?: express.Express) {
     ? await NestFactory.create(AppModule, new ExpressAdapter(expressInstance))
     : await NestFactory.create(AppModule);
 
-  // Global prefix → all routes become /api/...
-  app.setGlobalPrefix('api');
+  // Keep API resources under /api while allowing a lightweight root message.
+  app.setGlobalPrefix('api', {
+    exclude: [
+      { path: '', method: RequestMethod.GET },
+      { path: 'api', method: RequestMethod.GET },
+    ],
+  });
 
   // Validation
   app.useGlobalPipes(
@@ -71,7 +76,7 @@ async function bootstrap() {
   const app = await createApp();
   const port = process.env.PORT || 4000;
   await app.listen(port);
-  console.log(`🚀 ReCollab API running on: http://localhost:${port}/api`);
+  console.log(`🚀 ReCollab API running on: http://localhost:${port}`);
 }
 
 // ─── Vercel serverless: export a request handler ─────────────────────────────

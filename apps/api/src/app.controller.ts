@@ -2,9 +2,10 @@ import { Controller, Get } from '@nestjs/common';
 
 @Controller()
 export class AppController {
-  @Get()
+  @Get(['', 'api'])
   healthCheck() {
     return {
+      message: 'Welcome to ReCollab API',
       status: 'ok',
       service: 'ReCollab API',
       version: '1.0.0',
