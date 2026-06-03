@@ -30,7 +30,7 @@ export default function PortalLayout({
     if (!currentUser) {
       router.push('/login');
     } else if (currentUser.role === 'PHD_SCHOLAR' && !currentUser.isApproved) {
-      router.push('/auth/pending');
+      router.push('/verification-pending');
     } else {
       fetchData(); // Trigger initial live API fetch
       
@@ -61,19 +61,19 @@ export default function PortalLayout({
  
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-300">
+      <div className="min-h-screen bg-background text-on-surface flex flex-col md:flex-row transition-colors duration-300">
         {/* Persistent Navigational Sidebar */}
         <Sidebar />
  
-      {/* Main content body containing header and main child view */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <Navbar />
-        
-        {/* Scrollable contents zone */}
-        <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full transition-all duration-300">
-          {children}
-        </main>
-      </div>
+        {/* Main content body containing header and main child view */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+          <Navbar />
+          
+          {/* Scrollable contents zone */}
+          <main className="flex-1 p-margin-mobile md:p-margin-desktop max-w-container-max mx-auto w-full transition-all duration-300">
+            {children}
+          </main>
+        </div>
       </div>
     </QueryClientProvider>
   );

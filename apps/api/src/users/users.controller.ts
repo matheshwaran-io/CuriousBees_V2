@@ -59,6 +59,17 @@ export class UsersController {
     return this.usersService.approveScholar(req.user.id, scholarId);
   }
 
+  @Put('decline-scholar')
+  async declineScholar(@Req() req: any, @Body('scholarId') scholarId: string) {
+    if (req.user.role !== 'FACULTY' && req.user.role !== 'ADMIN') {
+      throw new BadRequestException('Only faculty supervisors can decline scholars.');
+    }
+    if (!scholarId) {
+      throw new BadRequestException('scholarId is required.');
+    }
+    return this.usersService.declineScholar(req.user.id, scholarId);
+  }
+
   @Get('all')
   async getAllUsers(@Req() req: any) {
     return this.usersService.getAllUsers(req.user.id);

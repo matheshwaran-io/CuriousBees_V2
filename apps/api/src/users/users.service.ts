@@ -176,6 +176,36 @@ export class UsersService {
     return approved;
   }
 
+  async declineScholar(supervisorId: string, scholarId: string) {
+    const scholar = await this.prisma.user.findFirst({
+      where: {
+        id: scholarId,
+        supervisorId
+      }
+    });
+
+    if (!scholar) {
+      throw new BadRequestException('Scholar mapping request not found for this supervisor.');
+    }
+
+    // Reset supervisorId to null so they can request another supervisor
+    const declined = await this.prisma.user.update({
+      where: { id: scholarId },
+      data: { supervisorId: null, isApproved: false }
+    });
+
+    // Write an audit log entry
+    await this.prisma.auditLog.create({
+      data: {
+        userId: supervisorId,
+        action: 'DECLINE_SCHOLAR',
+        details: `Supervisor declined scholar ${scholar.name || scholar.email} (${scholarId})`
+      }
+    });
+
+    return declined;
+  }
+
   async getAllUsers(adminId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
     if (!admin || admin.role !== 'ADMIN') {

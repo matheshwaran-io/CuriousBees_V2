@@ -11,9 +11,20 @@ import {
   CheckCircle, 
   XCircle, 
   Loader2,
-  Lock
+  Lock,
+  LayoutDashboard
 } from 'lucide-react';
 import AvatarRing from '@/components/AvatarRing';
+
+// Modular overview components
+import ResearchVelocityCard from '@/components/admin/research-velocity-card';
+import CollaborationsCard from '@/components/admin/collaborations-card';
+import CampusDistributionChart from '@/components/admin/campus-distribution-chart';
+import DataConsumptionCard from '@/components/admin/data-consumption-card';
+import SystemHealthCard from '@/components/admin/system-health-card';
+import AchievementsFeed from '@/components/admin/achievements-feed';
+
+type AdminTab = 'overview' | 'users' | 'audit';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -27,7 +38,7 @@ export default function AdminPage() {
     isLoading 
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'audit'>('users');
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [searchTerm, setSearchTerm] = useState('');
 
   // 1. Guard against non-admin access
@@ -62,8 +73,8 @@ export default function AdminPage() {
   const handleRoleChange = async (userId: string, newRole: any) => {
     try {
       await changeUserRole(userId, newRole);
-      await fetchAdminUsers(); // Refresh
-      await fetchAdminAuditLogs(); // Refresh logs
+      await fetchAdminUsers();
+      await fetchAdminAuditLogs();
     } catch (err) {
       console.error(err);
     }
@@ -77,6 +88,12 @@ export default function AdminPage() {
       u.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'users', label: 'User Moderation', icon: <Users className="w-4 h-4" /> },
+    { id: 'audit', label: 'Audit Logs', icon: <History className="w-4 h-4" /> },
+  ];
+
   return (
     <div className="space-y-8 text-left font-sans select-none">
       
@@ -88,7 +105,7 @@ export default function AdminPage() {
             <span>Admin Control Panel</span>
           </h1>
           <p className="text-textSecondary text-[13px] mt-1.5">
-            Manage institutional user roles, audit security activity, and moderate the CuriousBees network.
+            Manage institutional user roles, audit security activity, and monitor the CuriousBees network.
           </p>
         </div>
       </div>
@@ -130,29 +147,61 @@ export default function AdminPage() {
 
       {/* 🎛️ SUB TABS */}
       <div className="flex border-b border-borderStroke">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`flex items-center space-x-2 pb-3.5 px-4 font-semibold text-xs uppercase tracking-wider cursor-pointer border-b-2 transition ${
-            activeTab === 'users' ? 'border-black text-black' : 'border-transparent text-textMuted hover:text-black'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>User Moderation</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('audit')}
-          className={`flex items-center space-x-2 pb-3.5 px-4 font-semibold text-xs uppercase tracking-wider cursor-pointer border-b-2 transition ${
-            activeTab === 'audit' ? 'border-black text-black' : 'border-transparent text-textMuted hover:text-black'
-          }`}
-        >
-          <History className="w-4 h-4" />
-          <span>Audit Logs</span>
-        </button>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center space-x-2 pb-3.5 px-4 font-semibold text-xs uppercase tracking-wider cursor-pointer border-b-2 transition ${
+              activeTab === tab.id
+                ? 'border-black text-black'
+                : 'border-transparent text-textMuted hover:text-black'
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* ⚡ TAB CONTENTS */}
       <div className="min-h-[400px]">
-        {/* USERS MODERATION */}
+
+        {/* ─── OVERVIEW TAB ─── */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Full-width: Research Velocity */}
+            <div className="sm:col-span-2 lg:col-span-2">
+              <ResearchVelocityCard />
+            </div>
+
+            {/* System Health */}
+            <div className="sm:col-span-1">
+              <SystemHealthCard />
+            </div>
+
+            {/* Collaborations */}
+            <div className="sm:col-span-1">
+              <CollaborationsCard />
+            </div>
+
+            {/* Campus Distribution */}
+            <div className="sm:col-span-1">
+              <CampusDistributionChart />
+            </div>
+
+            {/* Data Consumption */}
+            <div className="sm:col-span-1">
+              <DataConsumptionCard />
+            </div>
+
+            {/* Full-width: Achievements Feed */}
+            <div className="sm:col-span-2 lg:col-span-3">
+              <AchievementsFeed />
+            </div>
+          </div>
+        )}
+
+        {/* ─── USERS MODERATION TAB ─── */}
         {activeTab === 'users' && (
           <div className="space-y-4">
             
@@ -234,7 +283,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* AUDIT LOGS */}
+        {/* ─── AUDIT LOGS TAB ─── */}
         {activeTab === 'audit' && (
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-black uppercase tracking-wider">Intranet Security Audit Trail</h3>

@@ -1,0 +1,50 @@
+/**
+ * lib/auth/route-protection.ts
+ *
+ * Pure helpers: map a role to its canonical dashboard landing route.
+ * Used by the login page (auto-redirect) and middleware (fallback redirect).
+ *
+ * Scalability note: when multi-role accounts land, this can return a
+ * priority-ordered route based on the user's primary role.
+ */
+
+import type { UserRole } from '@curiousbees/types';
+
+// ─── Dashboard Route Map ──────────────────────────────────────────────────────
+
+/**
+ * Maps each role to the canonical dashboard route.
+ *
+ * Note: FACULTY and PHD_SCHOLAR both land on /dashboard — the page itself
+ * conditionally renders the correct view based on currentUser.role.
+ */
+export const DASHBOARD_ROUTES: Record<UserRole, string> = {
+  FACULTY: '/dashboard',
+  PHD_SCHOLAR: '/dashboard',
+  ADMIN: '/admin',
+};
+
+// ─── Core Helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Returns the dashboard route for the given role.
+ * Defaults to '/dashboard' for any unknown role (safe fallback).
+ */
+export function getDashboardRoute(role: UserRole): string {
+  return DASHBOARD_ROUTES[role] ?? '/dashboard';
+}
+
+/**
+ * Returns the unauthorized page URL, optionally embedding the required role
+ * and the path the user attempted to visit (for context-aware messaging).
+ */
+export function getUnauthorizedUrl(
+  requiredRole?: string,
+  attemptedPath?: string
+): string {
+  const params = new URLSearchParams();
+  if (requiredRole) params.set('required', requiredRole);
+  if (attemptedPath) params.set('from', attemptedPath);
+  const qs = params.toString();
+  return `/auth/unauthorized${qs ? `?${qs}` : ''}`;
+}

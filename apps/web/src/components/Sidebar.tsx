@@ -1,15 +1,24 @@
 'use client';
 
+/**
+ * Sidebar.tsx — Role-aware navigation with mobile slide-in drawer.
+ *
+ * Desktop: 280px fixed left panel (unchanged)
+ * Mobile:  Slide-in drawer triggered by Navbar hamburger via Zustand showMobileSidebar
+ * Sections: Common nav + role-specific items + user mini-profile at bottom
+ */
+
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/store/useStore';
-import { 
-  LayoutDashboard, 
-  MessageSquare, 
-  Briefcase, 
-  User, 
-  LogOut, 
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LayoutDashboard,
+  MessageSquare,
+  Briefcase,
+  User,
+  LogOut,
   Calendar as CalendarIcon,
   Users,
   Cpu,
@@ -17,183 +26,247 @@ import {
   BarChart3,
   Sparkles,
   FolderOpen,
-  Shield
+  Shield,
+  UserCog,
+  X,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Logo from './Logo';
+import { RoleBadge } from './shared/role-badge';
+import type { UserRole } from '@curiousbees/types';
+
+// ─── Navigation Config ────────────────────────────────────────────────────────
+
+const COMMON_NAV = [
+  { name: 'Dashboard',      href: '/dashboard',    icon: LayoutDashboard },
+  { name: 'Research Feed',  href: '/threads',      icon: MessageSquare },
+  { name: 'Researchers',    href: '/researchers',  icon: Users },
+  { name: 'Opportunities',  href: '/opportunities', icon: Briefcase },
+  { name: 'Workspaces',     href: '/workspace',    icon: FolderOpen },
+  { name: 'Events',         href: '/events',       icon: CalendarIcon },
+];
+
+const TOOLS_NAV = [
+  { name: 'AI Search',      href: '/search',       icon: Search },
+  { name: 'AI Pipeline',    href: '/pipeline',     icon: Cpu },
+  { name: 'Analytics',      href: '/analytics',    icon: BarChart3 },
+  { name: 'Ask Copilot',    href: '/copilot',      icon: Sparkles },
+];
+
+const ROLE_NAV: Partial<Record<UserRole, { name: string; href: string; icon: React.ElementType }[]>> = {
+  FACULTY: [
+    { name: 'Scholar Management', href: '/dashboard', icon: UserCog },
+  ],
+  ADMIN: [
+    { name: 'Admin Panel', href: '/admin', icon: Shield },
+  ],
+};
+
+// ─── Nav Item ─────────────────────────────────────────────────────────────────
+
+function NavItem({
+  name,
+  href,
+  icon: Icon,
+  active,
+  onClick,
+}: {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  active: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 select-none group',
+        active
+          ? 'bg-primary/8 text-primary font-semibold'
+          : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+      )}
+    >
+      <Icon
+        className={cn(
+          'w-[18px] h-[18px] shrink-0 transition-colors',
+          active ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'
+        )}
+      />
+      <span className="truncate leading-none">{name}</span>
+      {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary opacity-60" />}
+    </Link>
+  );
+}
+
+// ─── Nav Section Label ────────────────────────────────────────────────────────
+
+function NavSection({ label }: { label: string }) {
+  return (
+    <p className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-[0.1em] text-on-surface-variant/50 select-none">
+      {label}
+    </p>
+  );
+}
+
+// ─── Sidebar Content ──────────────────────────────────────────────────────────
+
+function SidebarContent({ onClose }: { onClose?: () => void }) {
+  const pathname = usePathname();
+  const { currentUser, logout } = useStore();
+  const role = currentUser?.role;
+  const roleSpecificNav = role ? ROLE_NAV[role] ?? [] : [];
+
+  const isActive = (href: string) =>
+    pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+
+  return (
+    <div className="flex flex-col h-full py-5">
+      {/* Brand + Close (mobile) */}
+      <div className="flex items-center justify-between px-5 mb-5">
+        <Logo showText={true} size={32} />
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer md:hidden"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-3 flex flex-col">
+
+        {/* Common */}
+        <NavSection label="Navigation" />
+        <div className="flex flex-col gap-0.5">
+          {COMMON_NAV.map((item) => (
+            <NavItem
+              key={item.href}
+              {...item}
+              active={isActive(item.href)}
+              onClick={onClose}
+            />
+          ))}
+        </div>
+
+        {/* Tools */}
+        <NavSection label="Tools" />
+        <div className="flex flex-col gap-0.5">
+          {TOOLS_NAV.map((item) => (
+            <NavItem
+              key={item.href}
+              {...item}
+              active={isActive(item.href)}
+              onClick={onClose}
+            />
+          ))}
+        </div>
+
+        {/* Role-specific */}
+        {roleSpecificNav.length > 0 && (
+          <>
+            <NavSection label="Management" />
+            <div className="flex flex-col gap-0.5">
+              {roleSpecificNav.map((item) => (
+                <NavItem
+                  key={item.href + item.name}
+                  {...item}
+                  active={isActive(item.href)}
+                  onClick={onClose}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </nav>
+
+      {/* User mini-profile */}
+      <div className="px-3 pt-3 mt-auto border-t border-outline-variant/20">
+        {currentUser && (
+          <div className="px-3 py-3 rounded-xl bg-surface-container-low/60 mb-2 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/40 shrink-0">
+              <img
+                src={currentUser.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=004495&color=fff&size=64'}
+                alt={currentUser.name || 'User'}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-on-surface truncate leading-tight">{currentUser.name || 'Researcher'}</p>
+              {role && <RoleBadge role={role} size="sm" className="mt-0.5" />}
+            </div>
+          </div>
+        )}
+
+        <Link
+          href="/profile"
+          onClick={onClose}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all mb-0.5',
+            pathname === '/profile'
+              ? 'bg-primary/8 text-primary font-semibold'
+              : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+          )}
+        >
+          <User className="w-[18px] h-[18px] shrink-0" />
+          <span>My Profile</span>
+        </Link>
+
+        <button
+          onClick={() => { logout(); onClose?.(); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-on-surface-variant hover:bg-surface-container hover:text-error transition-all cursor-pointer text-left"
+        >
+          <LogOut className="w-[18px] h-[18px] shrink-0" />
+          <span>Exit Portal</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
-  const pathname = usePathname();
-  const { currentUser, roleOverride, logout } = useStore();
-
-  const menuItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Research Feed', href: '/threads', icon: MessageSquare },
-    { name: 'Researchers', href: '/researchers', icon: Users },
-    { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
-    { name: 'Workspaces', href: '/workspace', icon: FolderOpen },
-    { name: 'Events', href: '/events', icon: CalendarIcon },
-    { name: 'AI Search', href: '/search', icon: Search },
-    { name: 'AI Pipeline', href: '/pipeline', icon: Cpu },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Ask CuriousBees', href: '/copilot', icon: Sparkles },
-  ];
-
-  if (currentUser?.role === 'ADMIN') {
-    menuItems.push({ name: 'Admin Panel', href: '/admin', icon: Shield });
-  }
-
-  const moreItems = [
-    { name: 'My Profile', href: '/profile', icon: User },
-  ];
-
-  // Helper to extract initials
-  const getInitials = (name?: string) => {
-    if (!name) return 'RC';
-    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  };
+  const { showMobileSidebar, setMobileSidebar } = useStore();
 
   return (
     <>
-      {/* 🖥️ DESKTOP SIDEBAR - 220px Fixed Left Panel */}
-      <aside className="hidden md:flex flex-col w-[220px] bg-white border-r border-borderStroke h-screen sticky top-0 z-40 select-none shrink-0 font-sans">
-        
-        {/* TOP SECTION */}
-        <div className="h-[60px] flex items-center px-4 border-b border-borderStroke">
-          <Link href="/dashboard" className="flex items-center space-x-3 shrink-0">
-            <div className="w-[28px] h-[28px] bg-black flex items-center justify-center font-display font-bold text-white text-[13px] tracking-tight rounded-sm">
-              RC
-            </div>
-            <span className="font-sans font-semibold text-[15px] tracking-tight text-black">
-              CuriousBees
-            </span>
-            <span className="bg-darkSurfaceMuted border border-borderStroke text-textSecondary text-[11px] font-sans px-2 py-0.5 rounded-full scale-90">
-              SRM
-            </span>
-          </Link>
-        </div>
-
-        {/* USER CARD */}
-        <div className="p-4 border-b border-borderStroke bg-white">
-          <div className="flex items-center space-x-3">
-            {/* Avatar Circle with Warm Gradient */}
-            <div className="w-[36px] h-[36px] rounded-full bg-gradient-to-tr from-amber-500 via-orange-400 to-rose-400 flex items-center justify-center font-sans font-semibold text-white text-[13px] relative shrink-0">
-              <span>{getInitials(currentUser?.name || undefined)}</span>
-              {/* Online Dot */}
-              <span className="w-2 h-2 rounded-full bg-[#22c55e] border border-white absolute bottom-0 right-0" />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-[13px] font-semibold text-black truncate leading-none">
-                {currentUser?.name || 'Academic Scholar'}
-              </p>
-              <div className="mt-1.5 flex">
-                <span className="bg-darkSurfaceMuted border border-borderStroke text-textSecondary text-[10px] font-sans px-2 py-0.5 rounded-full leading-none">
-                  {roleOverride === 'FACULTY' ? 'Faculty' : 'Scholar'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* NAV SECTIONS */}
-        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4">
-          <div>
-            <p className="text-[11px] font-sans font-medium text-textMuted uppercase tracking-wider px-3 mb-2 text-left select-none">
-              RESEARCH SYSTEMS
-            </p>
-            <nav className="space-y-1">
-              {menuItems.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center px-3 py-2.5 rounded-lg text-[14px] font-sans tracking-tight transition-all duration-200 group relative shrink-0",
-                      isActive 
-                        ? 'bg-darkSurfaceMuted text-black font-medium border-l-[2px] border-black rounded-l-none' 
-                        : 'text-textSecondary hover:text-black hover:bg-darkBg'
-                    )}
-                  >
-                    <item.icon className={cn(
-                      "w-4 h-4 shrink-0 transition-colors mr-2.5",
-                      isActive ? 'text-black' : 'text-textSecondary'
-                    )} />
-                    <span className="truncate leading-none">{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          <div className="pt-2">
-            <p className="text-[11px] font-sans font-medium text-textMuted uppercase tracking-wider px-3 mb-2 text-left select-none">
-              ACADEMIC IDENTITY
-            </p>
-            <nav className="space-y-1">
-              {moreItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center px-3 py-2.5 rounded-lg text-[14px] font-sans tracking-tight transition-all duration-200 group relative shrink-0",
-                      isActive 
-                        ? 'bg-darkSurfaceMuted text-black font-medium border-l-[2px] border-black rounded-l-none' 
-                        : 'text-textSecondary hover:text-black hover:bg-darkBg'
-                    )}
-                  >
-                    <item.icon className={cn(
-                      "w-4 h-4 shrink-0 transition-colors mr-2.5",
-                      isActive ? 'text-black' : 'text-textSecondary'
-                    )} />
-                    <span className="truncate leading-none">{item.name}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        {/* BOTTOM SECTION */}
-        <div className="p-3 border-t border-borderStroke shrink-0">
-          <button 
-            onClick={() => logout()}
-            className="w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-sans font-semibold text-textMuted hover:text-black hover:bg-darkBg transition-all cursor-pointer text-left shrink-0 select-none"
-          >
-            <LogOut className="w-4 h-4 shrink-0 mr-2.5 text-textMuted" />
-            <span>Exit Portal</span>
-          </button>
-        </div>
-
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-[280px] bg-surface-container-low border-r border-outline-variant/25 h-screen sticky top-0 z-40 shrink-0">
+        <SidebarContent />
       </aside>
 
-      {/* 📱 MOBILE BOTTOM BAR */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-borderStroke px-2 py-1.5 flex justify-around items-center">
-        {menuItems.slice(0, 4).map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center space-y-0.5 py-1 px-3 rounded-lg transition duration-200",
-                isActive ? 'text-black' : 'text-textSecondary'
-              )}
+      {/* Mobile Drawer Overlay */}
+      <AnimatePresence>
+        {showMobileSidebar && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+              onClick={() => setMobileSidebar(false)}
+            />
+
+            {/* Drawer */}
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+              className="md:hidden fixed left-0 top-0 bottom-0 z-[51] w-[300px] bg-surface-container-low border-r border-outline-variant/25 shadow-2xl"
             >
-              <item.icon className="w-4.5 h-4.5 shrink-0" />
-              <span className="text-[9px] font-semibold tracking-tight">{item.name}</span>
-            </Link>
-          );
-        })}
-        <button
-          onClick={() => logout()}
-          className="flex flex-col items-center space-y-0.5 py-1 px-3 text-textSecondary"
-        >
-          <LogOut className="w-4.5 h-4.5 shrink-0" />
-          <span className="text-[9px] font-semibold tracking-tight">Exit</span>
-        </button>
-      </div>
+              <SidebarContent onClose={() => setMobileSidebar(false)} />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }

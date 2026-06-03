@@ -1,27 +1,34 @@
 'use client';
 
+/**
+ * Navbar.tsx — Top navigation bar with mobile hamburger, role badge, and dev banner.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { Search, Bell, Sparkles } from 'lucide-react';
+import { Search, Bell, Sparkles, MessageSquare, Settings, AlertTriangle, X, Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import AvatarRing from './AvatarRing';
 import SpotlightSearch from './SpotlightSearch';
 import { cn } from '@/lib/utils';
+import { ROLE_LABELS } from '@/lib/auth/role-mapping';
+import { RoleBadge } from './shared/role-badge';
+import type { UserRole } from '@curiousbees/types';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+// Role badge accent colors for the Navbar inline badge
+const ROLE_BADGE_STYLES: Record<UserRole, string> = {
+  ADMIN:       'bg-rose-50 text-rose-700 border-rose-200',
+  FACULTY:     'bg-indigo-50 text-indigo-700 border-indigo-200',
+  PHD_SCHOLAR: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { currentUser } = useStore();
+  const { currentUser, showMobileSidebar, setMobileSidebar } = useStore();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isMac, setIsMac] = useState(true);
-
-  // Set OS modifier text (CMD vs CTRL)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isMacOs = navigator.userAgent.toUpperCase().includes('MAC');
-      setIsMac(isMacOs);
-    }
-  }, []);
+  const [devBannerVisible, setDevBannerVisible] = useState(IS_DEV);
 
   // Listen for global keyboard shortcut (CMD+K or CTRL+K)
   useEffect(() => {
@@ -31,92 +38,107 @@ export default function Navbar() {
         setIsSearchOpen((prev) => !prev);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Helper to format breadcrumbs or current route name
-  const getPageTitle = () => {
-    if (pathname.startsWith('/dashboard')) return 'Research Dashboard';
-    if (pathname.startsWith('/threads')) return 'Research Feed';
-    if (pathname.startsWith('/opportunities')) return 'Recruitment Board';
-    if (pathname.startsWith('/events')) return 'AI Events';
-    if (pathname.startsWith('/pipeline')) return 'Ingestion Pipeline';
-    if (pathname.startsWith('/profile')) return 'Academic Portfolio';
-    if (pathname.startsWith('/researchers')) return 'Scholar Discovery';
-    return 'CuriousBees';
-  };
+  const role = currentUser?.role;
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 w-full bg-darkBg/80 border-b border-borderStroke backdrop-blur-md flex items-center justify-between px-6 md:px-8">
-        
-        {/* Breadcrumbs Title */}
-        <div className="flex items-center space-x-4">
-          <div>
-            <h1 className="font-display font-extrabold text-[11px] tracking-wider text-black flex items-center gap-1.5 uppercase font-mono">
-              <span className="text-textSecondary font-medium">portal</span>
-              <span className="text-textMuted font-light">/</span>
-              <span className="text-black tracking-widest">{getPageTitle()}</span>
-            </h1>
+      {/* ─── DEV-ONLY WARNING BANNER ─────────────────────────────────── */}
+      {IS_DEV && devBannerVisible && currentUser && (
+        <div className="relative z-40 w-full bg-amber-50 border-b border-amber-200 px-4 py-1.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-amber-700 text-[11px] font-semibold min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 animate-pulse" />
+            <span className="truncate">
+              <span className="font-black uppercase tracking-wider">DEV MODE</span>
+              {' '}— Signed in as <span className="font-black">{currentUser.email}</span>
+              {' '}→ <span className="font-black">{currentUser.role}</span>
+            </span>
+          </div>
+          <button
+            onClick={() => setDevBannerVisible(false)}
+            className="text-amber-500 hover:text-amber-700 transition-colors shrink-0 cursor-pointer"
+            aria-label="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* ─── MAIN NAVBAR ─────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 h-16 w-full bg-surface/90 backdrop-blur-md border-b border-outline-variant/25 flex items-center justify-between px-4 md:px-margin-desktop gap-3">
+
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setMobileSidebar(!showMobileSidebar)}
+          className="md:hidden p-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors shrink-0 cursor-pointer"
+          aria-label="Open navigation"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Search Bar */}
+        <div className="flex-1 max-w-xl">
+          <div
+            onClick={() => setIsSearchOpen(true)}
+            className="relative flex items-center group cursor-pointer"
+          >
+            <Search className="absolute left-3 w-4 h-4 text-on-surface-variant group-hover:text-primary transition-colors shrink-0" />
+            <div className="w-full bg-transparent border-0 border-b border-outline-variant/50 group-hover:border-primary pl-9 pr-8 py-1.5 text-[13px] text-on-surface-variant/70 select-none transition-all text-left">
+              <span className="hidden sm:inline">Search research, papers, or colleagues...</span>
+              <span className="sm:hidden">Search...</span>
+            </div>
+            <Sparkles className="absolute right-2 w-4 h-4 text-primary opacity-60 shrink-0" />
           </div>
         </div>
 
-        {/* Right Search, Notification & Theme Controls */}
-        <div className="flex items-center space-x-4">
-          {/* Quick Spotlight Search Toggle input */}
-          <div 
-            onClick={() => setIsSearchOpen(true)}
-            className="relative hidden sm:flex items-center w-48 lg:w-64 h-9 px-3 rounded-lg border border-borderStroke bg-darkSurfaceMuted hover:bg-[#eae6e2] hover:border-textSecondary/20 text-textSecondary cursor-pointer select-none transition-all"
+        {/* Trailing actions */}
+        <div className="flex items-center gap-1 md:gap-3 text-on-surface-variant shrink-0">
+
+          {/* Role Badge — visible on all sizes */}
+          {role && (
+            <RoleBadge role={role} size="sm" className="hidden sm:inline-flex" />
+          )}
+
+          {/* Discussions */}
+          <Link
+            href="/threads"
+            className="p-2 rounded-full hover:bg-surface-container hover:text-primary transition-colors flex items-center justify-center"
           >
-            <Search className="w-3.5 h-3.5 text-textSecondary mr-2 shrink-0" />
-            <span className="text-[10px] font-medium font-sans flex-1 text-left">
-              Quick search...
-            </span>
-            <span className="text-[8px] font-mono font-bold tracking-wider opacity-85 border border-borderStroke bg-white px-1.5 py-0.5 rounded leading-none shrink-0 text-black">
-              {isMac ? '⌘K' : 'Ctrl+K'}
-            </span>
-          </div>
-
-          {/* Mobile Search Button */}
-          <button 
-            onClick={() => setIsSearchOpen(true)}
-            className="sm:hidden p-2 rounded-lg bg-darkSurfaceMuted border border-borderStroke text-textSecondary hover:text-black transition cursor-pointer"
-          >
-            <Search className="w-4 h-4" />
-          </button>
-
-          {/* Notifications Widget */}
-          <button className="p-2 rounded-lg bg-darkSurfaceMuted border border-borderStroke text-textSecondary hover:text-black transition relative">
-            <Bell className="w-4 h-4" />
-            <span className="w-1.5 h-1.5 bg-indigoElectric rounded-full absolute top-1.5 right-1.5 shadow-[0_0_8px_rgba(108,99,255,0.8)]" />
-          </button>
-
-          {/* Divider */}
-          <span className="w-[1px] h-5 bg-borderStroke" />
-
-          {/* Quick Profile Snapshot Link */}
-          <Link href="/profile" className="flex items-center space-x-2.5 group">
-            <AvatarRing
-              src={currentUser?.image || undefined}
-              name={currentUser?.name || undefined}
-              role={currentUser?.role}
-              size="sm"
-            />
-            <div className="text-left hidden lg:block min-w-0">
-              <p className="text-[11px] font-bold text-textPrimary group-hover:text-indigoElectric transition-colors leading-none truncate max-w-[120px]">
-                {currentUser?.name || 'Scholar'}
-              </p>
-              <p className="text-[8px] text-textSecondary font-mono font-bold mt-1 uppercase tracking-tight truncate max-w-[120px]">
-                {currentUser?.department?.split('(')[0].trim() || 'Collaborator'}
-              </p>
-            </div>
+            <MessageSquare className="w-5 h-5" />
           </Link>
+
+          {/* Notifications */}
+          <button className="relative p-2 rounded-full hover:bg-surface-container hover:text-primary transition-colors flex items-center justify-center cursor-pointer">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full" />
+          </button>
+
+          {/* Settings */}
+          <Link
+            href="/profile"
+            className="p-2 rounded-full hover:bg-surface-container hover:text-primary transition-colors flex items-center justify-center"
+          >
+            <Settings className="w-5 h-5" />
+          </Link>
+
+          {/* Avatar */}
+          <div className="ml-1 h-8 w-8 rounded-full bg-surface-variant border border-outline-variant overflow-hidden shadow-sm shrink-0">
+            <img
+              alt="Profile"
+              className="w-full h-full object-cover"
+              src={
+                currentUser?.image ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'U')}&background=004495&color=fff&size=64`
+              }
+            />
+          </div>
         </div>
       </header>
 
-      {/* Mounting CMD+K Spotlight modal overlay */}
+      {/* Spotlight Search overlay */}
       <SpotlightSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );

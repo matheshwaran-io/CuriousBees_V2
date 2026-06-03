@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog } from '@curiousbees/types';
 import { auth } from '@/lib/firebase';
+import { getRoleForEmail } from '@/lib/auth/role-mapping';
+import { getDashboardRoute } from '@/lib/auth/route-protection';
+import { ROLE_COOKIE_NAME } from '@/lib/auth/constants';
 
 const MOCK_INTERESTS = [
   'Generative AI & LLMs',
@@ -17,6 +20,7 @@ interface AppState {
   // Session & Profiles
   currentUser: User | null;
   roleOverride: UserRole; // Syncs to current user role
+  dashboardRoute: string; // Role-based landing route
   interestsList: string[];
   
   // UI states
@@ -41,6 +45,7 @@ interface AppState {
 
   // Setters & Actions
   setCurrentUser: (user: User | null) => void;
+  setDashboardRoute: (route: string) => void;
   setMobileSidebar: (show: boolean) => void;
   setSearchQuery: (query: string) => void;
   setActiveTag: (tag: string) => void;
@@ -65,6 +70,7 @@ interface AppState {
   // Supervisor Approvals & Requests
   fetchPendingApprovals: () => Promise<User[]>;
   approveScholar: (scholarId: string) => Promise<User>;
+  declineScholar: (scholarId: string) => Promise<User>;
   requestSupervisor: (supervisorId: string) => Promise<User>;
 
   // Collaboration Requests
@@ -104,9 +110,22 @@ const getBearerHeader = async (): Promise<Record<string, string>> => {
   return {};
 };
 
+// ─── Cookie helpers (client-side only) ──────────────────────────────────────
+const setCookie = (name: string, value: string, days = 7) => {
+  if (typeof document === 'undefined') return;
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+};
+
+const deleteCookie = (name: string) => {
+  if (typeof document === 'undefined') return;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+};
+
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null, // Default to null for strict live login checking
   roleOverride: 'PHD_SCHOLAR',
+  dashboardRoute: '/dashboard',
   interestsList: MOCK_INTERESTS,
   
   isLoading: false,
@@ -127,7 +146,17 @@ export const useStore = create<AppState>((set, get) => ({
   adminUsers: [],
   adminAuditLogs: [],
 
-  setCurrentUser: (user) => set({ currentUser: user, roleOverride: user?.role || 'PHD_SCHOLAR' }),
+  setCurrentUser: (user) => {
+    if (user) {
+      const route = getDashboardRoute(user.role);
+      setCookie(ROLE_COOKIE_NAME, user.role);
+      set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
+    } else {
+      deleteCookie(ROLE_COOKIE_NAME);
+      set({ currentUser: null, roleOverride: 'PHD_SCHOLAR', dashboardRoute: '/dashboard' });
+    }
+  },
+  setDashboardRoute: (route) => set({ dashboardRoute: route }),
   setMobileSidebar: (show) => set({ showMobileSidebar: show }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveTag: (tag) => set({ activeTag: tag }),
@@ -158,6 +187,7 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const headers = await getBearerHeader();
       if (Object.keys(headers).length === 0) {
+        deleteCookie(ROLE_COOKIE_NAME);
         set({ currentUser: null });
         return null;
       }
@@ -166,19 +196,42 @@ export const useStore = create<AppState>((set, get) => ({
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.user) {
-          set({ currentUser: data.user, roleOverride: data.user.role });
-          return data.user;
+          const user: User = data.user;
+
+          // ── DEV ROLE OVERRIDE ─────────────────────────────────────────────
+          // Overlay the static email → role mapping for local testing.
+          // In production: remove this block; the backend returns the real role.
+          const devRole = getRoleForEmail(user.email);
+          if (devRole !== null) {
+            user.role = devRole;
+          } else {
+            // Email not in dev mapping → deny access
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('curiousbees-mock-token');
+            }
+            deleteCookie(ROLE_COOKIE_NAME);
+            set({ currentUser: null });
+            return null; // Caller should redirect to /login?error=access_denied
+          }
+          // ── END DEV ROLE OVERRIDE ─────────────────────────────────────────
+
+          const route = getDashboardRoute(user.role);
+          setCookie(ROLE_COOKIE_NAME, user.role);
+          set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
+          return user;
         }
       }
       if (typeof window !== 'undefined') {
         localStorage.removeItem('curiousbees-mock-token');
       }
+      deleteCookie(ROLE_COOKIE_NAME);
       set({ currentUser: null });
       return null;
     } catch (e) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('curiousbees-mock-token');
       }
+      deleteCookie(ROLE_COOKIE_NAME);
       set({ currentUser: null });
       return null;
     } finally {
@@ -430,10 +483,11 @@ export const useStore = create<AppState>((set, get) => ({
     if (typeof window !== 'undefined') {
       localStorage.removeItem('curiousbees-mock-token');
     }
+    deleteCookie(ROLE_COOKIE_NAME);
     import('@/lib/firebase').then(({ auth }) => {
       auth.signOut().catch(() => {});
     });
-    set({ currentUser: null });
+    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'PHD_SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {
@@ -469,6 +523,28 @@ export const useStore = create<AppState>((set, get) => ({
         return data;
       }
       throw new Error('Failed to approve scholar.');
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  declineScholar: async (scholarId: string) => {
+    set({ isLoading: true });
+    try {
+      const headers = await getBearerHeader();
+      const res = await fetch('/api/users/decline-scholar', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ scholarId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set(state => ({
+          pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId)
+        }));
+        return data;
+      }
+      throw new Error('Failed to decline scholar.');
     } finally {
       set({ isLoading: false });
     }
