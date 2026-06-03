@@ -10,8 +10,8 @@ export class ApprovedGuard implements CanActivate {
       return false;
     }
 
-    // Bypass approval for Faculty and Admin. Scholars must be explicitly approved.
-    if (user.role === 'FACULTY' || user.role === 'ADMIN' || user.isApproved) {
+    // Bypass approval for Supervisor and Admin. Scholars must be explicitly approved.
+    if (user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' || user.approved) {
       return true;
     }
 

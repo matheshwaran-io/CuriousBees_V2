@@ -20,21 +20,21 @@ import {
 import Logo from '@/components/Logo';
 
 const NAV_CONFIG = {
-  ADMIN: [
+  INSTITUTION_ADMIN: [
     { name: 'Overview', href: '/dashboard/admin', icon: LayoutDashboard },
     { name: 'User Management', href: '/dashboard/admin/users', icon: Users },
     { name: 'Institutions', href: '/dashboard/admin/institutions', icon: ShieldCheck },
     { name: 'Analytics', href: '/dashboard/admin/analytics', icon: BarChart3 },
     { name: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
   ],
-  FACULTY: [
+  RESEARCH_SUPERVISOR: [
     { name: 'Overview', href: '/dashboard/supervisor', icon: LayoutDashboard },
     { name: 'My Scholars', href: '/dashboard/supervisor/scholars', icon: GraduationCap },
     { name: 'Research Pipeline', href: '/dashboard/supervisor/pipeline', icon: BookOpen },
     { name: 'Meetings', href: '/dashboard/events', icon: Calendar },
     { name: 'Approvals', href: '/dashboard/supervisor/approvals', icon: FileText },
   ],
-  PHD_SCHOLAR: [
+  RESEARCH_SCHOLAR: [
     { name: 'My Dashboard', href: '/dashboard/researcher', icon: LayoutDashboard },
     { name: 'My Research', href: '/dashboard/researcher/research', icon: BookOpen },
     { name: 'Collaborators', href: '/dashboard/researcher/collaborators', icon: Users },
@@ -45,7 +45,7 @@ const NAV_CONFIG = {
 export function Sidebar() {
   const pathname = usePathname();
   const { currentUser } = useStore();
-  const role = currentUser?.role || 'PHD_SCHOLAR';
+  const role = currentUser?.role || 'RESEARCH_SCHOLAR';
   
   const navItems = NAV_CONFIG[role];
 
@@ -57,7 +57,7 @@ export function Sidebar() {
 
       <div className="flex-1 overflow-y-auto py-6 px-4 flex flex-col gap-1">
         <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-          {role === 'ADMIN' ? 'Admin Portal' : role === 'FACULTY' ? 'Supervisor Portal' : 'Scholar Portal'}
+          {role === 'INSTITUTION_ADMIN' ? 'Admin Portal' : role === 'RESEARCH_SUPERVISOR' ? 'Supervisor Portal' : 'Scholar Portal'}
         </div>
         
         {navItems.map((item) => {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { Bot, CheckCircle, Zap } from 'lucide-react';
@@ -16,20 +16,10 @@ type PrismaEvent = Event & {
 };
 
 const fetchFeed = async () => {
-  const user = auth.currentUser;
-  let headers: any = {};
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) headers['Authorization'] = `Bearer ${mockToken}`;
-  }
-
   // Fetch all recent events limit 10
-  const res = await fetch('/api/events?limit=10', { headers });
+  const res = await apiFetch('/api/events?limit=10');
   if (!res.ok) throw new Error('Failed to fetch events feed');
-  
+
   const data = await res.json() as PrismaEvent[];
   // Sort descending by created date
   return data.sort((a, b) => new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime());

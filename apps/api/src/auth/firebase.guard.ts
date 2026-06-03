@@ -2,6 +2,21 @@ import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedExceptio
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseAdminService } from './firebase-admin.service';
 
+function detectRoleFromEmail(email: string): { role: string; approved: boolean } {
+  // TODO: Production: Replace development email-pattern role detection with @srmist.edu.in validation.
+  const username = email.split('@')[0].toLowerCase();
+  
+  if (username.includes('.')) {
+    return { role: 'INSTITUTION_ADMIN', approved: true };
+  } else if (/[a-zA-Z]/.test(username) && /[0-9]/.test(username)) {
+    return { role: 'RESEARCH_SCHOLAR', approved: false };
+  } else if (/^[a-zA-Z]+$/.test(username)) {
+    return { role: 'RESEARCH_SUPERVISOR', approved: true };
+  }
+  
+  return { role: 'RESEARCH_SCHOLAR', approved: false };
+}
+
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(FirebaseAuthGuard.name);
@@ -31,9 +46,9 @@ export class FirebaseAuthGuard implements CanActivate {
         this.logger.warn('Using local mock Firebase auth bypass token.');
         const isFaculty = token.includes('faculty');
         decodedToken = {
-          uid: isFaculty ? 'mock-bypass-uid-faculty' : 'mock-bypass-uid-scholar',
-          email: isFaculty ? 'dr.priya.faculty@srmist.edu.in' : 'karthik.scholar@srmist.edu.in',
-          name: isFaculty ? 'Dr. Priya (Mock Faculty)' : 'Karthik Kumar (Mock Scholar)',
+          uid: isFaculty ? 'mock-bypass-uid-faculty' : token.includes('admin') ? 'mock-bypass-uid-admin' : 'mock-bypass-uid-scholar',
+          email: isFaculty ? 'faculty.mock@srmist.edu.in' : token.includes('admin') ? 'admin.mock@srmist.edu.in' : 'scholar.mock@srmist.edu.in',
+          name: isFaculty ? 'Dr. Priya (Mock Faculty)' : token.includes('admin') ? 'Admin User' : 'Karthik Kumar (Mock Scholar)',
           picture: isFaculty 
             ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'
             : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
@@ -64,18 +79,17 @@ export class FirebaseAuthGuard implements CanActivate {
       });
 
       if (!user) {
-        const isFaculty = username.startsWith('dr.') || username.includes('faculty') || username.startsWith('hod.');
-        const role = isFaculty ? 'FACULTY' : 'PHD_SCHOLAR';
+        const { role, approved } = detectRoleFromEmail(normalizedEmail);
 
-        this.logger.log(`Creating CuriousBees user for ${normalizedEmail} with role=${role}.`);
+        this.logger.log(`Creating CuriousBees user for ${normalizedEmail}: Assigned role=${role}, Approved status=${approved}`);
         user = await this.prisma.user.create({
           data: {
-            id: decodedToken.uid, // Map Firebase UID as primary key
+            firebaseUid: decodedToken.uid,
             email: normalizedEmail,
             name: decodedToken.name || email.split('@')[0],
             image: decodedToken.picture || null,
             role: role as any,
-            isApproved: isFaculty, // Faculty auto-approved, scholars require supervisor mapping
+            approved: approved,
             emailVerified: new Date(),
           },
           include: {
@@ -105,7 +119,7 @@ export class FirebaseAuthGuard implements CanActivate {
         });
       }
 
-      this.logger.log(`CuriousBees user sync complete for ${normalizedEmail}: id=${user.id}, role=${user.role}, approved=${user.isApproved}`);
+      this.logger.log(`CuriousBees user sync complete for ${normalizedEmail}: id=${user.id}, role=${user.role}, approved=${user.approved}`);
       request.user = user;
       return true;
     } catch (e: any) {

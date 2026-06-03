@@ -30,7 +30,7 @@ export class NotificationsService {
     }
 
     try {
-      return await this.prisma.deviceToken.upsert({
+      return await this.prisma.notificationToken.upsert({
         where: { token },
         update: { userId },
         create: { token, userId }
@@ -69,7 +69,7 @@ export class NotificationsService {
    */
   async sendPushToUser(userId: string, payload: { title: string; body: string; url?: string }) {
     try {
-      const devices = await this.prisma.deviceToken.findMany({ where: { userId } });
+      const devices = await this.prisma.notificationToken.findMany({ where: { userId } });
       if (devices.length === 0) {
         this.logger.log(`User ${userId} has no registered devices. Skipping push.`);
         return;
@@ -82,7 +82,7 @@ export class NotificationsService {
         webpush: { notification: { icon: '/logo.png', click_action: payload.url || '/' } }
       };
       const response = await admin.messaging().sendEachForMulticast(message);
-      this.logger.log(`Direct push: ${response.successCount} succeeded, ${response.failureCount} failed.`);
+      this.logger.log(`[FCM] Notification Sent: ${response.successCount} succeeded, ${response.failureCount} failed.`);
       // Cleanup expired tokens
       const expiredTokens: string[] = [];
       response.responses.forEach((res: any, idx: number) => {
@@ -94,11 +94,40 @@ export class NotificationsService {
         }
       });
       if (expiredTokens.length > 0) {
-        await this.prisma.deviceToken.deleteMany({ where: { token: { in: expiredTokens } } });
+        await this.prisma.notificationToken.deleteMany({ where: { token: { in: expiredTokens } } });
       }
     } catch (e: any) {
       this.logger.error(`sendPushToUser failed: ${e.message}`);
     }
+  }
+
+  /**
+   * Generic method to send notification using Firebase Admin SDK
+   */
+  async sendNotification(title: string, body: string, userId: string) {
+    return this.sendPushToUser(userId, { title, body });
+  }
+
+  // --- Notification Hooks for Future Events ---
+
+  async notifyScholarApprovalRequest(scholarId: string, supervisorId: string) {
+    // TODO: Implement later
+  }
+
+  async notifyScholarApproved(scholarId: string) {
+    // TODO: Implement later
+  }
+
+  async notifyNewOpportunity(opportunityId: string, authorId: string) {
+    // TODO: Implement later
+  }
+
+  async notifyNewThreadComment(threadId: string, authorId: string, commentId: string) {
+    // TODO: Implement later
+  }
+
+  async notifyWorkspaceInvite(workspaceId: string, inviterId: string, inviteeId: string) {
+    // TODO: Implement later
   }
 
   /**

@@ -41,8 +41,8 @@ export function FormWrapper<T extends Record<string, any>>({
   className,
 }: FormWrapperProps<T>) {
   const methods = useForm<T>({
-    resolver: zodResolver(schema),
-    defaultValues: defaultValues as T,
+    resolver: zodResolver(schema) as any,
+    defaultValues: defaultValues as any,
     mode: 'onTouched',
   });
 
@@ -50,7 +50,7 @@ export function FormWrapper<T extends Record<string, any>>({
 
   return (
     <FormProvider {...methods}>
-      <form className={className} onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form className={className} onSubmit={handleSubmit(onSubmit as any)} noValidate>
         {children({ register, formState, setValue, watch })}
       </form>
     </FormProvider>

@@ -77,7 +77,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
   };
 
   const getRoleBadge = (role: string) => {
-    return role === 'FACULTY' 
+    return role === 'RESEARCH_SUPERVISOR' 
       ? 'bg-srm-crimson/10 text-srm-crimson border-srm-crimson/20 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/30'
       : 'bg-srm-blue/10 text-srm-blue border-srm-blue/20 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30';
   };
@@ -119,7 +119,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
                   {thread.author?.name}
                 </h3>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase border leading-none ${getRoleBadge(thread.author?.role || '')}`}>
-                  {thread.author?.role === 'FACULTY' ? (
+                  {thread.author?.role === 'RESEARCH_SUPERVISOR' ? (
                     <>
                       <GraduationCap className="w-2.5 h-2.5 mr-0.5" />
                       Faculty
@@ -223,7 +223,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold text-slate-800 dark:text-white">{comment.author?.name}</span>
                       <span className={`inline-flex px-1.5 py-0.2 rounded-full text-[8px] font-black uppercase border leading-none ${getRoleBadge(comment.author?.role || '')}`}>
-                        {comment.author?.role === 'FACULTY' ? 'Faculty' : 'Scholar'}
+                        {comment.author?.role === 'RESEARCH_SUPERVISOR' ? 'Faculty' : 'Scholar'}
                       </span>
                     </div>
                     <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase">

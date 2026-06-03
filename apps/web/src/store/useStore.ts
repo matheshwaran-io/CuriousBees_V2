@@ -3,6 +3,7 @@ import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationReque
 import { auth } from '@/lib/firebase';
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@/lib/auth/constants';
+import { apiFetch, getAuthHeaders, readApiError, API_URL } from '@/lib/api-client';
 
 const MOCK_INTERESTS = [
   'Generative AI & LLMs',
@@ -21,7 +22,7 @@ interface AppState {
   roleOverride: UserRole; // Syncs to current user role
   dashboardRoute: string; // Role-based landing route
   interestsList: string[];
-  
+
   // UI states
   isLoading: boolean;
   showMobileSidebar: boolean;
@@ -91,47 +92,8 @@ interface AppState {
   changeUserRole: (userId: string, role: UserRole) => Promise<User>;
 }
 
-// Helper to asynchronously extract valid Firebase ID Token Bearer header
-const getBearerHeader = async (): Promise<Record<string, string>> => {
-  const user = auth.currentUser;
-  if (user) {
-    const token = await user.getIdToken(true); // Enforce fresh token
-    console.info('[Auth] Prepared Firebase bearer token for backend sync:', {
-      uid: user.uid,
-      email: user.email,
-      tokenLength: token.length,
-    });
-    return { 'Authorization': `Bearer ${token}` };
-  }
-  
-  // Local development bypass support
-  if (typeof window !== 'undefined') {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) {
-      return { 'Authorization': `Bearer ${mockToken}` };
-    }
-  }
-  return {};
-};
-
-const readApiError = async (res: Response): Promise<string> => {
-  try {
-    const data = await res.json();
-    const message = Array.isArray(data?.message)
-      ? data.message.join(', ')
-      : data?.message;
-    const details = Array.isArray(data?.details)
-      ? data.details.join(', ')
-      : data?.details;
-    return [message, details].filter(Boolean).join(' ');
-  } catch {
-    try {
-      return await res.text();
-    } catch {
-      return '';
-    }
-  }
-};
+// Auth header helper — delegates to centralized api-client
+const getBearerHeader = getAuthHeaders;
 
 // ─── Cookie helpers (client-side only) ──────────────────────────────────────
 const setCookie = (name: string, value: string, days = 7) => {
@@ -147,10 +109,10 @@ const deleteCookie = (name: string) => {
 
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null, // Default to null for strict live login checking
-  roleOverride: 'PHD_SCHOLAR',
+  roleOverride: 'RESEARCH_SCHOLAR',
   dashboardRoute: '/dashboard',
   interestsList: MOCK_INTERESTS,
-  
+
   isLoading: false,
   showMobileSidebar: false,
   searchQuery: '',
@@ -171,19 +133,19 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCurrentUser: (user) => {
     if (user) {
-      const route = getDashboardRoute(user.role);
+      const route = getDashboardRoute(user);
       setCookie(ROLE_COOKIE_NAME, user.role);
       set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
     } else {
       deleteCookie(ROLE_COOKIE_NAME);
-      set({ currentUser: null, roleOverride: 'PHD_SCHOLAR', dashboardRoute: '/dashboard' });
+      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/dashboard' });
     }
   },
   setDashboardRoute: (route) => set({ dashboardRoute: route }),
   setMobileSidebar: (show) => set({ showMobileSidebar: show }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveTag: (tag) => set({ activeTag: tag }),
-  
+
   toggleTheme: () => {
     const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
     get().setTheme(nextTheme);
@@ -219,11 +181,12 @@ export const useStore = create<AppState>((set, get) => ({
       }
 
       console.info('[Auth] Sending backend session sync request:', {
-        endpoint: '/api/auth/me',
+        endpoint: `${API_URL}/api/auth/me`,
         hasAuthorizationHeader: Boolean(headers.Authorization),
       });
 
-      const res = await fetch('/api/auth/me', { headers });
+      const res = await apiFetch('/api/auth/me');
+
       console.info('[Auth] Backend session sync response:', {
         status: res.status,
         ok: res.ok,
@@ -237,9 +200,9 @@ export const useStore = create<AppState>((set, get) => ({
             id: user.id,
             email: user.email,
             role: user.role,
-            isApproved: user.isApproved,
+            approved: user.approved,
           });
-          const route = getDashboardRoute(user.role);
+          const route = getDashboardRoute(user);
           setCookie(ROLE_COOKIE_NAME, user.role);
           set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
           return user;
@@ -292,10 +255,9 @@ export const useStore = create<AppState>((set, get) => ({
   fetchData: async () => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
       const [threadsRes, oppsRes] = await Promise.all([
-        fetch('/api/threads', { headers }),
-        fetch('/api/opportunities', { headers })
+        apiFetch('/api/threads'),
+        apiFetch('/api/opportunities'),
       ]);
 
       if (threadsRes.ok && oppsRes.ok) {
@@ -313,12 +275,11 @@ export const useStore = create<AppState>((set, get) => ({
   // 3. Query directory of co-authors / research experts from database
   fetchCollaborators: async (search, department) => {
     try {
-      const headers = await getBearerHeader();
       let query = '';
       if (search) query += `search=${encodeURIComponent(search)}&`;
       if (department) query += `department=${encodeURIComponent(department)}`;
 
-      const res = await fetch(`/api/users/collaborators?${query}`, { headers });
+      const res = await apiFetch(`/api/users/collaborators?${query}`);
       if (res.ok) {
         const data = await res.json();
         set({ collaborators: data });
@@ -335,11 +296,10 @@ export const useStore = create<AppState>((set, get) => ({
   createThread: async (title, content, tags) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/threads', {
+      const res = await apiFetch('/api/threads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title, content, tags })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content, tags }),
       });
       if (res.ok) {
         const newThread = await res.json();
@@ -358,11 +318,10 @@ export const useStore = create<AppState>((set, get) => ({
   addComment: async (threadId, content) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/comments', {
+      const res = await apiFetch('/api/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ threadId, content })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId, content }),
       });
       if (res.ok) {
         const newComment = await res.json();
@@ -390,11 +349,10 @@ export const useStore = create<AppState>((set, get) => ({
   createOpportunity: async (title, description, department, researchDomain) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/opportunities', {
+      const res = await apiFetch('/api/opportunities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title, description, department, researchDomain })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, department, researchDomain }),
       });
       if (res.ok) {
         const newOpp = await res.json();
@@ -413,11 +371,10 @@ export const useStore = create<AppState>((set, get) => ({
   updateProfile: async (data) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/profile', {
+      const res = await apiFetch('/api/users/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify(data)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
       if (res.ok) {
         const updatedUser = await res.json();
@@ -434,8 +391,7 @@ export const useStore = create<AppState>((set, get) => ({
   fetchEvents: async (showIndicator = false) => {
     if (showIndicator) set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/events', { headers });
+      const res = await apiFetch('/api/events');
       if (res.ok) {
         const data = await res.json();
         set({ events: data });
@@ -451,8 +407,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchAiLogs: async () => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/events/ai-logs', { headers });
+      const res = await apiFetch('/api/events/ai-logs');
       if (res.ok) {
         const data = await res.json();
         set({ aiLogs: data });
@@ -467,11 +422,10 @@ export const useStore = create<AppState>((set, get) => ({
   createEvent: async (title, date, time, venue) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/events', {
+      const res = await apiFetch('/api/events', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title, date, time, venue })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, date, time, venue }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -487,11 +441,10 @@ export const useStore = create<AppState>((set, get) => ({
   updateEvent: async (id, title, date, time, venue) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/events', {
+      const res = await apiFetch('/api/events', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ id, title, date, time, venue })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, title, date, time, venue }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -509,11 +462,10 @@ export const useStore = create<AppState>((set, get) => ({
   deleteEvent: async (id) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/events', {
+      const res = await apiFetch('/api/events', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ id })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -534,15 +486,14 @@ export const useStore = create<AppState>((set, get) => ({
     }
     deleteCookie(ROLE_COOKIE_NAME);
     import('@/lib/firebase').then(({ auth }) => {
-      auth.signOut().catch(() => {});
+      auth.signOut().catch(() => { });
     });
-    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'PHD_SCHOLAR' });
+    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'RESEARCH_SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/approvals', { headers });
+      const res = await apiFetch('/api/users/approvals');
       if (res.ok) {
         const data = await res.json();
         set({ pendingApprovals: data });
@@ -558,11 +509,10 @@ export const useStore = create<AppState>((set, get) => ({
   approveScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/approve-scholar', {
+      const res = await apiFetch('/api/users/approve-scholar', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ scholarId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scholarId }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -580,11 +530,10 @@ export const useStore = create<AppState>((set, get) => ({
   declineScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/decline-scholar', {
+      const res = await apiFetch('/api/users/decline-scholar', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ scholarId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scholarId }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -602,11 +551,10 @@ export const useStore = create<AppState>((set, get) => ({
   requestSupervisor: async (supervisorId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/request-supervisor', {
+      const res = await apiFetch('/api/users/request-supervisor', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ supervisorId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ supervisorId }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -614,7 +562,7 @@ export const useStore = create<AppState>((set, get) => ({
           currentUser: {
             ...state.currentUser,
             supervisorId,
-            isApproved: false
+            approved: false
           } as any
         }));
         return data;
@@ -627,8 +575,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchCollaborationRequests: async () => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/opportunities/requests', { headers });
+      const res = await apiFetch('/api/opportunities/requests');
       if (res.ok) {
         const data = await res.json();
         set({ collaborationRequests: data });
@@ -644,11 +591,10 @@ export const useStore = create<AppState>((set, get) => ({
   createCollaborationRequest: async (opportunityId: string, message?: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/opportunities/${opportunityId}/request`, {
+      const res = await apiFetch(`/api/opportunities/${opportunityId}/request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ message })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -666,11 +612,10 @@ export const useStore = create<AppState>((set, get) => ({
   updateCollaborationRequest: async (requestId: string, status: 'PUBLISHED' | 'REJECTED' | 'NEEDS_INFO') => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/opportunities/requests/${requestId}`, {
+      const res = await apiFetch(`/api/opportunities/requests/${requestId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ status })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -687,8 +632,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchWorkspaces: async () => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/workspaces', { headers });
+      const res = await apiFetch('/api/workspaces');
       if (res.ok) {
         const data = await res.json();
         set({ workspaces: data });
@@ -704,8 +648,7 @@ export const useStore = create<AppState>((set, get) => ({
   fetchWorkspaceDetails: async (workspaceId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/workspaces/${workspaceId}`, { headers });
+      const res = await apiFetch(`/api/workspaces/${workspaceId}`);
       if (res.ok) {
         const data = await res.json();
         set({ activeWorkspace: data });
@@ -720,11 +663,10 @@ export const useStore = create<AppState>((set, get) => ({
   addWorkspaceFile: async (workspaceId: string, name: string, url: string, size: number) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/workspaces/${workspaceId}/files`, {
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/files`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ name, url, size })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url, size }),
       });
       if (res.ok) {
         const fileData = await res.json();
@@ -750,11 +692,10 @@ export const useStore = create<AppState>((set, get) => ({
   addWorkspaceMilestone: async (workspaceId: string, title: string, description?: string, dueDate?: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/workspaces/${workspaceId}/milestones`, {
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/milestones`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title, description, dueDate })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, dueDate }),
       });
       if (res.ok) {
         const milestoneData = await res.json();
@@ -779,11 +720,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   toggleWorkspaceMilestone: async (workspaceId: string, milestoneId: string, completed: boolean) => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/workspaces/${workspaceId}/milestones/${milestoneId}`, {
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/milestones/${milestoneId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ completed })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed }),
       });
       if (res.ok) {
         const milestoneData = await res.json();
@@ -810,11 +750,10 @@ export const useStore = create<AppState>((set, get) => ({
   addWorkspaceAnnouncement: async (workspaceId: string, title: string, content: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/workspaces/${workspaceId}/announcements`, {
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/announcements`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ title, content })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content }),
       });
       if (res.ok) {
         const announcementData = await res.json();
@@ -839,8 +778,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchAdminUsers: async () => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/all', { headers });
+      const res = await apiFetch('/api/users/all');
       if (res.ok) {
         const data = await res.json();
         set({ adminUsers: data });
@@ -855,8 +793,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchAdminAuditLogs: async () => {
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch('/api/users/audit-logs', { headers });
+      const res = await apiFetch('/api/users/audit-logs');
       if (res.ok) {
         const data = await res.json();
         set({ adminAuditLogs: data });
@@ -872,11 +809,10 @@ export const useStore = create<AppState>((set, get) => ({
   changeUserRole: async (userId: string, role: UserRole) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await fetch(`/api/users/${userId}/role`, {
+      const res = await apiFetch(`/api/users/${userId}/role`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ role })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
       });
       if (res.ok) {
         const data = await res.json();

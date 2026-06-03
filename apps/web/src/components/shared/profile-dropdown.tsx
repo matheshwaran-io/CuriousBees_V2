@@ -22,10 +22,10 @@ export function ProfileDropdown() {
         className="flex items-center gap-2 cb-focus rounded-full p-1 border border-transparent hover:border-outline-variant/30 transition-all"
       >
         <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs uppercase overflow-hidden">
-          {currentUser.avatarUrl ? (
-            <img src={currentUser.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+          {currentUser.image ? (
+            <img src={currentUser.image} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
-            currentUser.name.charAt(0)
+            currentUser.name?.charAt(0) ?? '?'
           )}
         </div>
       </button>

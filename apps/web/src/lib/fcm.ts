@@ -16,14 +16,21 @@ export async function requestFcmToken(): Promise<string | null> {
   try {
     // 2. Request user permissions
     const permission = await Notification.requestPermission();
+    console.log('[FCM] Permission Status:', permission);
     if (permission !== 'granted') {
       console.warn('Notification permission not granted.');
       return null;
     }
 
-    // 3. Register service worker
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log('FCM Service Worker registered successfully:', registration);
+    // 3. Register service worker with dynamic config
+    const firebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    };
+    const configParam = encodeURIComponent(JSON.stringify(firebaseConfig));
+    const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?config=${configParam}`);
 
     // 4. Retrieve FCM messaging instance
     const messaging = getMessaging(app);
@@ -41,7 +48,7 @@ export async function requestFcmToken(): Promise<string | null> {
     });
 
     if (token) {
-      console.log('FCM Token successfully retrieved:', token);
+      console.log('[FCM] Token Generated:', token);
       return token;
     } else {
       console.warn('No FCM registration token received.');
@@ -66,7 +73,8 @@ export async function sendTokenToBackend(token: string): Promise<void> {
     }
 
     const idToken = await user.getIdToken();
-    const response = await fetch('/api/notifications/register', {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const response = await fetch(`${API_URL}/api/notifications/register-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +84,7 @@ export async function sendTokenToBackend(token: string): Promise<void> {
     });
 
     if (response.ok) {
-      console.log('Successfully registered FCM token with active backend node.');
+      console.log('[FCM] Token Registered');
     } else {
       console.error('Failed to sync token with backend:', await response.text());
     }

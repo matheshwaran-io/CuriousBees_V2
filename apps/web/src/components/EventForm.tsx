@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Tag, PlusCircle, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { apiFetch } from '@/lib/api-client';
 
 export const CAMPUS_VENUES = [
   "Dr. T.P Ganesan Auditorium",
@@ -73,10 +74,10 @@ export default function EventForm({ onEventAdded }: EventFormProps) {
       const formattedTime = formatTimeTo12Hour(time);
       const finalVenue = selectedVenue === 'custom' ? customVenue.trim() : selectedVenue;
       
-      const res = await fetch('/api/events', {
+      const res = await apiFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event, date, time: formattedTime, venue: finalVenue })
+        body: JSON.stringify({ event, date, time: formattedTime, venue: finalVenue }),
       });
 
       if (!res.ok) {

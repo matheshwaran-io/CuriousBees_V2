@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Check, CheckCircle, X, Calendar, MapPin, Loader2 } from 'lucide-react';
 import { Event } from '@curiousbees/types';
@@ -14,36 +14,16 @@ type PrismaEvent = Event & {
 };
 
 const fetchReviewQueue = async () => {
-  const user = auth.currentUser;
-  let headers: any = {};
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) headers['Authorization'] = `Bearer ${mockToken}`;
-  }
-
-  const res = await fetch('/api/events/review', { headers });
+  const res = await apiFetch('/api/events/review');
   if (!res.ok) throw new Error('Failed to fetch review queue');
   return res.json() as Promise<PrismaEvent[]>;
 };
 
 const updateStatus = async ({ id, status }: { id: string, status: string }) => {
-  const user = auth.currentUser;
-  let headers: any = { 'Content-Type': 'application/json' };
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) headers['Authorization'] = `Bearer ${mockToken}`;
-  }
-
-  const res = await fetch(`/api/events/${id}/status`, {
+  const res = await apiFetch(`/api/events/${id}/status`, {
     method: 'PATCH',
-    headers,
-    body: JSON.stringify({ status })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update status');
   return res.json();

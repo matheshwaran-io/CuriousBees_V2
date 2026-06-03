@@ -20,29 +20,18 @@ import {
   Layers,
   ArrowUpRight
 } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 
 async function fetchSessions() {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken();
-  const res = await fetch('/api/copilot/sessions', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch('/api/copilot/sessions');
   if (!res.ok) throw new Error('Failed to fetch sessions');
   return res.json();
 }
 
 async function createNewSession(title?: string) {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken();
-  const res = await fetch('/api/copilot/sessions', {
+  const res = await apiFetch('/api/copilot/sessions', {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` 
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title: title || 'Ask CuriousBees Conversation' }),
   });
   if (!res.ok) throw new Error('Failed to create session');
@@ -51,12 +40,7 @@ async function createNewSession(title?: string) {
 
 async function fetchSessionHistory(sessionId: string) {
   if (!sessionId) return { messages: [] };
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken();
-  const res = await fetch(`/api/copilot/sessions/${sessionId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch(`/api/copilot/sessions/${sessionId}`);
   if (!res.ok) throw new Error('Failed to fetch session history');
   return res.json();
 }
@@ -143,15 +127,10 @@ export default function CopilotPage() {
     setIsStreaming(true);
 
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Not logged in');
-      const token = await user.getIdToken();
-
       // Trigger temporary optimistic add in query history cache if possible
       // But queryClient invalidation on complete is easier and cleaner
-      const response = await fetch(
-        `/api/copilot/chat?sessionId=${targetSessionId}&message=${encodeURIComponent(textToSend)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await apiFetch(
+        `/api/copilot/chat?sessionId=${targetSessionId}&message=${encodeURIComponent(textToSend)}`
       );
 
       if (!response.ok) throw new Error('Generation pipeline failed');

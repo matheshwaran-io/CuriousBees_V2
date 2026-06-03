@@ -18,26 +18,17 @@ import {
   Compass,
   FileText
 } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 
 async function fetchAnalyticsData(endpoint: string) {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken();
-  const res = await fetch(`/api/analytics/${endpoint}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch(`/api/analytics/${endpoint}`);
   if (!res.ok) throw new Error(`Failed to fetch ${endpoint}`);
   return res.json();
 }
 
 async function triggerClustering() {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  const token = await user.getIdToken();
-  const res = await fetch('/api/analytics/trigger-clustering', {
+  const res = await apiFetch('/api/analytics/trigger-clustering', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Failed to run semantic clustering');
   return res.json();
@@ -92,12 +83,7 @@ export default function AnalyticsPage() {
 
   const handleDownloadCsv = async (type: string) => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
-      const res = await fetch(`/api/analytics/export?type=${type}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`/api/analytics/export?type=${type}`);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

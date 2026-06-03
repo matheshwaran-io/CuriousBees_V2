@@ -39,7 +39,7 @@ export function middleware(request: NextRequest) {
   }
 
   // 4. Validate the role value is a known role
-  const validRoles: UserRole[] = ['ADMIN', 'FACULTY', 'PHD_SCHOLAR'];
+  const validRoles: UserRole[] = ['INSTITUTION_ADMIN', 'RESEARCH_SUPERVISOR', 'RESEARCH_SCHOLAR'];
   if (!validRoles.includes(role)) {
     // Corrupt/unknown cookie — clear it and send to login
     const loginUrl = new URL('/login', request.url);

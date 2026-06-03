@@ -37,7 +37,7 @@ export class InterestMatcherService {
         ]
       },
       include: {
-        deviceTokens: true // Include FCM device tokens
+        notificationTokens: true // Include FCM device tokens
       }
     });
 

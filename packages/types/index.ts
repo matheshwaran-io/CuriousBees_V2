@@ -1,15 +1,17 @@
-export type UserRole = 'FACULTY' | 'PHD_SCHOLAR' | 'ADMIN';
+export type UserRole = 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR' | 'INSTITUTION_ADMIN';
 
 export interface User {
   id: string;
+  firebaseUid: string | null;
   name: string | null;
   email: string;
   image: string | null;
   role: UserRole;
   department: string | null;
   bio: string | null;
-  isApproved: boolean;
+  approved: boolean;
   supervisorId: string | null;
+  supervisorEmail: string | null;
   createdAt: Date | string;
   interests?: UserInterest[];
   threads?: Thread[];

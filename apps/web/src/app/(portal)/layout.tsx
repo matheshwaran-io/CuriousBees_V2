@@ -29,7 +29,7 @@ export default function PortalLayout({
   useEffect(() => {
     if (!currentUser) {
       router.push('/login');
-    } else if (currentUser.role === 'PHD_SCHOLAR' && !currentUser.isApproved) {
+    } else if (currentUser.role === 'RESEARCH_SCHOLAR' && !currentUser.approved) {
       router.push('/verification-pending');
     } else {
       fetchData(); // Trigger initial live API fetch

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { apiFetch } from '@/lib/api-client';
 import { 
   School,
   RefreshCw, 
@@ -48,7 +49,7 @@ export default function PipelinePage() {
   const handleTriggerMock = async () => {
     setTriggeringMock(true);
     try {
-      const response = await fetch('/api/events/gmail/mock', {
+      const response = await apiFetch('/api/events/gmail/mock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

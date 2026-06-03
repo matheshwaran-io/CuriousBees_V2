@@ -15,17 +15,17 @@ import type { UserRole } from '@curiousbees/types';
 // In production: replace this with a database-backed RBAC lookup.
 
 export const DEV_ROLE_MAP: Record<string, UserRole> = {
-  'mrmatheshwaran17@gmail.com': 'FACULTY',       // Research Supervisor
-  'r.matheshwaran.io@gmail.com': 'PHD_SCHOLAR',  // Research Scholar
-  'maddybgmistoreog@gmail.com': 'ADMIN',         // Institutional Admin
+  'mrmatheshwaran17@gmail.com': 'RESEARCH_SUPERVISOR',
+  'r.matheshwaran.io@gmail.com': 'RESEARCH_SCHOLAR',
+  'maddybgmistoreog@gmail.com': 'INSTITUTION_ADMIN',
 } as const;
 
 // ─── Role Labels (human-readable) ────────────────────────────────────────────
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  FACULTY: 'Supervisor',
-  PHD_SCHOLAR: 'Scholar',
-  ADMIN: 'Admin',
+  RESEARCH_SUPERVISOR: 'Supervisor',
+  RESEARCH_SCHOLAR: 'Scholar',
+  INSTITUTION_ADMIN: 'Admin',
 };
 
 // ─── Core resolver ───────────────────────────────────────────────────────────

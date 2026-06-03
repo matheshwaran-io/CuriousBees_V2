@@ -8,7 +8,7 @@ import { NotificationsService } from './notifications.service';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @Post('register')
+  @Post('register-token')
   async registerToken(@Req() req: any, @Body() body: { token: string }) {
     const result = await this.notificationsService.registerToken(req.user.id, body.token);
     return {

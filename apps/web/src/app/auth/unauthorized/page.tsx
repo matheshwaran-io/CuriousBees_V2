@@ -36,8 +36,8 @@ export default function UnauthorizedPage() {
   }, []);
 
   const userRoleLabel = currentUser?.role ? ROLE_LABELS[currentUser.role as UserRole] : null;
-  const correctDashboard = currentUser?.role
-    ? getDashboardRoute(currentUser.role as UserRole)
+  const correctDashboard = currentUser
+    ? getDashboardRoute(currentUser)
     : '/login';
 
   return (

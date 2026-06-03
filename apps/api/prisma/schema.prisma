@@ -10,22 +10,24 @@ generator client {
 }
 
 enum Role {
-  FACULTY
-  PHD_SCHOLAR
-  ADMIN
+  RESEARCH_SUPERVISOR
+  RESEARCH_SCHOLAR
+  INSTITUTION_ADMIN
 }
 
 model User {
   id            String          @id @default(cuid())
+  firebaseUid   String?         @unique
   name          String?
   email         String          @unique
   emailVerified DateTime?
   image         String?
-  role          Role            @default(PHD_SCHOLAR)
+  role          Role            @default(RESEARCH_SCHOLAR)
   department    String?
   bio           String?
-  isApproved    Boolean         @default(false)
+  approved      Boolean         @default(false)
   supervisorId  String?
+  supervisorEmail String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -35,7 +37,7 @@ model User {
   threads       Thread[]
   comments      Comment[]
   opportunities Opportunity[]
-  deviceTokens  DeviceToken[]
+  notificationTokens NotificationToken[]
   notifications Notification[]
   preferences   UserPreference?
   recommendationEngagements RecommendationEngagement[]
@@ -267,14 +269,6 @@ model AIProcessingLog {
   updatedAt        DateTime         @updatedAt
 }
 
-model DeviceToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-}
-
 model GmailCredentials {
   id           String   @id @default("singleton")
   accessToken  String   @db.Text
@@ -492,4 +486,14 @@ model AuditLog {
   details       String?  @db.Text
   ipAddress     String?
   createdAt     DateTime @default(now())
+}
+
+model NotificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

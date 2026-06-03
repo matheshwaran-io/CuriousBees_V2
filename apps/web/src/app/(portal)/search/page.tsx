@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 import EventResultCard from '@/components/search/EventResultCard';
 import RecommendationFeed from '@/components/search/RecommendationFeed';
 import SearchBar from '@/components/search/SearchBar';
@@ -19,13 +19,8 @@ function useDebounce<T>(value: T, delay: number): T {
 
 async function fetchSearchResults(query: string, filters: Record<string, string>) {
   if (!query.trim()) return { results: [], total: 0 };
-  const user = auth.currentUser;
-  if (!user) return { results: [], total: 0 };
-  const token = await user.getIdToken();
   const params = new URLSearchParams({ q: query, ...filters });
-  const res = await fetch(`/api/search?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch(`/api/search?${params}`);
   if (!res.ok) return { results: [], total: 0 };
   return res.json();
 }

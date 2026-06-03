@@ -43,20 +43,20 @@ export default function AdminPage() {
 
   // 1. Guard against non-admin access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   // 2. Fetch admin data
   useEffect(() => {
-    if (currentUser?.role === 'ADMIN') {
+    if (currentUser?.role === 'INSTITUTION_ADMIN') {
       fetchAdminUsers();
       fetchAdminAuditLogs();
     }
   }, [currentUser, fetchAdminUsers, fetchAdminAuditLogs]);
 
-  if (currentUser?.role !== 'ADMIN') {
+  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
         <Lock className="w-12 h-12 text-dangerAlert" />
@@ -126,7 +126,7 @@ export default function AdminPage() {
           <div>
             <p className="text-[10px] font-bold text-textMuted uppercase tracking-wider">Faculty Supervisors</p>
             <h4 className="font-display font-light text-3xl text-black mt-1 leading-none">
-              {adminUsers.filter(u => u.role === 'FACULTY').length}
+              {adminUsers.filter(u => u.role === 'RESEARCH_SUPERVISOR').length}
             </h4>
           </div>
           <div className="w-[36px] h-[36px] bg-darkSurfaceMuted rounded-lg flex items-center justify-center text-textSecondary shrink-0">
@@ -250,7 +250,7 @@ export default function AdminPage() {
                         <td className="p-3 text-textSecondary">{user.department || 'Not Configured'}</td>
                         <td className="p-3 font-semibold text-black">{user.role}</td>
                         <td className="p-3">
-                          {user.isApproved || user.role === 'FACULTY' || user.role === 'ADMIN' ? (
+                          {user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' ? (
                             <span className="inline-flex items-center space-x-1 text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded">
                               <CheckCircle className="w-3 h-3" />
                               <span>Approved</span>
@@ -268,9 +268,9 @@ export default function AdminPage() {
                             onChange={(e) => handleRoleChange(user.id, e.target.value)}
                             className="bg-white border border-borderStroke rounded px-2.5 py-1 text-[11px] font-semibold text-black focus:border-black outline-none cursor-pointer"
                           >
-                            <option value="PHD_SCHOLAR">Scholar</option>
-                            <option value="FACULTY">Faculty PI</option>
-                            <option value="ADMIN">Admin</option>
+                            <option value="RESEARCH_SCHOLAR">Scholar</option>
+                            <option value="RESEARCH_SUPERVISOR">Faculty PI</option>
+                            <option value="INSTITUTION_ADMIN">Admin</option>
                           </select>
                         </td>
                       </tr>

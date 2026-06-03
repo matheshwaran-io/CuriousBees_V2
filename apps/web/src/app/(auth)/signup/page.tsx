@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { signInWithGoogle } from '@/lib/firebase';
+import { requestFcmToken, sendTokenToBackend } from '@/lib/fcm';
 import Link from 'next/link';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,10 +39,10 @@ const SignupSchema = z.object({
     .refine((val) => val.trim().length > 0, 'Full name cannot be blank'),
   faculty: z.string().min(1, 'Please select a faculty'),
   department: z.string().min(1, 'Please select a department'),
-  role: z.enum(['FACULTY', 'PHD_SCHOLAR']),
+  role: z.enum(['RESEARCH_SUPERVISOR', 'RESEARCH_SCHOLAR']),
   supervisorEmail: z.string().optional()
 }).superRefine((data, ctx) => {
-  if (data.role === 'PHD_SCHOLAR') {
+  if (data.role === 'RESEARCH_SCHOLAR') {
     if (!data.supervisorEmail) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -85,7 +86,7 @@ export default function SignupPage() {
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role && currentUser.department) {
-        if (currentUser.role === 'PHD_SCHOLAR' && !currentUser.isApproved) {
+        if (currentUser.role === 'RESEARCH_SCHOLAR' && !currentUser.approved) {
           router.replace('/verification-pending');
         } else {
           router.replace('/dashboard');
@@ -96,7 +97,7 @@ export default function SignupPage() {
 
   // Fetch faculty advisors in background to validate supervisor inputs
   useEffect(() => {
-    fetchCollaborators('', 'FACULTY');
+    fetchCollaborators('', 'RESEARCH_SUPERVISOR');
   }, [fetchCollaborators]);
 
   // Setup form control
@@ -114,7 +115,7 @@ export default function SignupPage() {
       fullName: currentUser?.name || '',
       faculty: '',
       department: '',
-      role: 'PHD_SCHOLAR',
+      role: 'RESEARCH_SCHOLAR',
       supervisorEmail: ''
     }
   });
@@ -124,7 +125,7 @@ export default function SignupPage() {
     if (currentUser) {
       if (currentUser.name) setValue('fullName', currentUser.name);
       if (currentUser.role) {
-        const defaultRole = currentUser.role === 'FACULTY' ? 'FACULTY' : 'PHD_SCHOLAR';
+        const defaultRole = currentUser.role === 'RESEARCH_SUPERVISOR' ? 'RESEARCH_SUPERVISOR' : 'RESEARCH_SCHOLAR';
         setValue('role', defaultRole);
       }
       if (currentUser.department) {
@@ -143,6 +144,15 @@ export default function SignupPage() {
     try {
       await signInWithGoogle();
       await syncUserSession();
+      // Initialize FCM after successful signup and backend sync
+      try {
+        const fcmToken = await requestFcmToken();
+        if (fcmToken) {
+          await sendTokenToBackend(fcmToken);
+        }
+      } catch (fcmError) {
+        console.warn('[Signup] Non-fatal FCM registration error:', fcmError);
+      }
     } catch (e: any) {
       console.error(e);
       setErrorMsg(e.message || 'Authentication failed. Make sure you select a valid @srmist.edu.in account.');
@@ -161,12 +171,12 @@ export default function SignupPage() {
     try {
       // 1. Verify supervisor validity for Scholars
       let matchedSupervisorId: string | null = null;
-      if (data.role === 'PHD_SCHOLAR') {
+      if (data.role === 'RESEARCH_SCHOLAR') {
         const supervisorEmailClean = data.supervisorEmail?.trim().toLowerCase();
         
         // Find supervisor in our collaborators state
         const supervisor = collaborators.find(
-          c => c.role === 'FACULTY' && c.email.toLowerCase() === supervisorEmailClean
+          c => c.role === 'RESEARCH_SUPERVISOR' && c.email.toLowerCase() === supervisorEmailClean
         );
 
         if (!supervisor) {
@@ -190,7 +200,7 @@ export default function SignupPage() {
       });
 
       // 3. Map supervisor if Scholar
-      if (data.role === 'PHD_SCHOLAR' && matchedSupervisorId) {
+      if (data.role === 'RESEARCH_SCHOLAR' && matchedSupervisorId) {
         await requestSupervisor(matchedSupervisorId);
         await syncUserSession(); // Sync latest supervisor state
         router.push('/verification-pending');
@@ -436,7 +446,7 @@ export default function SignupPage() {
                       onChange={(val) => {
                         field.onChange(val);
                         // Clear supervisor email if they switch to Faculty
-                        if (val === 'FACULTY') {
+                        if (val === 'RESEARCH_SUPERVISOR') {
                           setValue('supervisorEmail', '');
                         }
                       }}
@@ -446,7 +456,7 @@ export default function SignupPage() {
 
                 {/* 6. Research Supervisor Email (Scholar Only) */}
                 <AnimatePresence>
-                  {selectedRole === 'PHD_SCHOLAR' && (
+                  {selectedRole === 'RESEARCH_SCHOLAR' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}

@@ -1,13 +1,20 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 
+console.log('[Firebase] Loaded Config:', {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+});
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'mock-api-key',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'mock-auth-domain',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'mock-project-id',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'mock-storage-bucket',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 'mock-sender-id',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || 'mock-app-id',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 const missingFirebaseConfig = Object.entries(firebaseConfig)
@@ -15,11 +22,18 @@ const missingFirebaseConfig = Object.entries(firebaseConfig)
   .map(([key]) => key);
 
 if (missingFirebaseConfig.length > 0) {
-  console.warn('[Firebase Client] Missing Firebase web config keys:', missingFirebaseConfig);
+  console.error(
+    '[Firebase Client] Missing Firebase web config keys:',
+    missingFirebaseConfig
+  );
+  throw new Error(
+    `Missing Firebase configuration: ${missingFirebaseConfig.join(', ')}`
+  );
 }
 
 // Initialize Firebase app (Singleton)
-export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app =
+  getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Auth service
 export const auth = getAuth(app);
@@ -36,19 +50,14 @@ googleProvider.setCustomParameters({
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    console.info('[Auth] Google login success:', {
-      uid: result.user.uid,
-      email: result.user.email,
-    });
 
     const token = await result.user.getIdToken();
-    console.info('[Auth] Firebase ID token generated:', {
-      uid: result.user.uid,
-      tokenLength: token.length,
-    });
 
-    return { user: result.user, token };
-  } catch (error: any) {
+    return {
+      user: result.user,
+      token,
+    };
+  } catch (error) {
     console.error('Firebase Google Sign-In Error:', error);
     throw error;
   }

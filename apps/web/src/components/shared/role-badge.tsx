@@ -11,15 +11,15 @@ import { cn } from '@/lib/utils';
 import type { UserRole } from '@curiousbees/types';
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  FACULTY:     'Supervisor',
-  PHD_SCHOLAR: 'Scholar',
-  ADMIN:       'Admin',
+  RESEARCH_SUPERVISOR:     'Supervisor',
+  RESEARCH_SCHOLAR: 'Scholar',
+  INSTITUTION_ADMIN:       'Admin',
 };
 
 const ROLE_STYLES: Record<UserRole, string> = {
-  ADMIN:       'bg-error-container text-on-error-container border-error/20',
-  FACULTY:     'bg-primary-container text-on-primary-container border-primary/20',
-  PHD_SCHOLAR: 'bg-success-container text-on-success-container border-success/20',
+  INSTITUTION_ADMIN:       'bg-error-container text-on-error-container border-error/20',
+  RESEARCH_SUPERVISOR:     'bg-primary-container text-on-primary-container border-primary/20',
+  RESEARCH_SCHOLAR: 'bg-success-container text-on-success-container border-success/20',
 };
 
 interface RoleBadgeProps {

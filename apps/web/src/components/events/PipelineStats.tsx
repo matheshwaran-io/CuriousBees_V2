@@ -2,21 +2,11 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 import { Bot, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
 
 const fetchStats = async () => {
-  const user = auth.currentUser;
-  let headers: any = {};
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) headers['Authorization'] = `Bearer ${mockToken}`;
-  }
-
-  const res = await fetch('/api/events/stats', { headers });
+  const res = await apiFetch('/api/events/stats');
   if (!res.ok) throw new Error('Failed to fetch stats');
   return res.json();
 };

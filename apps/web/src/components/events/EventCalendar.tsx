@@ -7,7 +7,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import { useQuery } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 import { Event } from '@curiousbees/types';
 
 type PrismaEvent = Event & {
@@ -15,18 +15,8 @@ type PrismaEvent = Event & {
 };
 
 const fetchEvents = async () => {
-  const user = auth.currentUser;
-  let headers: any = {};
-  if (user) {
-    const token = await user.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) headers['Authorization'] = `Bearer ${mockToken}`;
-  }
-
   // Fetch only published and review required events for the main calendar
-  const res = await fetch('/api/events', { headers });
+  const res = await apiFetch('/api/events');
   if (!res.ok) throw new Error('Failed to fetch events');
   return res.json() as Promise<PrismaEvent[]>;
 };

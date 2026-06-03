@@ -23,7 +23,7 @@ export class NotificationProcessor extends WorkerHost {
     this.logger.log(`Processing notification job ${job.id} for event ${eventId} to ${userIds.length} users.`);
 
     // 1. Fetch device tokens for all matched users
-    const devices = await this.prisma.deviceToken.findMany({
+    const devices = await this.prisma.notificationToken.findMany({
       where: { userId: { in: userIds } }
     });
 

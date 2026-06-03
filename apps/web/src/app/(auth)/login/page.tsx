@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { signInWithGoogle, auth } from '@/lib/firebase';
+import { requestFcmToken, sendTokenToBackend } from '@/lib/fcm';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 import { 
@@ -71,8 +72,18 @@ export default function LoginPage() {
 
       const syncedUser = await syncUserSession({ throwOnError: true });
       if (syncedUser) {
+        // Initialize FCM after successful login and backend sync
+        try {
+          const fcmToken = await requestFcmToken();
+          if (fcmToken) {
+            await sendTokenToBackend(fcmToken);
+          }
+        } catch (fcmError) {
+          console.warn('[Login] Non-fatal FCM registration error:', fcmError);
+        }
+
         // Role-based redirect determined by the backend user profile.
-        const route = syncedUser.role === 'ADMIN' ? '/admin' : '/dashboard';
+        const route = syncedUser.role === 'INSTITUTION_ADMIN' ? '/admin' : '/dashboard';
         router.push(route);
       } else {
         await signOut(auth);
@@ -102,7 +113,7 @@ export default function LoginPage() {
       
       const syncedUser = await syncUserSession();
       if (syncedUser) {
-        const route = syncedUser.role === 'ADMIN' ? '/admin' : '/dashboard';
+        const route = syncedUser.role === 'INSTITUTION_ADMIN' ? '/admin' : '/dashboard';
         router.push(route);
       } else {
         setErrorMsg('Local developer bypass failed to synchronize with backend database.');

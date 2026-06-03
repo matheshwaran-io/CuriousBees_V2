@@ -34,7 +34,7 @@ export default function VerificationPendingPage() {
   useEffect(() => {
     const checkStatus = async () => {
       const user = await syncUserSession();
-      if (user && (user.isApproved || user.role === 'FACULTY' || user.role === 'ADMIN')) {
+      if (user && (user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN')) {
         router.replace('/dashboard');
       }
     };
@@ -46,7 +46,7 @@ export default function VerificationPendingPage() {
 
   // 2. Fetch faculty list in background for potential supervisor mapping
   useEffect(() => {
-    fetchCollaborators('', 'FACULTY');
+    fetchCollaborators('', 'RESEARCH_SUPERVISOR');
   }, [fetchCollaborators]);
 
   // 3. Handle mapping form submit
@@ -72,7 +72,7 @@ export default function VerificationPendingPage() {
   // Filter supervisors based on search term
   const facultySupervisors = collaborators.filter(
     (c) =>
-      c.role === 'FACULTY' &&
+      c.role === 'RESEARCH_SUPERVISOR' &&
       (c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.department?.toLowerCase().includes(searchTerm.toLowerCase()))
   );

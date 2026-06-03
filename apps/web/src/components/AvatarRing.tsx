@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 interface AvatarRingProps {
   src?: string | null;
   name?: string;
-  role?: 'FACULTY' | 'PHD_SCHOLAR' | string;
+  role?: 'RESEARCH_SUPERVISOR' | 'RESEARCH_SCHOLAR' | string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -14,11 +14,11 @@ interface AvatarRingProps {
 export default function AvatarRing({
   src,
   name = 'Scholar',
-  role = 'PHD_SCHOLAR',
+  role = 'RESEARCH_SCHOLAR',
   size = 'md',
   className,
 }: AvatarRingProps) {
-  const isFaculty = role === 'FACULTY';
+  const isFaculty = role === 'RESEARCH_SUPERVISOR';
   
   const sizeClasses = {
     sm: 'w-7 h-7 text-[10px]',

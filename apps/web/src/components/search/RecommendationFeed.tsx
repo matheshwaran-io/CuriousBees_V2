@@ -1,28 +1,18 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { auth } from '@/lib/firebase';
+import { apiFetch } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import { Sparkles, TrendingUp, Loader2 } from 'lucide-react';
 import EventResultCard from './EventResultCard';
 
 async function fetchRecommendations() {
-  const user = auth.currentUser;
-  if (!user) return { results: [] };
-  const token = await user.getIdToken();
-  const res = await fetch('/api/search/recommendations', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch('/api/search/recommendations');
   if (!res.ok) return { results: [] };
   return res.json();
 }
 
 async function fetchTrending() {
-  const user = auth.currentUser;
-  if (!user) return { results: [] };
-  const token = await user.getIdToken();
-  const res = await fetch('/api/search/trending?limit=6', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch('/api/search/trending?limit=6');
   if (!res.ok) return { results: [] };
   return res.json();
 }

@@ -49,7 +49,7 @@ export default function ProfilePage() {
     resolver: zodResolver(UpdateProfileSchema),
     defaultValues: {
       name: currentUser?.name || '',
-      role: currentUser?.role || 'PHD_SCHOLAR',
+      role: currentUser?.role || 'RESEARCH_SCHOLAR',
       department: currentUser?.department || '',
       bio: currentUser?.bio || '',
     }
@@ -60,7 +60,7 @@ export default function ProfilePage() {
     if (currentUser) {
       reset({
         name: currentUser.name || '',
-        role: currentUser.role || 'PHD_SCHOLAR',
+        role: currentUser.role || 'RESEARCH_SCHOLAR',
         department: currentUser.department || '',
         bio: currentUser.bio || '',
       });
@@ -124,7 +124,7 @@ export default function ProfilePage() {
     : defaultNetwork;
 
   // Render stats based on user role
-  const isFaculty = roleOverride === 'FACULTY';
+  const isFaculty = roleOverride === 'RESEARCH_SUPERVISOR';
   const citationsVal = isFaculty ? 142 : 24;
   const publicationsVal = userThreads.length > 0 ? userThreads.length : (isFaculty ? 12 : 3);
   const thirdStatName = isFaculty ? 'Active Grants' : 'Workspace Synergy';
@@ -507,8 +507,8 @@ export default function ProfilePage() {
                     {...register('role')}
                     className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 py-2 font-body-md text-body-md text-on-surface transition-colors cursor-pointer"
                   >
-                    <option value="PHD_SCHOLAR">PhD Scholar</option>
-                    <option value="FACULTY">Verified Faculty Guide</option>
+                    <option value="RESEARCH_SCHOLAR">PhD Scholar</option>
+                    <option value="RESEARCH_SUPERVISOR">Verified Faculty Guide</option>
                   </select>
                   {errors.role && <p className="text-[11px] text-error mt-1 font-semibold">{errors.role.message as string}</p>}
                 </div>

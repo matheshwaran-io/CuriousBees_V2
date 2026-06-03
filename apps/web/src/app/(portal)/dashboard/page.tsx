@@ -58,14 +58,14 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
     fetchCollaborators();
-    if (roleOverride === 'FACULTY' || currentUser?.role === 'FACULTY') {
+    if (roleOverride === 'RESEARCH_SUPERVISOR' || currentUser?.role === 'RESEARCH_SUPERVISOR') {
       fetchPendingApprovals();
       fetchCollaborationRequests();
     }
   }, [fetchData, fetchCollaborators, fetchPendingApprovals, fetchCollaborationRequests, roleOverride, currentUser]);
 
-  const isFaculty = currentUser?.role === 'FACULTY' || roleOverride === 'FACULTY';
-  const activeScholars = collaborators.filter((c) => c.role !== 'FACULTY');
+  const isFaculty = currentUser?.role === 'RESEARCH_SUPERVISOR' || roleOverride === 'RESEARCH_SUPERVISOR';
+  const activeScholars = collaborators.filter((c) => c.role !== 'RESEARCH_SUPERVISOR');
   const pendingCount = pendingApprovals.length + collaborationRequests.filter((r) => r.status === 'PENDING').length;
 
   // ─── SUPERVISOR VIEW ───────────────────────────────────────────────────────

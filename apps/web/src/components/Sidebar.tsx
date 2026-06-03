@@ -55,10 +55,10 @@ const TOOLS_NAV = [
 ];
 
 const ROLE_NAV: Partial<Record<UserRole, { name: string; href: string; icon: React.ElementType }[]>> = {
-  FACULTY: [
+  RESEARCH_SUPERVISOR: [
     { name: 'Scholar Management', href: '/dashboard', icon: UserCog },
   ],
-  ADMIN: [
+  INSTITUTION_ADMIN: [
     { name: 'Admin Panel', href: '/admin', icon: Shield },
   ],
 };
