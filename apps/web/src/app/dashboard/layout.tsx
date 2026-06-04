@@ -1,19 +1,31 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Sidebar } from '@/components/dashboard/navigation/sidebar';
 import { Topbar } from '@/components/dashboard/navigation/topbar';
 import { useStore } from '@/store/useStore';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { getDashboardRoute } from '@/lib/auth/route-protection';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useStore();
+  const { currentUser, isLoading } = useStore();
+  const router = useRouter();
 
-  // Basic client-side auth check (replace with middleware for robust protection)
-  if (!currentUser) {
-    // redirect('/auth/login'); 
-    // Commented out temporarily for easy local testing without strict auth block
-  }
+  useEffect(() => {
+    // Only redirect after the auth state has settled (not during initial load)
+    if (isLoading) return;
+    if (!currentUser) {
+      router.replace('/login');
+      return;
+    }
+    // An unapproved scholar who somehow landed on /dashboard/* gets bounced
+    if (currentUser.role === 'RESEARCH_SCHOLAR' && !currentUser.approved) {
+      router.replace('/verification-pending');
+    }
+  }, [currentUser, isLoading, router]);
+
+  // Show nothing while auth is being determined to avoid flash
+  if (!currentUser) return null;
 
   return (
     <div className="min-h-screen bg-background flex w-full">

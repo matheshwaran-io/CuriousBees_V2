@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Network, Hexagon } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface TrendingClustersProps {
   clusters?: string[];
@@ -17,25 +18,31 @@ export default function TrendingClusters({
   ]
 }: TrendingClustersProps) {
   return (
-    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] select-none text-left">
-      <h3 className="font-headline-md text-headline-md text-on-surface mb-4 flex items-center gap-2">
-        <Network className="w-5 h-5 text-primary shrink-0" />
+    <section className="bg-white border border-borderStroke rounded-xl p-5 shadow-sm text-left">
+      <h3 className="text-sm font-bold text-[#0d3c61] mb-2 flex items-center gap-2 font-display select-none">
+        <Network className="w-4.5 h-4.5 text-primary shrink-0" />
         <span>Trending Clusters</span>
       </h3>
-      <p className="font-body-sm text-body-sm text-on-surface-variant mb-4">
-        High-growth research areas in your network.
+      <p className="text-[11.5px] text-textSecondary font-semibold mb-4 select-none">
+        High-growth research topics in the SRMIST network.
       </p>
       
-      <div className="flex flex-wrap gap-2">
-        {clusters.map((cluster) => (
-          <Link
+      <div className="flex flex-wrap gap-2 select-none">
+        {clusters.map((cluster, idx) => (
+          <motion.div
             key={cluster}
-            href={`/search?query=${encodeURIComponent(cluster)}`}
-            className="px-3 py-1.5 border border-outline-variant rounded-full font-label-md text-label-md text-on-surface hover:bg-surface-variant cursor-pointer transition-colors flex items-center gap-1.5 bg-white dark:bg-inverse-surface"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: idx * 0.05, duration: 0.25 }}
           >
-            <Hexagon className="w-3.5 h-3.5 text-primary fill-primary/10 shrink-0" />
-            <span>{cluster}</span>
-          </Link>
+            <Link
+              href={`/search?query=${encodeURIComponent(cluster)}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-borderStroke/70 hover:border-primary rounded-full text-xs font-semibold text-black hover:text-primary bg-slate-50/50 hover:bg-primary/5 cursor-pointer transition-colors"
+            >
+              <Hexagon className="w-3.5 h-3.5 text-primary fill-primary/10 shrink-0" />
+              <span>{cluster}</span>
+            </Link>
+          </motion.div>
         ))}
       </div>
     </section>

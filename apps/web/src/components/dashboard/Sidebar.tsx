@@ -1,14 +1,10 @@
 'use client';
 
 /**
- * Sidebar.tsx — Role-aware navigation with mobile slide-in drawer.
- *
- * Desktop: 280px fixed left panel (unchanged)
- * Mobile:  Slide-in drawer triggered by Navbar hamburger via Zustand showMobileSidebar
- * Sections: Common nav + role-specific items + user mini-profile at bottom
+ * Sidebar.tsx — Premium role-aware navigation with sliding hover backdrops.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -30,6 +26,7 @@ import {
   UserCog,
   X,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
@@ -63,7 +60,7 @@ const ROLE_NAV: Partial<Record<UserRole, { name: string; href: string; icon: Rea
   ],
 };
 
-// ─── Nav Item ─────────────────────────────────────────────────────────────────
+// ─── Nav Item Component ────────────────────────────────────────────────────────
 
 function NavItem({
   name,
@@ -71,43 +68,92 @@ function NavItem({
   icon: Icon,
   active,
   onClick,
+  hoveredItem,
+  setHoveredItem,
 }: {
   name: string;
   href: string;
   icon: React.ElementType;
   active: boolean;
   onClick?: () => void;
+  hoveredItem: string | null;
+  setHoveredItem: (name: string | null) => void;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 select-none group',
-        active
-          ? 'bg-primary/8 text-primary font-semibold'
-          : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-      )}
+      onMouseEnter={() => setHoveredItem(name)}
+      onMouseLeave={() => setHoveredItem(null)}
+      className="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-200 select-none group"
     >
+      {/* Sliding Backdrop Pill */}
+      {hoveredItem === name && (
+        <motion.span
+          layoutId="sidebar-backdrop"
+          className="absolute inset-0 bg-primary/5 rounded-lg z-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+        />
+      )}
+
+      {/* Active State Indicator */}
+      {active && (
+        <motion.span
+          layoutId="sidebar-active-indicator"
+          className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-full z-10"
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        />
+      )}
+
       <Icon
         className={cn(
-          'w-[18px] h-[18px] shrink-0 transition-colors',
-          active ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'
+          'w-[18px] h-[18px] shrink-0 transition-colors duration-200 relative z-10',
+          active ? 'text-primary' : 'text-textSecondary group-hover:text-primary'
         )}
       />
-      <span className="truncate leading-none">{name}</span>
-      {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary opacity-60" />}
+      <span
+        className={cn(
+          'truncate leading-none relative z-10 transition-colors duration-200',
+          active ? 'text-primary font-bold' : 'text-textSecondary group-hover:text-black'
+        )}
+      >
+        {name}
+      </span>
+      {active && (
+        <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary relative z-10" />
+      )}
     </Link>
   );
 }
 
-// ─── Nav Section Label ────────────────────────────────────────────────────────
+// ─── Collapsible Nav Section ─────────────────────────────────────────────────
 
-function NavSection({ label }: { label: string }) {
+function NavSection({ 
+  label, 
+  isOpen, 
+  onToggle 
+}: { 
+  label: string; 
+  isOpen: boolean; 
+  onToggle: () => void 
+}) {
   return (
-    <p className="px-3 pt-4 pb-1 text-[9px] font-black uppercase tracking-[0.1em] text-on-surface-variant/50 select-none">
-      {label}
-    </p>
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center justify-between px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-textSecondary hover:text-black transition-colors select-none text-left cursor-pointer group"
+    >
+      <span>{label}</span>
+      <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+        {isOpen ? (
+          <ChevronDown className="w-3 h-3 text-textSecondary" />
+        ) : (
+          <ChevronRight className="w-3 h-3 text-textSecondary" />
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -116,21 +162,38 @@ function NavSection({ label }: { label: string }) {
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { currentUser, logout } = useStore();
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  
+  // Collapsible section states
+  const [sectionsOpen, setSectionsOpen] = useState({
+    navigation: true,
+    tools: true,
+    management: true,
+  });
+
+  const toggleSection = (section: keyof typeof sectionsOpen) => {
+    setSectionsOpen((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
   const role = currentUser?.role;
   const roleSpecificNav = role ? ROLE_NAV[role] ?? [] : [];
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+  const isActive = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard' || pathname === '/dashboard/supervisor' || pathname === '/dashboard/admin';
+    }
+    return pathname === href || pathname.startsWith(href + '/');
+  };
 
   return (
-    <div className="flex flex-col h-full py-5">
+    <div className="flex flex-col h-full py-5 bg-white">
       {/* Brand + Close (mobile) */}
-      <div className="flex items-center justify-between px-5 mb-5">
+      <div className="flex items-center justify-between px-5 mb-6">
         <Logo showText={true} size={32} />
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer md:hidden"
+            className="p-1.5 rounded-lg text-textSecondary hover:bg-surface-container transition-colors cursor-pointer md:hidden"
           >
             <X className="w-5 h-5" />
           </button>
@@ -138,57 +201,105 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 flex flex-col">
-
-        {/* Common */}
-        <NavSection label="Navigation" />
-        <div className="flex flex-col gap-0.5">
-          {COMMON_NAV.map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              active={isActive(item.href)}
-              onClick={onClose}
-            />
-          ))}
+      <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-2">
+        {/* Common Section */}
+        <div>
+          <NavSection 
+            label="Workspace" 
+            isOpen={sectionsOpen.navigation} 
+            onToggle={() => toggleSection('navigation')} 
+          />
+          <AnimatePresence initial={false}>
+            {sectionsOpen.navigation && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden flex flex-col gap-0.5 mt-1"
+              >
+                {COMMON_NAV.map((item) => (
+                  <NavItem
+                    key={item.href}
+                    {...item}
+                    active={isActive(item.href)}
+                    onClick={onClose}
+                    hoveredItem={hoveredItem}
+                    setHoveredItem={setHoveredItem}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Tools */}
-        <NavSection label="Tools" />
-        <div className="flex flex-col gap-0.5">
-          {TOOLS_NAV.map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              active={isActive(item.href)}
-              onClick={onClose}
-            />
-          ))}
+        {/* Tools Section */}
+        <div>
+          <NavSection 
+            label="AI & Telemetry" 
+            isOpen={sectionsOpen.tools} 
+            onToggle={() => toggleSection('tools')} 
+          />
+          <AnimatePresence initial={false}>
+            {sectionsOpen.tools && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden flex flex-col gap-0.5 mt-1"
+              >
+                {TOOLS_NAV.map((item) => (
+                  <NavItem
+                    key={item.href}
+                    {...item}
+                    active={isActive(item.href)}
+                    onClick={onClose}
+                    hoveredItem={hoveredItem}
+                    setHoveredItem={setHoveredItem}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Role-specific */}
+        {/* Role-specific Section */}
         {roleSpecificNav.length > 0 && (
-          <>
-            <NavSection label="Management" />
-            <div className="flex flex-col gap-0.5">
-              {roleSpecificNav.map((item) => (
-                <NavItem
-                  key={item.href + item.name}
-                  {...item}
-                  active={isActive(item.href)}
-                  onClick={onClose}
-                />
-              ))}
-            </div>
-          </>
+          <div>
+            <NavSection 
+              label="Management" 
+              isOpen={sectionsOpen.management} 
+              onToggle={() => toggleSection('management')} 
+            />
+            <AnimatePresence initial={false}>
+              {sectionsOpen.management && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden flex flex-col gap-0.5 mt-1"
+                >
+                  {roleSpecificNav.map((item) => (
+                    <NavItem
+                      key={item.href + item.name}
+                      {...item}
+                      active={isActive(item.href)}
+                      onClick={onClose}
+                      hoveredItem={hoveredItem}
+                      setHoveredItem={setHoveredItem}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
       </nav>
 
       {/* User mini-profile */}
-      <div className="px-3 pt-3 mt-auto border-t border-outline-variant/20">
+      <div className="px-3 pt-3 mt-auto border-t border-borderStroke/50">
         {currentUser && (
-          <div className="px-3 py-3 rounded-xl bg-surface-container-low/60 mb-2 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/40 shrink-0">
+          <div className="px-3 py-3 rounded-xl bg-surface-container-low/40 mb-3 border border-borderStroke/30 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-borderStroke shrink-0">
               <img
                 src={currentUser.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=004495&color=fff&size=64'}
                 alt={currentUser.name || 'User'}
@@ -196,8 +307,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-semibold text-on-surface truncate leading-tight">{currentUser.name || 'Researcher'}</p>
-              {role && <RoleBadge role={role} size="sm" className="mt-0.5" />}
+              <p className="text-[12px] font-bold text-black truncate leading-tight">{currentUser.name || 'Researcher'}</p>
+              {role && <RoleBadge role={role} size="sm" className="mt-1" />}
             </div>
           </div>
         )}
@@ -205,23 +316,49 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         <Link
           href="/profile"
           onClick={onClose}
+          onMouseEnter={() => setHoveredItem('profile')}
+          onMouseLeave={() => setHoveredItem(null)}
           className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all mb-0.5',
-            pathname === '/profile'
-              ? 'bg-primary/8 text-primary font-semibold'
-              : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-200 mb-1',
+            pathname === '/profile' ? 'text-primary font-bold' : 'text-textSecondary hover:text-black'
           )}
         >
-          <User className="w-[18px] h-[18px] shrink-0" />
-          <span>My Profile</span>
+          {hoveredItem === 'profile' && (
+            <motion.span
+              layoutId="sidebar-backdrop"
+              className="absolute inset-0 bg-primary/5 rounded-lg z-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
+          {pathname === '/profile' && (
+            <motion.span
+              layoutId="sidebar-active-indicator"
+              className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-full z-10"
+            />
+          )}
+          <User className="w-[18px] h-[18px] shrink-0 relative z-10" />
+          <span className="relative z-10">My Profile</span>
         </Link>
 
         <button
           onClick={() => { logout(); onClose?.(); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-on-surface-variant hover:bg-surface-container hover:text-error transition-all cursor-pointer text-left"
+          onMouseEnter={() => setHoveredItem('logout')}
+          onMouseLeave={() => setHoveredItem(null)}
+          className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold text-textSecondary hover:text-error transition-colors duration-200 cursor-pointer text-left"
         >
-          <LogOut className="w-[18px] h-[18px] shrink-0" />
-          <span>Exit Portal</span>
+          {hoveredItem === 'logout' && (
+            <motion.span
+              layoutId="sidebar-backdrop"
+              className="absolute inset-0 bg-error/5 rounded-lg z-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
+          <LogOut className="w-[18px] h-[18px] shrink-0 relative z-10" />
+          <span className="relative z-10">Exit Portal</span>
         </button>
       </div>
     </div>
@@ -236,7 +373,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-[280px] bg-surface-container-low border-r border-outline-variant/25 h-screen sticky top-0 z-40 shrink-0 font-sans">
+      <aside className="hidden md:flex flex-col w-[260px] bg-white border-r border-borderStroke h-screen sticky top-0 z-40 shrink-0 font-sans">
         <SidebarContent />
       </aside>
 
@@ -250,7 +387,7 @@ export default function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+              className="md:hidden fixed inset-0 z-50 bg-black/35 backdrop-blur-[1px]"
               onClick={() => setMobileSidebar(false)}
             />
 
@@ -259,8 +396,8 @@ export default function Sidebar() {
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-              className="md:hidden fixed left-0 top-0 bottom-0 z-[51] w-[300px] bg-surface-container-low border-r border-outline-variant/25 shadow-2xl font-sans"
+              transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+              className="md:hidden fixed left-0 top-0 bottom-0 z-[51] w-[280px] bg-white border-r border-borderStroke shadow-2xl font-sans"
             >
               <SidebarContent onClose={() => setMobileSidebar(false)} />
             </motion.aside>
@@ -270,3 +407,4 @@ export default function Sidebar() {
     </>
   );
 }
+

@@ -29,7 +29,7 @@ export class SupervisorsService {
       take: 20,
     });
 
-    this.logger.log(`Found ${supervisors.length} supervisors matching search='${search || ''}'`);
+    this.logger.log(`[AUTH] Supervisor Count: ${supervisors.length} (search='${search || ''}')`);
     return supervisors;
   }
 

@@ -106,7 +106,7 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
 
   const results = getFilteredResults().slice(0, 8);
 
-  // Handle keyboard shortcuts (CMD+K to toggle, ESC to close, arrows to select, enter to open)
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -136,10 +136,10 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
   }, [isOpen, results, selectedIndex, onClose, router]);
 
   const categoryIcons = {
-    Threads: <MessageSquare className="w-3.5 h-3.5 text-indigoElectric" />,
-    Opportunities: <Briefcase className="w-3.5 h-3.5 text-violetRoyal" />,
-    Events: <Calendar className="w-3.5 h-3.5 text-tealGlow" />,
-    Researchers: <Users className="w-3.5 h-3.5 text-emerald-500" />,
+    Threads: <MessageSquare className="w-4 h-4 text-primary" />,
+    Opportunities: <Briefcase className="w-4 h-4 text-amber-600" />,
+    Events: <Calendar className="w-4 h-4 text-emerald-600" />,
+    Researchers: <Users className="w-4 h-4 text-blue-600" />,
   };
 
   return (
@@ -149,41 +149,41 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.7 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-darkBg/80 backdrop-blur-md"
+            className="fixed inset-0 bg-slate-900/25 backdrop-blur-[2px]"
           />
 
           {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            initial={{ opacity: 0, scale: 0.97, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ type: 'spring', duration: 0.4 }}
-            className="relative w-full max-w-xl bg-darkSurfaceMuted/90 border border-white/10 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden glass-premium text-left"
+            exit={{ opacity: 0, scale: 0.97, y: -8 }}
+            transition={{ type: 'spring', duration: 0.35 }}
+            className="relative w-full max-w-xl bg-white border border-borderStroke rounded-xl shadow-2xl overflow-hidden text-left flex flex-col font-sans"
           >
             {/* Search Input Bar */}
-            <div className="flex items-center px-4 py-3.5 border-b border-white/5 gap-3">
-              <Search className="w-4 h-4 text-textMuted" />
+            <div className="flex items-center px-4 py-3.5 border-b border-borderStroke gap-3">
+              <Search className="w-4.5 h-4.5 text-textSecondary shrink-0" />
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Search across CuriousBees (threads, events, experts...)"
+                placeholder="Search threads, events, workspaces, experts..."
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setSelectedIndex(0);
                 }}
-                className="flex-1 bg-transparent border-none text-[13px] text-textPrimary placeholder-textMuted outline-none select-text"
+                className="flex-1 bg-transparent border-none text-[13.5px] text-black placeholder-textSecondary/50 outline-none select-text"
               />
-              <span className="text-[9px] font-bold text-textMuted/60 uppercase border border-white/5 bg-white/5 px-2 py-0.5 rounded">
+              <span className="text-[9px] font-bold text-textSecondary/60 uppercase border border-borderStroke/70 bg-slate-50 px-2 py-0.5 rounded shadow-sm">
                 ESC
               </span>
             </div>
 
             {/* Quick Filter Tabs */}
-            <div className="flex px-3 py-2 border-b border-white/5 bg-white/[0.01] gap-1.5 overflow-x-auto">
+            <div className="flex px-3 py-2 border-b border-borderStroke bg-slate-50/50 gap-1.5 overflow-x-auto">
               {(['ALL', 'THREADS', 'OPPORTUNITIES', 'EVENTS', 'RESEARCHERS'] as const).map((cat) => (
                 <button
                   key={cat}
@@ -192,10 +192,10 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                     setSelectedIndex(0);
                   }}
                   className={cn(
-                    'px-2.5 py-1 rounded text-[9px] font-display uppercase tracking-widest font-extrabold transition-all cursor-pointer',
+                    'px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer',
                     activeCategory === cat
-                      ? 'bg-white/10 text-white'
-                      : 'bg-transparent text-textMuted hover:text-white hover:bg-white/5'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-transparent text-textSecondary hover:text-black hover:bg-slate-100'
                   )}
                 >
                   {cat}
@@ -204,12 +204,12 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
             </div>
 
             {/* Results Zone */}
-            <div className="max-h-[300px] overflow-y-auto p-2 space-y-0.5">
+            <div className="max-h-[320px] overflow-y-auto p-2 space-y-0.5">
               {results.length === 0 ? (
-                <div className="py-12 text-center text-textMuted space-y-1">
-                  <Search className="w-8 h-8 opacity-20 mx-auto" />
-                  <p className="text-[11px] font-bold uppercase tracking-wider">No matching results found</p>
-                  <p className="text-[10px] opacity-60">Try refining your search keyword details</p>
+                <div className="py-10 text-center text-textSecondary space-y-1.5">
+                  <Search className="w-8 h-8 opacity-20 mx-auto text-textSecondary" />
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-textSecondary/80">No matching results found</p>
+                  <p className="text-xs text-textSecondary/50">Try refining your search keyword queries</p>
                 </div>
               ) : (
                 results.map((item, idx) => {
@@ -223,20 +223,26 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                       }}
                       onMouseEnter={() => setSelectedIndex(idx)}
                       className={cn(
-                        'flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150',
-                        isSelected ? 'bg-white/5' : 'bg-transparent'
+                        'flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 relative overflow-hidden',
+                        isSelected ? 'bg-primary/5' : 'bg-transparent'
                       )}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-1.5 rounded bg-white/5 shrink-0 border border-white/5">
+                      <div className="flex items-center gap-3 min-w-0 z-10">
+                        <div className={cn(
+                          'p-1.5 rounded shrink-0 border transition-all',
+                          isSelected ? 'bg-white border-primary/20 shadow-sm' : 'bg-slate-50 border-borderStroke/30'
+                        )}>
                           {categoryIcons[item.category]}
                         </div>
                         <div className="min-w-0 text-left">
-                          <p className="text-xs font-bold text-textPrimary leading-tight truncate">
+                          <p className={cn(
+                            'text-[13px] font-semibold leading-tight truncate transition-colors',
+                            isSelected ? 'text-primary' : 'text-black'
+                          )}>
                             {item.title}
                           </p>
                           {item.meta && (
-                            <p className="text-[9px] text-textMuted leading-normal truncate mt-0.5">
+                            <p className="text-[10px] text-textSecondary/60 leading-normal truncate mt-0.5 font-medium">
                               {item.meta}
                             </p>
                           )}
@@ -244,9 +250,9 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
                       </div>
 
                       {isSelected && (
-                        <div className="flex items-center gap-1 text-[8px] font-bold text-textMuted uppercase shrink-0">
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-primary uppercase shrink-0 z-10">
                           <span>Open</span>
-                          <CornerDownLeft className="w-3 h-3 text-textMuted" />
+                          <CornerDownLeft className="w-3.5 h-3.5 text-primary" />
                         </div>
                       )}
                     </div>
@@ -256,12 +262,12 @@ export default function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProp
             </div>
 
             {/* Instructions Footer */}
-            <div className="flex items-center justify-between px-4 py-2 border-t border-white/5 bg-white/[0.01] text-[9px] text-textMuted/60 font-bold uppercase">
+            <div className="flex items-center justify-between px-4 py-2 border-t border-borderStroke bg-slate-50/50 text-[9px] font-bold text-textSecondary/60 uppercase">
               <div className="flex items-center gap-4">
                 <span>↑↓ navigate</span>
                 <span>⏎ select</span>
               </div>
-              <span>CuriousBees AI Spotlight</span>
+              <span className="font-semibold text-primary">CuriousBees Spotlight Search</span>
             </div>
           </motion.div>
         </div>

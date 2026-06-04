@@ -35,17 +35,17 @@ export default function EventCalendar({ onEventClick }: { onEventClick: (event: 
     let textColor = '#374151';
     
     if (e.status === 'PUBLISHED') {
-      backgroundColor = '#e0fbf9'; // Teal background
-      borderColor = '#b2f2ed';
-      textColor = '#007A70'; // High contrast teal text
+      backgroundColor = 'rgba(0, 68, 149, 0.05)';
+      borderColor = 'rgba(0, 68, 149, 0.15)';
+      textColor = '#004495';
     } else if (e.status === 'REVIEW_REQUIRED') {
-      backgroundColor = '#fffbeb'; // Amber background
-      borderColor = '#fde68a';
-      textColor = '#b45309'; // High contrast amber text
+      backgroundColor = 'rgba(138, 89, 0, 0.05)';
+      borderColor = 'rgba(138, 89, 0, 0.15)';
+      textColor = '#8a5900';
     } else if (e.status === 'FAILED') {
-      backgroundColor = '#fef2f2'; // Red background
-      borderColor = '#fecaca';
-      textColor = '#b91c1c'; // High contrast red text
+      backgroundColor = 'rgba(186, 26, 26, 0.05)';
+      borderColor = 'rgba(186, 26, 26, 0.15)';
+      textColor = '#ba1a1a';
     }
 
     let startDateTime = e.date;
@@ -69,15 +69,15 @@ export default function EventCalendar({ onEventClick }: { onEventClick: (event: 
 
   if (isLoading) {
     return (
-      <div className="h-[650px] bg-white border border-borderStroke rounded-2xl animate-pulse flex flex-col p-6">
-        <div className="h-10 w-1/3 bg-stone-100 rounded-lg mb-6"></div>
-        <div className="flex-1 bg-stone-50 rounded-xl border border-stone-100"></div>
+      <div className="h-[650px] cb-card animate-pulse flex flex-col p-6 bg-white/90 backdrop-blur-md">
+        <div className="h-10 w-1/3 bg-slate-100 rounded-lg mb-6"></div>
+        <div className="flex-1 bg-slate-50/50 rounded-xl border border-slate-100"></div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-borderStroke rounded-2xl p-4 lg:p-6 overflow-hidden">
+    <div className="cb-card p-4 lg:p-6 overflow-hidden bg-white/90 backdrop-blur-md">
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
         initialView="dayGridMonth"

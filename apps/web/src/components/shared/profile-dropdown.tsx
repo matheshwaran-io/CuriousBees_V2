@@ -67,7 +67,7 @@ export function ProfileDropdown() {
                   onClick={async () => {
                     setIsOpen(false);
                     await logout();
-                    router.push('/auth/login');
+                    router.push('/login');
                   }}
                   className="flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors w-full text-left font-medium"
                 >

@@ -3,7 +3,7 @@ import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationReque
 import { auth } from '@/lib/firebase';
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@curiousbees/constants';
-import { apiFetch, getAuthHeaders, readApiError, API_URL } from '@/lib/api-client';
+import { apiFetch, getAuthHeaders, readApiError, API_URL, resetAuthPromise } from '@/lib/api-client';
 
 const MOCK_INTERESTS = [
   'Generative AI & LLMs',
@@ -485,6 +485,8 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.removeItem('curiousbees-mock-token');
     }
     deleteCookie(ROLE_COOKIE_NAME);
+    // Reset the auth promise singleton so re-login initializes a fresh auth listener
+    resetAuthPromise();
     import('@/lib/firebase').then(({ auth }) => {
       auth.signOut().catch(() => { });
     });

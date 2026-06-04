@@ -35,6 +35,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/workspace',
   ],
   RESEARCH_SUPERVISOR: [
+    '/dashboard/supervisor',
     '/dashboard',
     '/analytics',
     '/events',
@@ -48,7 +49,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/workspace',
   ],
   RESEARCH_SCHOLAR: [
-    '/dashboard',
+    '/dashboard/researcher',
     '/events',
     '/threads',
     '/researchers',
@@ -66,6 +67,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 export const PUBLIC_ROUTES: string[] = [
   '/',
   '/login',
+  '/signin',
   '/signup',
   '/about',
   '/features',

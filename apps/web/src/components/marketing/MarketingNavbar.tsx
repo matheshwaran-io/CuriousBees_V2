@@ -18,15 +18,10 @@ export default function MarketingNavbar() {
         <a className="font-body-md text-body-md text-primary font-bold border-b-2 border-primary pb-1" href="#">About</a>
       </nav>
       
-      <div className="flex items-center gap-stack-md">
+      <div className="flex items-center gap-2">
         <Link href="/login">
-          <button className="font-label-md text-label-md text-primary hover:opacity-80 transition-opacity active:scale-95 transition-transform hidden sm:block">
-            Login
-          </button>
-        </Link>
-        <Link href="/signup">
-          <button className="font-label-md text-label-md bg-primary text-on-primary px-4 py-2 rounded-lg hover:opacity-80 transition-opacity active:scale-95 transition-transform">
-            Sign Up
+          <button className="font-label-md text-label-md bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/95 transition-colors active:scale-95 transition-transform text-xs font-bold uppercase tracking-wider">
+            Sign In
           </button>
         </Link>
       </div>

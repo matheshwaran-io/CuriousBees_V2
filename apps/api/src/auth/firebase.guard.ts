@@ -120,6 +120,17 @@ export class FirebaseAuthGuard implements CanActivate {
       }
 
       this.logger.log(`CuriousBees user sync complete for ${normalizedEmail}: id=${user.id}, role=${user.role}, approved=${user.approved}`);
+      
+      // ── Structured [AUTH] audit logs ──────────────────────────────────────
+      this.logger.log(`[AUTH] Email: ${normalizedEmail}`);
+      this.logger.log(`[AUTH] Detected Role: ${user.role}`);
+      this.logger.log(`[AUTH] Approved Status: ${user.approved}`);
+      const redirectRoute =
+        user.role === 'INSTITUTION_ADMIN' ? '/admin' :
+        user.role === 'RESEARCH_SUPERVISOR' ? '/dashboard/supervisor' :
+        (!user.approved ? '/verification-pending' : '/dashboard/researcher');
+      this.logger.log(`[AUTH] Redirect Route: ${redirectRoute}`);
+      
       request.user = user;
       return true;
     } catch (e: any) {

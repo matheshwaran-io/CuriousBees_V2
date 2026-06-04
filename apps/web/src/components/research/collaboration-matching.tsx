@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Network, UserPlus } from 'lucide-react';
 import { User } from '@curiousbees/types';
+import { motion } from 'framer-motion';
 
 interface CollaborationMatchingProps {
   collaborators: User[];
@@ -45,40 +46,48 @@ export default function CollaborationMatching({
     : mockMatches;
 
   return (
-    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] select-none text-left">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
-          <Network className="w-5 h-5 text-primary shrink-0" />
+    <section className="bg-white border border-borderStroke rounded-xl p-5 shadow-sm text-left w-full select-none">
+      <div className="flex justify-between items-center mb-5">
+        <h3 className="text-sm font-bold text-[#0d3c61] flex items-center gap-2 font-display">
+          <Network className="w-4.5 h-4.5 text-primary shrink-0" />
           <span>Collaboration Matching</span>
         </h3>
-        <Link href="/researchers" className="text-primary font-label-md text-label-md hover:underline">
-          View All Network
+        <Link href="/researchers" className="text-primary font-bold text-xs hover:underline inline-flex items-center gap-0.5">
+          <span>Roster network</span>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {displayCollaborators.map((collab) => (
-          <div
+        {displayCollaborators.map((collab, idx) => (
+          <motion.div
             key={collab.name}
-            className="border border-outline-variant/50 rounded-lg p-4 flex items-start gap-4 hover:bg-surface-container-low transition-colors text-left"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1, duration: 0.3 }}
+            className="border border-borderStroke/60 rounded-xl p-4 flex items-start gap-3.5 hover:border-primary/40 hover:bg-slate-50/20 transition-all text-left"
           >
-            <img
-              alt="Researcher"
-              className="w-12 h-12 rounded-full object-cover shrink-0"
-              src={collab.image}
-            />
+            <div className="relative shrink-0">
+              <img
+                alt="Researcher"
+                className="w-10 h-10 rounded-full object-cover border border-borderStroke"
+                src={collab.image}
+              />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+            </div>
+
             <div className="flex-1 min-w-0">
-              <h4 className="font-label-md text-label-md text-on-surface font-semibold truncate">
+              <h4 className="text-xs font-bold text-black truncate leading-tight">
                 {collab.name}
               </h4>
-              <p className="font-body-sm text-body-sm text-on-surface-variant truncate">
+              <p className="text-[10px] text-textSecondary font-semibold truncate mt-1">
                 {collab.department}
               </p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <span className="px-2 py-0.5 bg-primary-container/20 text-primary-container rounded-full font-label-caps text-[10px] uppercase shrink-0">
+              
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                <span className="px-2 py-0.5 bg-primary/5 text-primary border border-primary/10 rounded-full text-[9px] font-bold uppercase tracking-wider shrink-0">
                   {collab.matchScore}
                 </span>
-                <span className="px-2 py-0.5 bg-surface-variant text-on-surface-variant rounded-full font-label-caps text-[10px] uppercase truncate max-w-[100px]">
+                <span className="px-2 py-0.5 bg-slate-100 text-textSecondary border border-borderStroke/30 rounded-full text-[9px] font-bold uppercase tracking-wider truncate max-w-[90px]">
                   {collab.tag}
                 </span>
               </div>
@@ -86,11 +95,12 @@ export default function CollaborationMatching({
             
             <button
               onClick={() => onInviteCollaborator(collab.name)}
-              className="bg-surface-variant hover:bg-tertiary hover:text-on-tertiary text-on-surface w-8 h-8 rounded flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+              className="bg-slate-50 hover:bg-primary hover:text-white border border-borderStroke/65 hover:border-primary text-textSecondary w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer active:scale-95 shadow-sm"
+              title="Dispatched Synergy request"
             >
-              <UserPlus className="w-4.5 h-4.5" />
+              <UserPlus className="w-3.5 h-3.5" />
             </button>
-          </div>
+          </motion.div>
         ))}
       </div>
     </section>

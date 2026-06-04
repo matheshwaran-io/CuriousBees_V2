@@ -41,9 +41,9 @@ export default function AchievementsFeed({
   ]
 }: AchievementsFeedProps) {
   return (
-    <div className="card-level-1 rounded-xl md:col-span-2 lg:col-span-2 p-0 flex flex-col select-none text-left">
-      <div className="p-5 border-b border-outline-variant/30 bg-surface-container-lowest">
-        <h3 className="font-headline-md text-headline-md text-on-surface">Recent Achievements</h3>
+    <div className="cb-card md:col-span-2 lg:col-span-2 flex flex-col select-none text-left bg-white/90 backdrop-blur-md">
+      <div className="p-5 border-b border-slate-100">
+        <h3 className="text-sm font-bold text-[#0d3c61] font-display">Recent Achievements</h3>
       </div>
       
       <div className="flex-1 p-5 space-y-4">
@@ -51,14 +51,14 @@ export default function AchievementsFeed({
           const isLast = idx === achievements.length - 1;
           
           let icon = <Trophy className="w-3.5 h-3.5 text-secondary" />;
-          let iconBg = 'bg-secondary-container/20';
+          let iconBg = 'bg-[#775a00]/5 text-[#775a00] border-[#775a00]/15';
           
           if (item.type === 'collab') {
             icon = <UserPlus className="w-3.5 h-3.5 text-primary" />;
-            iconBg = 'bg-primary/10';
+            iconBg = 'bg-primary/5 text-primary border border-primary/15';
           } else if (item.type === 'system') {
-            icon = <Clock className="w-3.5 h-3.5 text-outline" />;
-            iconBg = 'bg-surface-container-high';
+            icon = <Clock className="w-3.5 h-3.5 text-slate-500" />;
+            iconBg = 'bg-slate-50 text-slate-500 border border-slate-200';
           }
 
           return (
@@ -66,23 +66,23 @@ export default function AchievementsFeed({
               {/* Timeline Line */}
               {!isLast && (
                 <div 
-                  className="absolute left-[11px] top-6 bottom-[-16px] w-0.5 bg-outline-variant/30 pointer-events-none" 
+                  className="absolute left-[11px] top-6 bottom-[-16px] w-0.5 bg-slate-100 pointer-events-none" 
                 />
               )}
               
               {/* Timeline Node */}
-              <div className={`w-6 h-6 rounded-full ${iconBg} flex flex-shrink-0 items-center justify-center relative z-10 ring-4 ring-surface-container-lowest`}>
+              <div className={`w-6 h-6 rounded-full border ${iconBg} flex flex-shrink-0 items-center justify-center relative z-10 bg-white`}>
                 {icon}
               </div>
               
               <div>
-                <p className="font-label-md text-label-md text-on-surface font-semibold">
+                <p className="text-xs font-bold text-slate-900 leading-snug">
                   {item.title}
                 </p>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed">
                   {item.description}
                 </p>
-                <span className="font-label-caps text-label-caps text-outline text-[10px] mt-2 block tracking-wider">
+                <span className="text-[9px] font-bold text-slate-400 mt-1.5 block tracking-wider uppercase">
                   {item.timeAgo}
                 </span>
               </div>

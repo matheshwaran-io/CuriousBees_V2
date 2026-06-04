@@ -13,8 +13,8 @@ export default function CTASection() {
         <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg max-w-xl mx-auto leading-relaxed">
           Join the leading minds at SRMIST. Establish your workspace, connect with peers, and elevate your research impact.
         </p>
-        <Link href="/signup">
-          <button className="bg-secondary text-on-secondary font-label-md text-label-md px-8 py-4 rounded-lg shadow-sm hover:opacity-90 transition-opacity active:scale-95 text-lg font-bold">
+        <Link href="/login">
+          <button className="bg-primary text-white font-label-md text-label-md px-8 py-4 rounded-lg shadow-sm hover:bg-primary/95 transition-colors active:scale-95 text-sm font-bold uppercase tracking-wider">
             Register Your Project
           </button>
         </Link>

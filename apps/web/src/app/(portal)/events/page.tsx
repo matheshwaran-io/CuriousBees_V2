@@ -24,17 +24,17 @@ export default function EventsPage() {
     <div className="space-y-6 relative select-none text-left flex flex-col pb-12">
 
       {/* 🚀 Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border-b border-slate-100 pb-5">
         <div>
-          <span className="text-[10px] font-mono font-bold text-indigoElectric uppercase tracking-widest flex items-center gap-1.5">
-            <Bot className="w-4 h-4 text-indigoElectric" />
+          <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+            <Bot className="w-4 h-4 text-primary" />
             <span>AI Automation Engine</span>
           </span>
-          <h2 className="font-display font-extrabold text-3xl text-black mt-2 flex items-center gap-3 tracking-tight">
-            Events
-            <span className="text-[9px] font-mono font-bold bg-tealGlow/10 text-tealGlow border border-tealGlow/20 px-2.5 py-1 rounded-md uppercase tracking-wider animate-pulse">Auto-Pilot Active</span>
+          <h2 className="cb-page-title mt-2 flex items-center gap-3">
+            <span>Events Feed</span>
+            <span className="text-[9px] font-bold bg-[#775a00]/5 text-[#775a00] border border-[#775a00]/15 px-2.5 py-1 rounded-md uppercase tracking-wider animate-pulse">Auto-Pilot Active</span>
           </h2>
-          <p className="text-stone-600 text-sm mt-2 leading-relaxed max-w-2xl">
+          <p className="cb-page-subtitle">
             Real-time visualization of academic events ingested, structured, and published entirely by our local Small Language Model (SLM) pipeline.
           </p>
         </div>

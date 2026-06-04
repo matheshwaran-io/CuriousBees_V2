@@ -9,24 +9,52 @@
  */
 
 import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // Backend base URL — set in apps/web/.env.local
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+let authInitPromise: Promise<any> | null = null;
+
+function waitForAuth(): Promise<any> {
+  if (authInitPromise) return authInitPromise;
+  authInitPromise = new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+  return authInitPromise;
+}
+
+/**
+ * Resets the auth singleton — call after sign-out so re-login works correctly.
+ * Exported for use by the store logout action.
+ */
+export function resetAuthPromise() {
+  authInitPromise = null;
+}
+
 // ─── Token helper ────────────────────────────────────────────────────────────
 
 /**
- * Returns the Firebase Bearer token for the currently authenticated user,
- * or falls back to the local mock token used in development.
+ * Returns the Firebase Bearer token for the currently authenticated user.
+ *
+ * Resilience strategy:
+ *   1. Try forceRefresh=true (gets a fresh token from Firebase servers)
+ *   2. On failure, fall back to the cached token (avoids spurious logout on network blip)
+ *   3. If both fail, return empty object (unauthenticated request)
  *
  * Returns an empty object when there is no authenticated user (guest mode).
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
+  await waitForAuth();
   const user = auth.currentUser;
 
   if (user) {
     try {
+      // Try to get a fresh token
       const token = await user.getIdToken(/* forceRefresh */ true);
       console.debug('[APIClient] Attaching Firebase bearer token:', {
         uid: user.uid,
@@ -35,16 +63,15 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
       });
       return { Authorization: `Bearer ${token}` };
     } catch (err) {
-      console.warn('[APIClient] Failed to retrieve Firebase ID token:', err);
-    }
-  }
-
-  // Local development bypass
-  if (typeof window !== 'undefined') {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) {
-      console.debug('[APIClient] Using local mock bypass token.');
-      return { Authorization: `Bearer ${mockToken}` };
+      console.warn('[APIClient] forceRefresh token failed, trying cached token:', err);
+      try {
+        // Fallback: use cached token (no force refresh)
+        const token = await user.getIdToken(false);
+        console.debug('[APIClient] Using cached Firebase token as fallback.');
+        return { Authorization: `Bearer ${token}` };
+      } catch (fallbackErr) {
+        console.warn('[APIClient] Cached token also failed:', fallbackErr);
+      }
     }
   }
 

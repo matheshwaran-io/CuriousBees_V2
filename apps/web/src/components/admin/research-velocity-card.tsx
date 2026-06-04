@@ -15,26 +15,26 @@ export default function ResearchVelocityCard({
   chartHeights = ['25%', '50%', '33%', '75%', '66%', '100%']
 }: ResearchVelocityCardProps) {
   return (
-    <div className="card-level-1 rounded-xl p-6 flex flex-col relative overflow-hidden group select-none text-left min-h-[180px]">
+    <div className="cb-card p-6 flex flex-col relative overflow-hidden group select-none text-left min-h-[180px] bg-white/90 backdrop-blur-md">
       {/* Decorative blurred background circle */}
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-secondary-container/10 rounded-full blur-xl group-hover:bg-secondary-container/20 transition-all duration-300 pointer-events-none" />
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-all duration-300 pointer-events-none" />
       
       <div className="flex justify-between items-start mb-4 relative z-10">
-        <div className="p-2 bg-surface-container text-primary rounded-lg shrink-0">
-          <Rocket className="w-5 h-5" />
+        <div className="p-2 bg-primary/5 text-primary rounded-lg border border-primary/10 shrink-0">
+          <Rocket className="w-4 h-4" />
         </div>
-        <span className="font-label-caps text-label-caps text-secondary-fixed-dim bg-secondary-container/10 px-2 py-0.5 rounded flex items-center gap-1 shrink-0">
-          <TrendingUp className="w-3.5 h-3.5" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-secondary bg-[#775a00]/5 border border-[#775a00]/15 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+          <TrendingUp className="w-3 h-3" />
           <span>{trend}</span>
         </span>
       </div>
       
-      <h3 className="font-label-md text-label-md text-on-surface-variant mb-1 relative z-10">
+      <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 relative z-10 font-sans">
         Research Velocity
       </h3>
-      <div className="font-headline-xl text-headline-xl text-on-surface relative z-10">
-        {velocity}{' '}
-        <span className="text-body-sm text-outline font-normal">pts/mo</span>
+      <div className="text-2xl font-extrabold text-[#0d3c61] relative z-10 font-display flex items-baseline gap-1">
+        {velocity}
+        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider ml-1">pts/mo</span>
       </div>
       
       {/* Micro Sparkline Columns Chart */}
@@ -42,7 +42,7 @@ export default function ResearchVelocityCard({
         <div className="h-8 w-full flex items-end gap-1 opacity-70">
           {chartHeights.map((height, idx) => {
             const isLast = idx === chartHeights.length - 1;
-            const barBg = isLast ? 'bg-secondary-container' : 'bg-primary/40 group-hover:bg-primary/60 transition-colors';
+            const barBg = isLast ? 'bg-[#775a00]' : 'bg-primary/40 group-hover:bg-primary/60 transition-colors';
             return (
               <div 
                 key={idx} 

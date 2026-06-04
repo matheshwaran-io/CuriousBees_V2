@@ -19,8 +19,8 @@ import type { UserRole } from '@curiousbees/types';
  * conditionally renders the correct view based on currentUser.role.
  */
 export const DASHBOARD_ROUTES: Record<UserRole, string> = {
-  RESEARCH_SUPERVISOR: '/dashboard',
-  RESEARCH_SCHOLAR: '/dashboard',
+  RESEARCH_SUPERVISOR: '/dashboard/supervisor',
+  RESEARCH_SCHOLAR: '/dashboard/researcher',
   INSTITUTION_ADMIN: '/admin',
 };
 
@@ -28,11 +28,12 @@ export const DASHBOARD_ROUTES: Record<UserRole, string> = {
 
 /**
  * Returns the dashboard route for the given user, considering role and approval status.
- * Defaults to '/dashboard' for any unknown role (safe fallback).
+ * Unapproved scholars are always directed to /verification-pending.
+ * Defaults to '/login' for unauthenticated users.
  */
 export function getDashboardRoute(user?: { role: UserRole; approved?: boolean }): string {
   if (!user) return '/login';
-  if (user.approved === false && user.role === 'RESEARCH_SCHOLAR') {
+  if (user.role === 'RESEARCH_SCHOLAR' && !user.approved) {
     return '/verification-pending';
   }
   return DASHBOARD_ROUTES[user.role] ?? '/dashboard';

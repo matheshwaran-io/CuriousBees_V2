@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CalendarDays } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface DeadlineItem {
   id: string;
@@ -37,34 +38,48 @@ export default function UpcomingDeadlines({
   ]
 }: UpcomingDeadlinesProps) {
   return (
-    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] select-none text-left">
-      <h3 className="font-headline-md text-headline-md text-on-surface mb-4 flex items-center gap-2">
-        <CalendarDays className="w-5 h-5 text-primary shrink-0" />
+    <section className="bg-white border border-borderStroke rounded-xl p-5 shadow-sm text-left">
+      <h3 className="text-sm font-bold text-[#0d3c61] mb-5 flex items-center gap-2 font-display select-none">
+        <CalendarDays className="w-4.5 h-4.5 text-primary shrink-0" />
         <span>Upcoming Deadlines</span>
       </h3>
 
-      <div className="relative border-l border-outline-variant ml-3 space-y-6">
-        {deadlines.map((item) => {
+      <div className="relative border-l border-borderStroke/60 ml-2.5 space-y-5 select-none">
+        {deadlines.map((item, idx) => {
           const dotColor = item.isActive
-            ? 'bg-secondary-container'
-            : 'bg-surface-variant';
+            ? 'bg-primary border-primary/20'
+            : 'bg-slate-200 border-slate-300/40';
 
           return (
-            <div key={item.id} className="pl-6 relative text-left">
+            <motion.div 
+              key={item.id} 
+              initial={{ opacity: 0, x: -5 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.1, duration: 0.3 }}
+              className="pl-5 relative text-left"
+            >
               {/* Absoluted Timeline Circle */}
               <div 
-                className={`absolute w-3 h-3 ${dotColor} rounded-full -left-[6.5px] top-1 border-2 border-surface-container-lowest shrink-0`}
+                className={`absolute w-2.5 h-2.5 ${dotColor} rounded-full -left-[5.5px] top-1 border-2 border-white shrink-0`}
               />
-              <h4 className="font-label-md text-label-md text-on-surface font-semibold leading-tight">
+              <h4 className={cn(
+                "text-[12.5px] font-bold leading-tight",
+                item.isActive ? "text-primary" : "text-black"
+              )}>
                 {item.title}
               </h4>
-              <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              <p className="text-[11px] text-textSecondary font-medium mt-0.5">
                 {item.subtitle}
               </p>
-            </div>
+            </motion.div>
           );
         })}
       </div>
     </section>
   );
+}
+
+// Inline helper for conditional classnames without breaking imports
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(' ');
 }

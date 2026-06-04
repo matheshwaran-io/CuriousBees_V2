@@ -9,7 +9,11 @@ import {
   UserCheck, 
   LogOut, 
   Hourglass,
-  ShieldAlert
+  ShieldAlert,
+  Loader2,
+  Shield,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
@@ -19,35 +23,59 @@ export default function VerificationPendingPage() {
   const { 
     currentUser, 
     syncUserSession, 
-    collaborators, 
-    fetchCollaborators, 
     requestSupervisor, 
     logout 
   } = useStore();
 
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [selectedSupervisor, setSelectedSupervisor] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [loadingSupervisors, setLoadingSupervisors] = useState(true);
 
   // 1. Sync session on mount and poll periodically for approval status changes
   useEffect(() => {
     const checkStatus = async () => {
       const user = await syncUserSession();
       if (user && (user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN')) {
-        router.replace('/dashboard');
+        const route = user.role === 'RESEARCH_SUPERVISOR' ? '/dashboard/supervisor'
+          : user.role === 'INSTITUTION_ADMIN' ? '/admin'
+          : '/dashboard/researcher';
+        router.replace(route);
       }
     };
     
     checkStatus();
-    const interval = setInterval(checkStatus, 6000); // Check every 6s
+    const interval = setInterval(checkStatus, 6000); // Check every 6s for approval
     return () => clearInterval(interval);
   }, [syncUserSession, router]);
 
-  // 2. Fetch faculty list in background for potential supervisor mapping
+  // 2. Fetch supervisor directory from the dedicated /api/supervisors endpoint
   useEffect(() => {
-    fetchCollaborators('', 'RESEARCH_SUPERVISOR');
-  }, [fetchCollaborators]);
+    const fetchSupervisors = async () => {
+      setLoadingSupervisors(true);
+      try {
+        const { apiFetch } = await import('@/lib/api-client');
+        const query = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+        const res = await apiFetch(`/api/supervisors${query}`);
+        if (res.ok) {
+          const data = await res.json();
+          console.info('[AUTH] Supervisor Count:', data.length);
+          setSupervisors(data);
+        } else {
+          console.error('[AUTH] Failed to fetch supervisors:', res.status);
+          setSupervisors([]);
+        }
+      } catch (e) {
+        console.error('[AUTH] Supervisor fetch error:', e);
+        setSupervisors([]);
+      } finally {
+        setLoadingSupervisors(false);
+      }
+    };
+    fetchSupervisors();
+  }, [searchTerm]);
 
   // 3. Handle mapping form submit
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,126 +97,120 @@ export default function VerificationPendingPage() {
     }
   };
 
-  // Filter supervisors based on search term
-  const facultySupervisors = collaborators.filter(
-    (c) =>
-      c.role === 'RESEARCH_SUPERVISOR' &&
-      (c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.department?.toLowerCase().includes(searchTerm.toLowerCase()))
+  // Filter supervisors based on search term (client-side secondary filter)
+  const facultySupervisors = supervisors.filter(
+    (s) =>
+      s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const pendingSupervisor = collaborators.find(c => c.id === currentUser?.supervisorId);
-
-  // SVG Hexagon background inline style matching Stitch specs
-  const hexagonBgStyle = {
-    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='103.9' viewBox='0 0 60 103.9' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 17.3v34.6L30 69.3 0 52V17.3z' fill='%23004495' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-    backgroundSize: '60px 103.9px'
-  };
+  const pendingSupervisor = supervisors.find(s => s.id === currentUser?.supervisorId);
 
   return (
-    <div 
-      className="bg-background min-h-screen flex items-center justify-center p-margin-mobile md:p-margin-desktop relative overflow-hidden select-none w-full"
-      style={hexagonBgStyle}
-    >
-      {/* Glow Blur Orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-secondary-container/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6 relative overflow-hidden font-sans w-full">
+      {/* Decorative background grid pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
       {/* Floating Sign Out Trigger */}
       <button 
         onClick={() => { logout(); router.push('/login'); }}
-        className="absolute top-8 right-8 flex items-center space-x-1.5 px-3 py-1.5 border border-outline-variant/30 rounded-lg text-xs font-semibold text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all cursor-pointer z-20"
+        className="absolute top-6 right-6 flex items-center space-x-1.5 px-3 py-1.5 border border-borderStroke rounded-lg text-xs font-bold text-textSecondary hover:text-primary hover:bg-slate-50 transition-all cursor-pointer z-20"
       >
         <LogOut className="w-3.5 h-3.5" />
         <span>Sign Out</span>
       </button>
 
       {/* Centered Glass Container Card */}
-      <main className="w-full max-w-lg relative z-10">
-        <div className="glass-panel rounded-xl p-stack-lg flex flex-col items-center text-center">
+      <main className="w-full max-w-md relative z-10">
+        <div className="bg-white border border-borderStroke rounded-xl p-8 shadow-xl flex flex-col items-center text-center space-y-6">
           
           {/* Logo container box */}
-          <div className="w-24 h-24 mb-stack-md rounded-lg overflow-hidden border border-outline-variant/20 shadow-sm bg-surface-container-lowest flex items-center justify-center">
-            <Logo showText={false} size={64} />
+          <div className="w-16 h-16 rounded-xl overflow-hidden border border-borderStroke shadow-sm bg-slate-50 flex items-center justify-center">
+            <Logo showText={false} size={42} />
           </div>
 
           {/* Dynamic State Rendering */}
           {currentUser?.supervisorId ? (
             /* STATE A: VERIFICATION IN PROGRESS */
-            <div className="flex flex-col items-center w-full">
+            <div className="flex flex-col items-center w-full space-y-6">
+              
               {/* Status Indicator */}
-              <div className="relative w-16 h-16 mb-stack-md flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-4 border-secondary-fixed pulse-ring" />
-                <div className="w-12 h-12 bg-secondary-fixed rounded-full flex items-center justify-center z-10 shadow-sm">
-                  <Hourglass className="w-5 h-5 text-on-secondary-fixed" />
+              <div className="relative w-14 h-14 flex items-center justify-center">
+                <span className="absolute inset-0 rounded-full border-4 border-amber-500/20 pulse-ring" />
+                <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center z-10 border border-amber-500/30">
+                  <Hourglass className="w-4.5 h-4.5 text-amber-600 animate-spin-slow" />
                 </div>
               </div>
 
               {/* Typography & Content */}
-              <h1 className="font-display font-bold text-headline-xl text-on-surface mb-stack-sm tracking-tight leading-tight">
-                Registration Submitted Successfully
-              </h1>
-
-              {/* Status Badge */}
-              <div className="inline-flex items-center gap-2 bg-secondary-container/20 px-4 py-1.5 rounded-full mb-stack-lg border border-secondary-container/30">
-                <span className="w-2 h-2 rounded-full bg-secondary-fixed-dim animate-pulse" />
-                <span className="font-label-caps text-label-caps text-on-secondary-container uppercase tracking-wider">
-                  Awaiting Verification
-                </span>
+              <div className="space-y-2">
+                <h1 className="font-display font-extrabold text-2xl text-black tracking-tight leading-tight">
+                  Verification Pending
+                </h1>
+                
+                {/* Status Badge */}
+                <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200/50 px-3 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+                    Awaiting Guide Approval
+                  </span>
+                </div>
               </div>
 
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-md mx-auto leading-relaxed mb-6">
-                Your registration request has been sent to your Research Supervisor for verification. You will be granted full access to the CuriousBees dashboard once your supervisor approves your profile. This page will automatically refresh once access is granted.
+              <p className="text-xs text-textSecondary leading-relaxed font-semibold max-w-sm">
+                Your profile was submitted to your Faculty Supervisor. Once they approve your request, this page will automatically refresh to load your scholar portal.
               </p>
 
               {pendingSupervisor && (
-                <div className="mb-stack-md p-4 rounded-lg bg-surface border border-outline-variant/20 flex items-center space-x-3 text-left w-full max-w-[400px]">
+                <div className="p-3.5 rounded-lg bg-slate-50 border border-borderStroke/50 flex items-center space-x-3 text-left w-full">
                   {pendingSupervisor.image ? (
-                    <img src={pendingSupervisor.image} alt="" className="w-10 h-10 rounded-full object-cover border border-outline-variant/10 shrink-0" />
+                    <img src={pendingSupervisor.image} alt="" className="w-9 h-9 rounded-full object-cover border border-borderStroke shrink-0" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-[#0d3c61]/10 text-[#0d3c61] flex items-center justify-center font-bold text-sm shrink-0 border border-[#0d3c61]/25">
                       {pendingSupervisor.name?.charAt(0) || 'S'}
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-on-surface truncate">{pendingSupervisor.name}</p>
-                    <p className="text-[11px] text-on-surface-variant truncate">🏫 {pendingSupervisor.department}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-black truncate leading-tight">{pendingSupervisor.name}</p>
+                    <p className="text-[10px] text-textSecondary truncate mt-1">🏫 {pendingSupervisor.department}</p>
                   </div>
                 </div>
               )}
 
-              {/* Progress Bar */}
-              <div className="w-full h-1 bg-surface-variant rounded-full mt-stack-lg overflow-hidden">
-                <div className="h-full bg-secondary-fixed-dim w-1/3 rounded-full animate-[pulse_2s_ease-in-out_infinite]" />
+              {/* Progress Loading bar */}
+              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 w-1/3 rounded-full animate-indeterminate" />
               </div>
             </div>
           ) : (
             /* STATE B: SUPERVISOR NOT LINKED FALLBACK */
-            <div className="flex flex-col items-center w-full">
+            <div className="flex flex-col items-center w-full space-y-6">
+              
               {/* Status Indicator */}
-              <div className="relative w-16 h-16 mb-stack-md flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-4 border-error/20 animate-ping" />
-                <div className="w-12 h-12 bg-error-container rounded-full flex items-center justify-center z-10 shadow-sm border border-error/10">
-                  <ShieldAlert className="w-5 h-5 text-error" />
+              <div className="relative w-14 h-14 flex items-center justify-center">
+                <span className="absolute inset-0 rounded-full border-4 border-rose-500/25 animate-pulse" />
+                <div className="w-10 h-10 bg-rose-50 rounded-full flex items-center justify-center z-10 border border-rose-500/30">
+                  <AlertCircle className="w-5 h-5 text-rose-600" />
                 </div>
               </div>
 
-              <h1 className="font-display font-bold text-headline-xl text-on-surface mb-stack-sm tracking-tight leading-tight">
-                Select Research Supervisor
-              </h1>
-              
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-md mx-auto leading-relaxed mb-6">
-                Before accessing your workspace, you must specify your academic supervisor. Search for their name below to submit a verification request.
-              </p>
+              <div className="space-y-2">
+                <h1 className="font-display font-extrabold text-2xl text-black tracking-tight leading-tight">
+                  Link Supervisor
+                </h1>
+                <p className="text-xs text-textSecondary font-semibold max-w-sm">
+                  You must link your guide to verify your PhD enrollment before using CuriousBees tools.
+                </p>
+              </div>
 
-              <form onSubmit={handleSubmit} className="w-full max-w-[400px] space-y-stack-md text-left">
-                <div className="space-y-2">
-                  <label className="block font-label-caps text-label-caps text-on-surface-variant font-semibold" htmlFor="supervisor-search">
+              <form onSubmit={handleSubmit} className="w-full space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="supervisor-search">
                     Search Faculty Guides
                   </label>
                   
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-outline pointer-events-none">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-textSecondary/50 pointer-events-none">
                       <Search className="w-4 h-4" />
                     </span>
                     <input
@@ -197,40 +219,40 @@ export default function VerificationPendingPage() {
                       placeholder="Search by name or department..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full h-11 pl-9 pr-4 input-underline text-on-surface text-sm outline-none"
+                      className="w-full pl-9 pr-4 cb-input"
                     />
                   </div>
 
-                  <div className="border border-outline-variant/30 rounded-lg max-h-[160px] overflow-y-auto bg-surface p-1 divide-y divide-outline-variant/10">
+                  <div className="border border-borderStroke rounded-lg max-h-[140px] overflow-y-auto bg-white p-1 divide-y divide-slate-100 shadow-inner">
                     {facultySupervisors.length > 0 ? (
                       facultySupervisors.map((faculty) => (
                         <div
                           key={faculty.id}
                           onClick={() => setSelectedSupervisor(faculty.id)}
                           className={cn(
-                            "flex items-center justify-between p-2.5 rounded-md cursor-pointer transition",
+                            "flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors text-xs font-semibold",
                             selectedSupervisor === faculty.id 
-                              ? 'bg-primary text-on-primary font-semibold' 
-                              : 'hover:bg-surface-container-high/40 text-on-surface'
+                              ? 'bg-primary text-white' 
+                              : 'hover:bg-slate-50 text-black'
                           )}
                         >
                           <div className="min-w-0">
-                            <h4 className="text-xs font-bold truncate">{faculty.name}</h4>
+                            <h4 className="truncate">{faculty.name}</h4>
                             <span className={cn(
-                              "text-[10px] truncate block mt-0.5",
-                              selectedSupervisor === faculty.id ? 'text-primary-fixed-dim' : 'text-on-surface-variant'
+                              "text-[9px] truncate block mt-0.5",
+                              selectedSupervisor === faculty.id ? 'text-primary-foreground/80' : 'text-textSecondary'
                             )}>
                               🏫 {faculty.department}
                             </span>
                           </div>
                           {selectedSupervisor === faculty.id && (
-                            <UserCheck className="w-4 h-4 text-on-primary shrink-0 ml-2" />
+                            <UserCheck className="w-4 h-4 text-white shrink-0 ml-2" />
                           )}
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-6 text-xs text-outline flex flex-col items-center justify-center space-y-2">
-                        <Users className="w-5 h-5 text-outline" />
+                      <div className="text-center py-6 text-xs text-textSecondary/40 flex flex-col items-center justify-center space-y-1.5">
+                        <Users className="w-5 h-5 opacity-40" />
                         <span>No supervisor found.</span>
                       </div>
                     )}
@@ -238,7 +260,7 @@ export default function VerificationPendingPage() {
                 </div>
 
                 {errorMsg && (
-                  <div className="p-3 border border-error/20 bg-error-container/30 text-error text-xs font-semibold rounded-lg flex items-center space-x-2">
+                  <div className="p-3 border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold rounded-lg flex items-center space-x-2">
                     <ShieldAlert className="w-4 h-4 shrink-0" />
                     <span>{errorMsg}</span>
                   </div>
@@ -247,13 +269,28 @@ export default function VerificationPendingPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !selectedSupervisor}
-                  className="w-full h-11 flex items-center justify-center bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99]"
+                  className="w-full py-3 flex items-center justify-center bg-primary hover:bg-[#004495]/95 text-white font-bold text-xs rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99] shadow"
                 >
-                  {isSubmitting ? 'Submitting Request...' : 'Submit Supervisor Request'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      <span>Submitting Request...</span>
+                    </>
+                  ) : (
+                    <span>Submit Supervisor Request</span>
+                  )}
                 </button>
               </form>
             </div>
           )}
+
+          {/* Intranet notice */}
+          <div className="pt-6 border-t border-borderStroke flex items-center justify-center gap-1.5 text-textSecondary/40 select-none">
+            <Shield className="w-3.5 h-3.5 shrink-0" />
+            <p className="text-[10px] font-bold uppercase tracking-wider">
+              SRMIST Institutional Security Standard
+            </p>
+          </div>
 
         </div>
       </main>

@@ -15,7 +15,7 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { currentUser, fetchData, setTheme } = useStore();
+  const { currentUser, fetchData, setTheme, syncUserSession, isLoading } = useStore();
 
   // Sync local storage theme on mount
   useEffect(() => {
@@ -27,11 +27,22 @@ export default function PortalLayout({
 
   // Client-side authentication guard:
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    } else if (currentUser.role === 'RESEARCH_SCHOLAR' && !currentUser.approved) {
-      router.push('/verification-pending');
-    } else {
+    const initAuth = async () => {
+      let activeUser = currentUser;
+      if (!activeUser) {
+        activeUser = await syncUserSession();
+      }
+
+      if (!activeUser) {
+        router.push('/login');
+        return;
+      }
+
+      if (activeUser.role === 'RESEARCH_SCHOLAR' && !activeUser.approved) {
+        router.push('/verification-pending');
+        return;
+      }
+
       fetchData(); // Trigger initial live API fetch
       
       // Register device for FCM Push Notifications (dynamically loaded to bypass SSR constraints)
@@ -45,15 +56,17 @@ export default function PortalLayout({
           console.error('FCM Registration hook failed:', err);
         }
       });
-    }
-  }, [currentUser, router, fetchData]);
+    };
 
-  if (!currentUser) {
+    initAuth();
+  }, [currentUser, router, fetchData, syncUserSession]);
+
+  if (isLoading || !currentUser) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex items-center justify-center text-slate-500 dark:text-slate-400 font-sans">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500 font-sans">
         <div className="flex flex-col items-center space-y-3">
           <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <p className="text-xs font-semibold uppercase tracking-wider">Verifying Intranet Security Credentials...</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Verifying Intranet Security Credentials...</p>
         </div>
       </div>
     );

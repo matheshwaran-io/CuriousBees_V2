@@ -483,89 +483,188 @@ h1, h2, h3, h4, h5, h6 {
 /* ─── CuriousBees Shared Design System Layer ─────────────────────────────── */
 
 @layer components {
-  /* Enterprise card surface */
+  /* Enterprise premium card surface (Stripe & Linear style) */
   .cb-card {
     background: #ffffff;
-    border: 1px solid rgba(195, 198, 214, 0.4);
+    border: 1px solid rgba(195, 198, 214, 0.35);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  }
-  .cb-card-hover {
-    background: #ffffff;
-    border: 1px solid rgba(195, 198, 214, 0.4);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .cb-card-hover:hover {
-    border-color: rgba(195, 198, 214, 0.8);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02), 0 4px 12px 0 rgba(0, 0, 0, 0.015);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Glass surface */
-  .cb-glass {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+  .cb-card-hover {
+    background: #ffffff;
+    border: 1px solid rgba(195, 198, 214, 0.35);
     border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02), 0 4px 12px 0 rgba(0, 0, 0, 0.015);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cb-card-hover:hover {
+    border-color: rgba(0, 68, 149, 0.25);
+    box-shadow: 0 12px 24px -10px rgba(0, 68, 149, 0.06), 0 4px 16px 0 rgba(0, 0, 0, 0.02);
+    transform: translateY(-1.5px);
+  }
+
+  /* Glass surface (Framer & Apple style) */
+  .cb-glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   }
 
   /* Typography utilities */
   .cb-page-title {
     font-family: var(--font-display);
-    font-size: clamp(1.375rem, 2.5vw, 1.875rem);
-    font-weight: 300;
-    letter-spacing: -0.02em;
-    color: #191b29;
-    line-height: 1.2;
+    font-size: clamp(1.5rem, 3vw, 2.125rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #0d3c61;
+    line-height: 1.15;
   }
   .cb-page-subtitle {
     font-family: var(--font-sans);
-    font-size: 0.8125rem;
-    color: #424654;
+    font-size: 0.875rem;
+    color: #6e6e6e;
     margin-top: 6px;
-    line-height: 1.6;
+    line-height: 1.5;
   }
   .cb-section-title {
     font-family: var(--font-display);
-    font-size: 0.9375rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     letter-spacing: -0.01em;
-    color: #191b29;
+    color: #0d3c61;
   }
   .cb-metric-value {
     font-family: var(--font-display);
-    font-size: 1.875rem;
-    font-weight: 300;
-    letter-spacing: -0.02em;
-    color: #191b29;
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0d3c61;
     line-height: 1;
   }
   .cb-metric-label {
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #737785;
   }
 
-  /* Status semantic chips */
-  .cb-status-success { background: #d4f0e3; color: #0a3d23; border: 1px solid rgba(26,122,74,0.2); border-radius: 9999px; }
-  .cb-status-warning { background: #ffefc7; color: #3d2800; border: 1px solid rgba(138,89,0,0.2); border-radius: 9999px; }
-  .cb-status-error   { background: #ffdad6; color: #93000a; border: 1px solid rgba(186,26,26,0.2); border-radius: 9999px; }
-  .cb-status-info    { background: #d6e4ff; color: #002266; border: 1px solid rgba(0,85,204,0.2); border-radius: 9999px; }
-  .cb-status-pending { background: #edecff; color: #424654; border: 1px solid rgba(195,198,214,0.4); border-radius: 9999px; }
+  /* Status semantic chips (Redesigned) */
+  .cb-status-success { 
+    background: rgba(26, 122, 74, 0.06); 
+    color: #1a7a4a; 
+    border: 1px solid rgba(26, 122, 74, 0.15); 
+    border-radius: 9999px; 
+    padding: 2px 10px;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cb-status-warning { 
+    background: rgba(138, 89, 0, 0.06); 
+    color: #8a5900; 
+    border: 1px solid rgba(138, 89, 0, 0.15); 
+    border-radius: 9999px; 
+    padding: 2px 10px;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cb-status-error { 
+    background: rgba(186, 26, 26, 0.06); 
+    color: #ba1a1a; 
+    border: 1px solid rgba(186, 26, 26, 0.15); 
+    border-radius: 9999px; 
+    padding: 2px 10px;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cb-status-info { 
+    background: rgba(0, 85, 204, 0.06); 
+    color: #0055cc; 
+    border: 1px solid rgba(0, 85, 204, 0.15); 
+    border-radius: 9999px; 
+    padding: 2px 10px;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cb-status-pending { 
+    background: rgba(115, 119, 133, 0.06); 
+    color: #737785; 
+    border: 1px solid rgba(115, 119, 133, 0.15); 
+    border-radius: 9999px; 
+    padding: 2px 10px;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
 
   /* Table system */
-  .cb-table-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #737785; background: #f4f2ff; }
-  .cb-table-row { border-bottom: 1px solid rgba(195,198,214,0.3); transition: background 0.15s ease; }
-  .cb-table-row:hover { background: rgba(237,236,255,0.4); }
-  .cb-table-cell { padding: 12px 16px; font-size: 12px; color: #191b29; }
+  .cb-table-header { 
+    font-size: 10px; 
+    font-weight: 700; 
+    text-transform: uppercase; 
+    letter-spacing: 0.08em; 
+    color: #737785; 
+    background: #fbf8ff; 
+    border-bottom: 1px solid rgba(195, 198, 214, 0.35);
+  }
+  .cb-table-row { 
+    border-bottom: 1px solid rgba(195, 198, 214, 0.25); 
+    transition: background 0.2s ease; 
+  }
+  .cb-table-row:hover { 
+    background: rgba(0, 68, 149, 0.02); 
+  }
+  .cb-table-cell { 
+    padding: 14px 16px; 
+    font-size: 13px; 
+    color: #191b29; 
+  }
 
   /* Focus ring */
   .cb-focus { outline: none; }
   .cb-focus:focus-visible { box-shadow: 0 0 0 2px #fbf8ff, 0 0 0 4px rgba(0,68,149,0.4); border-radius: 6px; }
+
+  /* Premium Form Input (Stripe inspired) */
+  .cb-input {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    font-size: 13.5px;
+    background: #ffffff;
+    border: 1px solid rgba(195, 198, 214, 0.5);
+    border-radius: 8px;
+    color: #191b29;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+  }
+  .cb-input:focus {
+    outline: none;
+    border-color: #004495;
+    box-shadow: 0 0 0 3px rgba(0, 68, 149, 0.12), 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+  .cb-input:disabled {
+    background: #fbf8ff;
+    color: #737785;
+    cursor: not-allowed;
+  }
 }
