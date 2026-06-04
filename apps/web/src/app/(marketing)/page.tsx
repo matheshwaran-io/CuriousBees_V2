@@ -4,35 +4,29 @@ import React from 'react';
 import MarketingNavbar from '@/components/marketing/MarketingNavbar';
 import HeroSection from '@/components/marketing/HeroSection';
 import FeatureCards from '@/components/marketing/FeatureCards';
+import WorkflowSection from '@/components/marketing/WorkflowSection';
 import ResearchStats from '@/components/marketing/ResearchStats';
+import TestimonialsSection from '@/components/marketing/TestimonialsSection';
+import FAQSection from '@/components/marketing/FAQSection';
 import CTASection from '@/components/marketing/CTASection';
 import MarketingFooter from '@/components/marketing/MarketingFooter';
 
 export default function MarketingPage() {
   return (
-    <div className="bg-surface-container-high text-on-surface font-body-md antialiased honeycomb-bg min-h-screen flex flex-col font-sans">
+    <div className="bg-white text-slate-900 font-sans antialiased min-h-screen flex flex-col selection:bg-primary/20">
       
-      {/* Reusable Navbar */}
       <MarketingNavbar />
 
-      {/* Main Content Area */}
-      <main className="flex-grow pt-stack-xl mt-stack-xl max-w-container-max mx-auto w-full px-margin-mobile md:px-margin-desktop flex flex-col gap-stack-xl">
-        
-        {/* Reusable Hero Section */}
+      <main className="flex-grow w-full flex flex-col">
         <HeroSection />
-
-        {/* Reusable Feature Cards (Bento) */}
         <FeatureCards />
-
-        {/* Reusable Social Proof Statistics */}
+        <WorkflowSection />
         <ResearchStats />
-
-        {/* Reusable Bottom CTA */}
+        <TestimonialsSection />
+        <FAQSection />
         <CTASection />
-
       </main>
 
-      {/* Reusable Footer */}
       <MarketingFooter />
 
     </div>

@@ -3,14 +3,12 @@ import { EventsService } from './events.service';
 import { FirebaseAuthGuard } from '../auth/firebase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { EventStatus, Prisma } from '@prisma/client';
-import { SearchService } from '../search/search.service';
 
 @Controller('events')
 @UseGuards(FirebaseAuthGuard, ApprovedGuard)
 export class EventsController {
   constructor(
-    private readonly eventsService: EventsService,
-    private readonly searchService: SearchService,
+    private readonly eventsService: EventsService
   ) {}
 
   @Get()
@@ -31,23 +29,7 @@ export class EventsController {
     return this.eventsService.getReviewEvents();
   }
 
-  @Get('stats')
-  async getPipelineStats() {
-    return this.eventsService.getPipelineStats();
-  }
 
-  @Get(':id')
-  async getEventById(@Param('id') id: string) {
-    return this.eventsService.getEventById(id);
-  }
-
-  @Get(':id/related')
-  async getRelatedEvents(
-    @Param('id') id: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.searchService.getRelatedEvents(id, limit ? parseInt(limit) : 5);
-  }
 
   @Post()
   async createEvent(

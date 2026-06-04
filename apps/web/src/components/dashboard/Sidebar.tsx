@@ -44,12 +44,7 @@ const COMMON_NAV = [
   { name: 'Events',         href: '/events',       icon: CalendarIcon },
 ];
 
-const TOOLS_NAV = [
-  { name: 'AI Search',      href: '/search',       icon: Search },
-  { name: 'AI Pipeline',    href: '/pipeline',     icon: Cpu },
-  { name: 'Analytics',      href: '/analytics',    icon: BarChart3 },
-  { name: 'Ask Copilot',    href: '/copilot',      icon: Sparkles },
-];
+
 
 const ROLE_NAV: Partial<Record<UserRole, { name: string; href: string; icon: React.ElementType }[]>> = {
   RESEARCH_SUPERVISOR: [
@@ -232,35 +227,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* Tools Section */}
-        <div>
-          <NavSection 
-            label="AI & Telemetry" 
-            isOpen={sectionsOpen.tools} 
-            onToggle={() => toggleSection('tools')} 
-          />
-          <AnimatePresence initial={false}>
-            {sectionsOpen.tools && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden flex flex-col gap-0.5 mt-1"
-              >
-                {TOOLS_NAV.map((item) => (
-                  <NavItem
-                    key={item.href}
-                    {...item}
-                    active={isActive(item.href)}
-                    onClick={onClose}
-                    hoveredItem={hoveredItem}
-                    setHoveredItem={setHoveredItem}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+
 
         {/* Role-specific Section */}
         {roleSpecificNav.length > 0 && (

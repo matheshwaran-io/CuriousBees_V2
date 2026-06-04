@@ -11,12 +11,6 @@ import { CommentsModule } from './comments/comments.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { EventsModule } from './events/events.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { AiProcessingQueueModule } from './queues/ai-processing.queue.module';
-
-import { EmbeddingModule } from './embeddings/embedding.module';
-import { SearchModule } from './search/search.module';
-import { AnalyticsModule } from './analytics/analytics.module';
-import { CopilotModule } from './copilot/copilot.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { SupervisorsModule } from './supervisors/supervisors.module';
 
@@ -41,13 +35,7 @@ import { SupervisorsModule } from './supervisors/supervisors.module';
     CommentsModule,
     OpportunitiesModule,
     EventsModule,
-    AiProcessingQueueModule,
-
     NotificationsModule,
-    EmbeddingModule,
-    SearchModule,
-    AnalyticsModule,
-    CopilotModule,
     WorkspacesModule,
     SupervisorsModule,
   ],

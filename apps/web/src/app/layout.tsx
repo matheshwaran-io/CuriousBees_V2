@@ -2,8 +2,18 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CuriousBees — AI-powered Academic Collaboration Portal',
-  description: 'A dedicated intranet collaboration space for CuriousBees Academic Portal Faculty and PhD Scholars.',
+  title: 'CuriousBees — Elevating Academic Research & Collaboration',
+  description: 'CuriousBees is a premium university-grade research platform connecting scholars, supervisors, and institutions for seamless collaboration, academic tracking, and innovation.',
+  openGraph: {
+    title: 'CuriousBees — Elevating Academic Research',
+    description: 'A premium university-grade research platform connecting scholars, supervisors, and institutions.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CuriousBees — Academic Research Platform',
+    description: 'A premium university-grade research platform connecting scholars, supervisors, and institutions.',
+  }
 };
 
 export default function RootLayout({

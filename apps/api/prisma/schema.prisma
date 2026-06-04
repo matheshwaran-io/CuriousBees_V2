@@ -40,8 +40,7 @@ model User {
   notificationTokens NotificationToken[]
   notifications Notification[]
   preferences   UserPreference?
-  recommendationEngagements RecommendationEngagement[]
-  copilotChatSessions CopilotChatSession[]
+
   
   // Supervisor/Scholar mappings
   supervisor    User?           @relation("SupervisorToScholar", fields: [supervisorId], references: [id])
@@ -156,17 +155,7 @@ enum ApprovalStatus {
   NEEDS_INFO
 }
 
-enum ProcessingStatus {
-  PENDING
-  FILTERED
-  QUEUED
-  PROCESSING
-  AI_PROCESSING
-  EXTRACTED
-  IGNORED
-  FAILED
-  SUCCESS
-}
+
 
 enum EventStatus {
   DRAFT
@@ -193,10 +182,6 @@ model Event {
   venue             String
   topic             String?
   organizerEmail    String?
-  confidence        Float
-  aiModel           String
-  aiProvider        String
-  rawEmail          String?        @db.Text
   status            EventStatus
   priority          EventPriority  @default(MEDIUM)
 
@@ -206,15 +191,12 @@ model Event {
   posterUrl         String?
   registrationLink  String?
   tags              String[]
-  embedding         Unsupported("vector(768)")?
 
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
   notifications     Notification[]
-  clusterMembers    EventClusterMember[]
-  recommendationEngagements RecommendationEngagement[]
-  engagementScore   EngagementScore?
+
 }
 
 model Notification {
@@ -253,153 +235,7 @@ model UserPreference {
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model AIProcessingLog {
-  id               String           @id @default(cuid())
-  gmailMessageId   String           @unique
-  senderEmail      String
-  subject          String
-  rawEmailBody     String           @db.Text
-  extractedJson    Json?
-  confidenceScore  Float?
-  status           ProcessingStatus @default(PENDING)
-  errorReason      String?          @db.Text
-  retryCount       Int              @default(0)
 
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-}
-
-model GmailCredentials {
-  id           String   @id @default("singleton")
-  accessToken  String   @db.Text
-  refreshToken String   @db.Text
-  expiresAt    DateTime
-  updatedAt    DateTime @updatedAt
-}
-
-model SearchAnalytics {
-  id           String   @id @default(cuid())
-  query        String
-  userId       String?
-  resultCount  Int      @default(0)
-  topScore     Float?
-  filters      Json?
-  createdAt    DateTime @default(now())
-}
-
-model AggregatedMetric {
-  id          String   @id @default(cuid())
-  metricName  String   // e.g. "total_events", "department_activity", "notification_engagement"
-  metricValue Float
-  dimensions  Json?    // e.g. { "department": "Mechanical", "month": "2026-05" }
-  timestamp   DateTime @default(now())
-
-  @@index([metricName, timestamp])
-}
-
-model AIObservabilityLog {
-  id            String   @id @default(cuid())
-  operationName String   // e.g. "slm_extraction", "embedding_generation", "semantic_search"
-  latencyMs     Float
-  status        String   // "SUCCESS" | "FAILED"
-  errorMessage  String?  @db.Text
-  retryCount    Int      @default(0)
-  metadata      Json?    // e.g. { "model": "qwen2.5:7b", "cpuUsage": 12.4 }
-  createdAt     DateTime @default(now())
-
-  @@index([operationName, createdAt])
-}
-
-model EventCluster {
-  id              String               @id @default(cuid())
-  name            String               // e.g. "AI & Machine Learning Research"
-  description     String?              @db.Text
-  centerEmbedding Unsupported("vector(768)")?
-  department      String?
-  eventCount      Int                  @default(0)
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  members         EventClusterMember[]
-
-  @@index([name])
-}
-
-model EventClusterMember {
-  clusterId  String
-  eventId    String
-  similarity Float
-  cluster    EventCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
-  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  @@id([clusterId, eventId])
-}
-
-model RecommendationEngagement {
-  id        String   @id @default(cuid())
-  userId    String
-  eventId   String
-  action    String   // "VIEW" | "CLICK" | "DISMISS"
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  @@index([userId, eventId])
-}
-
-model EngagementScore {
-  id              String   @id @default(cuid())
-  eventId         String   @unique
-  popularityScore Float    @default(0.0) // Clicks, notifications, opens weighted
-  openRate        Float    @default(0.0)
-  predictionScore Float    @default(0.0) // Attendance estimation
-  engagementRank  Int?
-  updatedAt       DateTime @updatedAt
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-}
-
-model HistoricalMetric {
-  id           String   @id @default(cuid())
-  metricGroup  String   // e.g. "departmental_engagement", "ai_system_health"
-  metricName   String
-  metricValue  Float
-  dimensions   Json?
-  aggregatedAt DateTime
-  createdAt    DateTime @default(now())
-
-  @@index([metricGroup, metricName, aggregatedAt])
-}
-
-model ArchivedEventEmbedding {
-  id         String   @id
-  eventId    String
-  embedding  Unsupported("vector(768)")
-  archivedAt DateTime @default(now())
-}
-
-model CopilotChatSession {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  messages  CopilotMessage[]
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model CopilotMessage {
-  id            String             @id @default(cuid())
-  sessionId     String
-  role          String             // "USER" | "ASSISTANT"
-  content       String             @db.Text
-  citations     Json?              // Mapped list of referenced event metadata
-  telemetry     Json?              // Latency, model config, token count
-  createdAt     DateTime           @default(now())
-  session       CopilotChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-}
 
 model CollaborationRequest {
   id             String         @id @default(cuid())

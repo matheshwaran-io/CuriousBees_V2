@@ -71,9 +71,6 @@ export class EventsService {
           venue, 
           description,
           eventType: 'Manual Entry',
-          confidence: 1.0,
-          aiModel: 'manual',
-          aiProvider: 'manual',
           status: EventStatus.PUBLISHED
         }
       });
@@ -134,32 +131,5 @@ export class EventsService {
     }
   }
 
-  /**
-   * Gets AI processing statistics for the dashboard.
-   */
-  async getPipelineStats() {
-    const totalEvents = await this.prisma.event.count();
-    const reviewRequired = await this.prisma.event.count({ where: { status: EventStatus.REVIEW_REQUIRED } });
-    
-    // Calculate average confidence of AI generated events
-    const aiEvents = await this.prisma.event.findMany({
-      where: { aiProvider: { not: 'manual' } },
-      select: { confidence: true }
-    });
-    
-    const avgConfidence = aiEvents.length > 0 
-      ? (aiEvents.reduce((acc, curr) => acc + curr.confidence, 0) / aiEvents.length) * 100
-      : 0;
 
-    const duplicatesRejected = await this.prisma.aIProcessingLog.count({
-      where: { status: 'IGNORED' }
-    });
-
-    return {
-      totalEvents,
-      reviewQueue: reviewRequired,
-      avgConfidence: Math.round(avgConfidence),
-      duplicatesRejected,
-    };
-  }
 }

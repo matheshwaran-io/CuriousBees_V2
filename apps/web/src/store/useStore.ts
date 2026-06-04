@@ -34,7 +34,7 @@ interface AppState {
   threads: Thread[];
   opportunities: Opportunity[];
   events: Event[];
-  aiLogs: any[];
+
   collaborators: User[];
   pendingApprovals: User[];
   collaborationRequests: CollaborationRequest[];
@@ -61,7 +61,7 @@ interface AppState {
   createOpportunity: (title: string, description: string, department: string, researchDomain: string) => Promise<Opportunity>;
   updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
   fetchEvents: (showIndicator?: boolean) => Promise<Event[]>;
-  fetchAiLogs: () => Promise<any[]>;
+
   createEvent: (title: string, date: string, time: string, venue: string) => Promise<Event>;
   updateEvent: (id: string, title: string, date: string, time: string, venue: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
@@ -122,7 +122,7 @@ export const useStore = create<AppState>((set, get) => ({
   threads: [],
   opportunities: [],
   events: [],
-  aiLogs: [],
+
   collaborators: [],
   pendingApprovals: [],
   collaborationRequests: [],
@@ -405,19 +405,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  fetchAiLogs: async () => {
-    try {
-      const res = await apiFetch('/api/events/ai-logs');
-      if (res.ok) {
-        const data = await res.json();
-        set({ aiLogs: data });
-        return data;
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
-  },
+
 
   createEvent: async (title, date, time, venue) => {
     set({ isLoading: true });

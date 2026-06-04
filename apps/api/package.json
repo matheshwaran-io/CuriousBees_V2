@@ -17,7 +17,7 @@
   "dependencies": {
     "@curiousbees/shared-utils": "*",
     "@curiousbees/types": "*",
-    "@google/genai": "^2.7.0",
+
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.24",
     "@nestjs/core": "^11.1.24",
@@ -31,7 +31,7 @@
     "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "firebase-admin": "^13.10.0",
-    "googleapis": "^173.0.0",
+
     "ioredis": "^5.11.0",
     "nodemailer": "^8.0.10",
     "reflect-metadata": "^0.2.2",

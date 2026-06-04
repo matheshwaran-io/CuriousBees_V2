@@ -1,66 +1,169 @@
 # CuriousBees Architecture
 
-This document describes the architectural flows and operational workflows for the CuriousBees V2 platform.
+This document provides a comprehensive technical overview of the CuriousBees V2 platform, a modern, decoupled monorepo designed for scale, security, and real-time research collaboration.
 
-## Request Flow
+---
 
-1. **Client Interface**: Users interact via the Next.js React frontend.
-2. **Edge Middleware**: Next.js middleware intercepts requests to protected routes, validating the `cb-role` cookie to quickly allow or deny access before rendering.
-3. **API Invocation**: Client-side logic uses `apiFetch` (from `@curiousbees/shared-utils`/`api-client`) which automatically attaches the active Firebase ID token.
-4. **Backend Gateway**: Requests arrive at the NestJS API.
-5. **Guards & Validation**: `FirebaseAuthGuard` validates the Firebase token against the Firebase Admin SDK.
-6. **Controller Logic**: Controllers orchestrate business logic.
-7. **Database Interaction**: Prisma queries the Supabase PostgreSQL database.
+## 1. System Architecture
 
-## User Login Flow
+CuriousBees utilizes a strictly typed, client-server architecture. The frontend handles presentation and edge-level security, while the backend orchestrates business logic, database transactions, and background jobs.
 
 ```text
-User clicks "Login with Google"
-        |
-        v
-Firebase Client SDK popup opens
-        |
-        v
-User authenticates (must be @srmist.edu.in in prod)
-        |
-        v
-Firebase returns User Object + ID Token
-        |
-        v
-Next.js POSTs ID Token to NestJS `/api/auth/me`
-        |
-        v
-NestJS verifies token -> creates/updates User in Prisma
-        |
-        v
-NestJS returns User Profile (Role, Approval Status)
-        |
-        v
-Next.js sets Role Cookie & Redirects to Dashboard
+       [ User Browser ]
+              |
+      (HTTPS / Bearer JWT)
+              |
+    [ Vercel Edge Network ] --- (Next.js Middleware validates Role Cookie)
+              |
+     [ Next.js React App ] ---> [ External Clients: Firebase Auth ]
+              |
+      (REST API Fetching)
+              |
++-----------------------------+
+|    CuriousBees Gateway      |
+|  (NestJS / Render / Docker) |
++-----------------------------+
+    |                  |
+(Prisma ORM)       (BullMQ)
+    |                  |
+ [ Supabase ]      [ Redis ]
+ (PostgreSQL)      (Message Queue)
 ```
 
-## Notification Flow (FCM)
+---
 
-1. Client logs in -> Request FCM Permission -> Service Worker registers.
-2. Token is POSTed to `/api/notifications/register-token`.
-3. An event occurs (e.g. Scholar submits approval request).
-4. `NotificationsService` drops a job into `BullMQ` (Redis).
-5. `NotificationProcessor` consumes job -> Queries Prisma for device tokens.
-6. Dispatch to Firebase Admin SDK -> Push delivered to browser.
+## 2. Frontend Architecture
 
-## Supervisor Approval Workflow
+**Technology:** Next.js 14+ (App Router), React, Tailwind CSS, Zustand, React Query.
 
-1. Scholar signs up via Google -> Profile synced -> Status `approved: false`.
-2. Scholar selects a Faculty Supervisor from a dropdown list.
-3. System creates a `CollaborationRequest` and triggers FCM notification to the Supervisor.
-4. Supervisor sees request in Dashboard -> Approves.
-5. Backend updates Scholar to `approved: true` -> triggers FCM notification to Scholar.
-6. Scholar gains full platform access.
+- **Routing:** Handled entirely by the Next.js App Router (`apps/web/src/app`). Protected portal routes reside within the `(portal)` route group.
+- **State Management:** 
+  - Global UI state and entity caching are managed by `Zustand` (`apps/web/src/store/useStore.ts`).
+  - Strict unidirectional data flow ensures components re-render predictably.
+- **Styling:** Tailwind CSS combined with `lucide-react` for iconography. A robust design token system ensures consistent theming.
+- **API Client:** A custom abstraction (`apiFetch`) automatically intercepts outgoing requests to attach the active Firebase Authorization header, ensuring secure communication with the backend.
 
-## Research Collaboration Workflow
+---
 
-1. **Thread Creation**: Researchers create discussion threads on topics.
-2. **Commenting**: Researchers comment on threads.
-3. **Workspaces**: Approved groups create collaborative Workspaces.
-4. **File Sharing**: Resources are linked/uploaded within the Workspace context.
-5. **Milestones**: Workspaces track progress against defined milestones.
+## 3. Backend Architecture
+
+**Technology:** NestJS 10+, TypeScript, RxJS, class-validator.
+
+- **Modularity:** The backend is divided into discrete feature modules (e.g., `UsersModule`, `ThreadsModule`, `WorkspacesModule`). This ensures strong encapsulation.
+- **Dependency Injection:** Services are injected into Controllers, adhering to SOLID principles.
+- **Guards & Interceptors:** 
+  - `FirebaseAuthGuard` protects all endpoints by validating the incoming Bearer JWT against the Firebase Admin SDK.
+  - Exception filters catch and format errors into a standardized JSON response structure.
+- **Validation:** Incoming payloads are strictly validated using DTOs (Data Transfer Objects) combined with `class-validator` and `class-transformer`.
+
+---
+
+## 4. Database Architecture
+
+**Technology:** PostgreSQL (hosted on Supabase), Prisma ORM.
+
+The schema is heavily relational, enforcing strict referential integrity.
+- **Core Entities:** `User`, `Thread`, `Comment`, `Opportunity`, `Event`, `Workspace`.
+- **Cascading Deletes:** Removing a parent entity (e.g., a `Thread` or `Workspace`) automatically cleans up related child entities (e.g., `Comments` or `WorkspaceFiles`).
+- **Enums:** Strongly typed enums for Roles (`UserRole`) and statuses (`EventStatus`, `OpportunityStatus`).
+
+---
+
+## 5. Authentication Architecture
+
+We utilize a robust hybrid authentication model that offloads credential management to Google/Firebase while maintaining absolute authority over roles in our backend database.
+
+### Authentication Flow
+
+```text
+User           Next.js Frontend         Firebase Auth        NestJS Backend         PostgreSQL
+ |                    |                       |                    |                    |
+ |--- Clicks Login -->|                       |                    |                    |
+ |                    |--- Request OAuth ---->|                    |                    |
+ |                    |<-- Returns ID Token --|                    |                    |
+ |                    |                       |                    |                    |
+ |                    |-- POST /api/auth/me (Bearer Token) ------->|                    |
+ |                    |                       |                    |--- Verify Token -->|
+ |                    |                       |                    |<-- User Details ---|
+ |                    |<-- 200 OK (User Profile & Role) -----------|                    |
+ |                    |                       |                    |                    |
+ |<-- Set `cb-role` --|                       |                    |                    |
+ |    cookie &        |                       |                    |                    |
+ |    redirect to     |                       |                    |                    |
+ |    /dashboard      |                       |                    |                    |
+```
+
+---
+
+## 6. Role-Based Access Control (RBAC)
+
+Access control operates on two layers:
+
+1. **Edge Layer (Next.js Middleware):** 
+   - Reads the `cb-role` cookie.
+   - Checks `permissions.ts` to see if the assigned role is authorized for the requested pathname.
+   - Redirects unauthorized users to `/auth/unauthorized` before the page even renders.
+
+2. **API Layer (NestJS Guards):**
+   - Endpoints are protected by `@UseGuards(FirebaseAuthGuard)`.
+   - specific mutations can be further restricted by Role Guards (e.g., only `INSTITUTION_ADMIN` can delete a user).
+
+---
+
+## 7. Supervisor Approval Workflow
+
+To maintain academic integrity, new users cannot immediately access the platform.
+
+1. **Onboarding:** A new user authenticates via Google. Their profile is created in Postgres with `approved: false`.
+2. **Request:** The scholar selects a supervisor from a dropdown list and submits a request.
+3. **Notification:** A background job triggers an FCM push notification to the targeted supervisor.
+4. **Action:** The supervisor sees the request in their dashboard (`/dashboard`) and clicks "Approve".
+5. **Fulfillment:** The backend updates the scholar to `approved: true`, granting them access to the portal routes.
+
+---
+
+## 8. Workspace Architecture
+
+Workspaces are isolated collaborative environments.
+- **Membership:** Users are explicitly added to a workspace via the `WorkspaceMember` join table.
+- **Resources:** 
+  - **Files:** Managed via `WorkspaceFile` records (pointing to external storage URLs).
+  - **Milestones:** Trackable deadlines via `WorkspaceMilestone`.
+  - **Announcements:** Broadcast messages via `WorkspaceAnnouncement`.
+- **Security:** Backend controllers ensure that a user requesting workspace data actually possesses a valid `WorkspaceMember` record for that specific workspace.
+
+---
+
+## 9. Opportunity Management
+
+The Opportunities module facilitates research recruitment.
+- Users can create an `Opportunity` (e.g., looking for a co-author).
+- Other users can submit a `CollaborationRequest` linking to that opportunity.
+- The opportunity owner can transition these requests between `PENDING`, `PUBLISHED` (Accepted), or `REJECTED`.
+
+---
+
+## 10. Notifications System
+
+We employ an asynchronous, queue-based notification system to prevent blocking the main API thread during heavy I/O operations (like communicating with Firebase Cloud Messaging).
+
+1. An action occurs (e.g., a new comment is posted).
+2. The `NotificationsService` drops a payload into a BullMQ queue backed by Redis.
+3. The API responds to the user immediately.
+4. A background `NotificationProcessor` consumes the job, looks up the recipient's FCM tokens in Postgres, and dispatches the push notification via the Firebase Admin SDK.
+
+---
+
+## 11. Deployment Architecture
+
+- **Frontend:** Deployed on Vercel. Vercel automatically handles static generation, edge middleware deployment, and global CDN distribution.
+- **Backend:** Containerized via Docker. Deployed on platforms like Render, Railway, or AWS ECS. It requires persistent connections to the Redis instance and the Supabase PostgreSQL database.
+- **Database:** Supabase provides a managed, scalable PostgreSQL instance with built-in connection pooling (PgBouncer) for handling spikes in traffic.
+
+---
+
+## 12. Future Scalability Considerations
+
+- **Read Replicas:** As the user base grows, Supabase read replicas can be introduced. NestJS Prisma clients can be configured to route read-heavy operations (like loading the Thread feed) to the replicas.
+- **Microservices:** If the Notifications queue becomes a bottleneck, the `NotificationProcessor` can be extracted into a standalone worker node, separate from the main API gateway.
+- **Storage Strategy:** Currently, file URLs are stored in the database. In the future, a direct integration with Supabase Storage or AWS S3 utilizing presigned URLs will be necessary for secure, large-scale document management.
