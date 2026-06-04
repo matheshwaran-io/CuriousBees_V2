@@ -10,11 +10,16 @@ export class ApprovedGuard implements CanActivate {
       return false;
     }
 
-    // Bypass approval for Supervisor and Admin. Scholars must be explicitly approved.
-    if (user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' || user.approved) {
+    // Admin is automatically approved or bypassed.
+    // Scholar and Supervisor must have approved === true and status === 'APPROVED'.
+    if (user.role === 'INSTITUTION_ADMIN') {
+      return true;
+    }
+    
+    if (user.approved && user.status === 'APPROVED') {
       return true;
     }
 
-    throw new ForbiddenException('Access denied. Account is pending supervisor approval.');
+    throw new ForbiddenException('Access denied. Account is pending approval or onboarding.');
   }
 }

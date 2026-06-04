@@ -59,6 +59,28 @@ export class UsersController {
     return this.usersService.approveScholar(req.user.id, scholarId);
   }
 
+  @Put('approve-supervisor')
+  async approveSupervisor(@Req() req: any, @Body('supervisorId') supervisorId: string) {
+    if (req.user.role !== 'INSTITUTION_ADMIN') {
+      throw new BadRequestException('Only administrators can approve supervisors.');
+    }
+    if (!supervisorId) {
+      throw new BadRequestException('supervisorId is required.');
+    }
+    return this.usersService.approveSupervisor(req.user.id, supervisorId);
+  }
+
+  @Put('decline-supervisor')
+  async declineSupervisor(@Req() req: any, @Body('supervisorId') supervisorId: string) {
+    if (req.user.role !== 'INSTITUTION_ADMIN') {
+      throw new BadRequestException('Only administrators can decline supervisors.');
+    }
+    if (!supervisorId) {
+      throw new BadRequestException('supervisorId is required.');
+    }
+    return this.usersService.declineSupervisor(req.user.id, supervisorId);
+  }
+
   @Put('decline-scholar')
   async declineScholar(@Req() req: any, @Body('scholarId') scholarId: string) {
     if (req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'INSTITUTION_ADMIN') {
@@ -112,5 +134,16 @@ export class UsersController {
   @Get('audit-logs')
   async getAuditLogs(@Req() req: any) {
     return this.usersService.getAuditLogs(req.user.id);
+  }
+
+  @Put('onboard')
+  async completeOnboarding(
+    @Req() req: any,
+    @Body() payload: { role: 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR'; supervisorId?: string }
+  ) {
+    if (!payload.role || !['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR'].includes(payload.role)) {
+      throw new BadRequestException('Invalid role selection.');
+    }
+    return this.usersService.completeOnboarding(req.user.id, payload);
   }
 }

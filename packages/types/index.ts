@@ -12,6 +12,9 @@ export interface User {
   departmentRef?: Department | null;
   bio: string | null;
   approved: boolean;
+  status: string;
+  approvedBy?: string | null;
+  approvedAt?: Date | string | null;
   suspended: boolean;
   supervisorId: string | null;
   supervisorEmail: string | null;

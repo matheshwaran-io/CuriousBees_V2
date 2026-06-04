@@ -24,7 +24,7 @@ import DataConsumptionCard from '@/components/admin/data-consumption-card';
 import SystemHealthCard from '@/components/admin/system-health-card';
 import AchievementsFeed from '@/components/admin/achievements-feed';
 
-type AdminTab = 'overview' | 'users' | 'audit';
+type AdminTab = 'overview' | 'users' | 'supervisors' | 'audit';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -80,6 +80,34 @@ export default function AdminPage() {
     }
   };
 
+  const handleApproveSupervisor = async (userId: string) => {
+    try {
+      const { apiFetch } = await import('@/lib/api-client');
+      await apiFetch('/api/users/approve-supervisor', {
+        method: 'PUT',
+        body: JSON.stringify({ supervisorId: userId }),
+      });
+      await fetchAdminUsers();
+      await fetchAdminAuditLogs();
+    } catch (err) {
+      console.error('Failed to approve supervisor:', err);
+    }
+  };
+
+  const handleDeclineSupervisor = async (userId: string) => {
+    try {
+      const { apiFetch } = await import('@/lib/api-client');
+      await apiFetch('/api/users/decline-supervisor', {
+        method: 'PUT',
+        body: JSON.stringify({ supervisorId: userId }),
+      });
+      await fetchAdminUsers();
+      await fetchAdminAuditLogs();
+    } catch (err) {
+      console.error('Failed to decline supervisor:', err);
+    }
+  };
+
   // Filter users based on search
   const filteredUsers = adminUsers.filter(
     (u) =>
@@ -90,9 +118,12 @@ export default function AdminPage() {
 
   const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'supervisors', label: 'Supervisor Approvals', icon: <UserCog className="w-4 h-4" /> },
     { id: 'users', label: 'User Moderation', icon: <Users className="w-4 h-4" /> },
     { id: 'audit', label: 'Audit Logs', icon: <History className="w-4 h-4" /> },
   ];
+
+  const pendingSupervisors = adminUsers.filter(u => u.role === 'RESEARCH_SUPERVISOR' && (u.status === 'PENDING_ADMIN' || !u.approved));
 
   return (
     <div className="space-y-6 text-left font-sans select-none">
@@ -332,6 +363,73 @@ export default function AdminPage() {
               </>
             )}
 
+          </div>
+        )}
+
+        {/* ─── SUPERVISOR APPROVALS TAB ─── */}
+        {activeTab === 'supervisors' && (
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-[#0d3c61] uppercase tracking-wider font-display">Pending Faculty Guides</h3>
+            
+            {isLoading && adminUsers.length === 0 ? (
+              <div className="py-12 flex justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            ) : pendingSupervisors.length > 0 ? (
+              <div className="cb-card overflow-hidden bg-white/90 backdrop-blur-md">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="cb-table-header">
+                        <th className="p-3.5 pl-4">Supervisor Profile</th>
+                        <th className="p-3.5">Department</th>
+                        <th className="p-3.5 pr-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pendingSupervisors.map((user) => (
+                        <tr key={user.id} className="cb-table-row text-xs">
+                          <td className="p-3.5 pl-4 flex items-center space-x-2.5">
+                            <AvatarRing 
+                              src={user.image || undefined} 
+                              name={user.name || undefined}
+                              role={user.role}
+                              size="sm"
+                            />
+                            <div>
+                              <h4 className="font-bold text-slate-900 leading-snug">{user.name || 'Unknown Name'}</h4>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{user.email}</p>
+                            </div>
+                          </td>
+                          <td className="p-3.5 text-slate-500 font-semibold">{user.department || 'Not Configured'}</td>
+                          <td className="p-3.5 pr-4 text-right flex justify-end space-x-2">
+                            <button
+                              onClick={() => handleApproveSupervisor(user.id)}
+                              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded font-bold transition flex items-center space-x-1"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeclineSupervisor(user.id)}
+                              className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded font-bold transition flex items-center space-x-1"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Decline</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="py-20 text-center border border-dashed border-slate-200 rounded-2xl text-slate-400 flex flex-col items-center justify-center space-y-2 bg-white">
+                <UserCog className="w-8 h-8 text-slate-300" />
+                <span className="text-xs font-semibold">No pending supervisor requests.</span>
+              </div>
+            )}
           </div>
         )}
 

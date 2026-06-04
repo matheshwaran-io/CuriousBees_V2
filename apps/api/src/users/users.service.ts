@@ -161,7 +161,12 @@ export class UsersService {
     // Approve the scholar
     const approvedUser = await this.prisma.user.update({
       where: { id: scholarId },
-      data: { approved: true }
+      data: { 
+        approved: true,
+        status: 'APPROVED',
+        approvedBy: supervisorId,
+        approvedAt: new Date()
+      }
     });
 
     // Write an audit log entry
@@ -308,5 +313,109 @@ export class UsersService {
     });
 
     return updated;
+  }
+
+  async completeOnboarding(
+    userId: string,
+    payload: { role: 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR'; supervisorId?: string }
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new BadRequestException('User not found.');
+    }
+    if (user.status !== 'ONBOARDING') {
+      throw new BadRequestException('User has already completed onboarding.');
+    }
+
+    let status = 'ONBOARDING';
+    let supervisorEmail = null;
+
+    if (payload.role === 'RESEARCH_SCHOLAR') {
+      if (!payload.supervisorId) {
+        throw new BadRequestException('Research Scholars must select a supervisor.');
+      }
+      const supervisor = await this.prisma.user.findUnique({ where: { id: payload.supervisorId } });
+      if (!supervisor || supervisor.role !== 'RESEARCH_SUPERVISOR') {
+        throw new BadRequestException('Invalid supervisor selected.');
+      }
+      status = 'PENDING_SUPERVISOR';
+      supervisorEmail = supervisor.email;
+    } else if (payload.role === 'RESEARCH_SUPERVISOR') {
+      status = 'PENDING_ADMIN';
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        role: payload.role,
+        status,
+        supervisorId: payload.role === 'RESEARCH_SCHOLAR' ? payload.supervisorId : null,
+        supervisorEmail
+      }
+    });
+
+    return updated;
+  }
+
+  async approveSupervisor(adminId: string, supervisorId: string) {
+    const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin || admin.role !== 'INSTITUTION_ADMIN') {
+      throw new ForbiddenException('Only administrators can approve supervisors.');
+    }
+
+    const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
+    if (!supervisor || supervisor.role !== 'RESEARCH_SUPERVISOR') {
+      throw new BadRequestException('User is not a Research Supervisor.');
+    }
+
+    const approvedUser = await this.prisma.user.update({
+      where: { id: supervisorId },
+      data: { 
+        approved: true,
+        status: 'APPROVED',
+        approvedBy: adminId,
+        approvedAt: new Date()
+      }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: adminId,
+        action: 'APPROVE_SUPERVISOR',
+        details: `Admin approved supervisor ${supervisor.name || supervisor.email} (${supervisorId})`
+      }
+    });
+
+    return approvedUser;
+  }
+
+  async declineSupervisor(adminId: string, supervisorId: string) {
+    const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin || admin.role !== 'INSTITUTION_ADMIN') {
+      throw new ForbiddenException('Only administrators can decline supervisors.');
+    }
+
+    const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
+    if (!supervisor || supervisor.role !== 'RESEARCH_SUPERVISOR') {
+      throw new BadRequestException('User is not a Research Supervisor.');
+    }
+
+    const declined = await this.prisma.user.update({
+      where: { id: supervisorId },
+      data: { 
+        approved: false,
+        status: 'ONBOARDING', // Send them back to onboarding or reject them
+      }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: adminId,
+        action: 'DECLINE_SUPERVISOR',
+        details: `Admin declined supervisor ${supervisor.name || supervisor.email} (${supervisorId})`
+      }
+    });
+
+    return declined;
   }
 }

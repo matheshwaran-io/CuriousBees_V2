@@ -2,21 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedExceptio
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseAdminService } from './firebase-admin.service';
 
-function detectRoleFromEmail(email: string): { role: string; approved: boolean } {
-  const normalized = email.trim().toLowerCase();
-  const username = normalized.split('@')[0];
-
-  if (username.includes('.')) {
-    return { role: 'INSTITUTION_ADMIN', approved: true };
-  } else if (/[a-zA-Z]/.test(username) && /[0-9]/.test(username)) {
-    return { role: 'RESEARCH_SCHOLAR', approved: false };
-  } else if (/^[a-zA-Z]+$/.test(username)) {
-    return { role: 'RESEARCH_SUPERVISOR', approved: true };
-  }
-  
-  return { role: 'RESEARCH_SCHOLAR', approved: false };
-}
-
+// Email-pattern detection removed in favor of explicit onboarding flow.
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(FirebaseAuthGuard.name);
@@ -80,10 +66,16 @@ export class FirebaseAuthGuard implements CanActivate {
       });
 
       if (!user) {
-        roleSource = 'Email Pattern / Dev Map';
-        const { role, approved } = detectRoleFromEmail(normalizedEmail);
+        roleSource = 'Default / Main Admin Check';
+        
+        const mainAdminEmail = process.env.MAIN_ADMIN_EMAIL || 'curiousbees@srmist.edu.in';
+        const isMainAdmin = normalizedEmail === mainAdminEmail.toLowerCase();
+        
+        const role = isMainAdmin ? 'INSTITUTION_ADMIN' : 'RESEARCH_SCHOLAR';
+        const approved = isMainAdmin;
+        const status = isMainAdmin ? 'APPROVED' : 'ONBOARDING';
 
-        this.logger.log(`Creating CuriousBees user for ${normalizedEmail}: Assigned role=${role}, Approved status=${approved}`);
+        this.logger.log(`Creating CuriousBees user for ${normalizedEmail}: Assigned role=${role}, status=${status}`);
         user = await this.prisma.user.create({
           data: {
             firebaseUid: decodedToken.uid,
@@ -92,6 +84,7 @@ export class FirebaseAuthGuard implements CanActivate {
             image: decodedToken.picture || null,
             role: role as any,
             approved: approved,
+            status: status,
             emailVerified: new Date(),
           },
           include: {
@@ -129,11 +122,12 @@ export class FirebaseAuthGuard implements CanActivate {
       this.logger.log(`[AUTH] Retrieved Role: ${user.role}`);
       this.logger.log(`[AUTH] Role Source: ${roleSource}`);
       
-      const redirectRoute =
-        user.role === 'INSTITUTION_ADMIN' ? '/admin/dashboard' :
-        user.role === 'RESEARCH_SUPERVISOR' ? '/dashboard' :
-        (!user.approved ? '/verification-pending' : '/dashboard');
-      this.logger.log(`[AUTH] Redirect Target: ${redirectRoute}`);
+      const redirectRoute = 
+        user.status === 'ONBOARDING' ? '/onboarding' :
+        (!user.approved || user.status !== 'APPROVED') ? '/verification-pending' :
+        user.role === 'INSTITUTION_ADMIN' ? '/admin/dashboard' : '/dashboard';
+        
+      this.logger.log(`[AUTH] Expected Redirect Target: ${redirectRoute}`);
       
       request.user = user;
       return true;

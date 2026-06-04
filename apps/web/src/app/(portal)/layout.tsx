@@ -65,8 +65,14 @@ export default function PortalLayout({
         return;
       }
 
-      if (activeUser.role === 'RESEARCH_SCHOLAR' && !activeUser.approved) {
-        console.warn('[PortalLayout] Scholar is not approved. Redirecting to /verification-pending.');
+      if (activeUser.status === 'ONBOARDING') {
+        console.warn('[PortalLayout] User has not completed onboarding. Redirecting to /onboarding.');
+        router.push('/onboarding');
+        return;
+      }
+
+      if (activeUser.role !== 'INSTITUTION_ADMIN' && (!activeUser.approved || activeUser.status !== 'APPROVED')) {
+        console.warn('[PortalLayout] User is pending approval. Redirecting to /verification-pending.');
         router.push('/verification-pending');
         return;
       }

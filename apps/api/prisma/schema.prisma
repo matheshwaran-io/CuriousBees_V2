@@ -28,6 +28,9 @@ model User {
   departmentRef Department?     @relation(fields: [departmentId], references: [id])
   bio           String?
   approved      Boolean         @default(false)
+  status        String          @default("ONBOARDING")
+  approvedBy    String?
+  approvedAt    DateTime?
   suspended     Boolean         @default(false)
   supervisorId  String?
   supervisorEmail String?
