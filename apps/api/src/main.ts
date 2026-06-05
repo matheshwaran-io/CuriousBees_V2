@@ -73,7 +73,7 @@ async function createApp(expressInstance?: express.Express) {
   ]));
 
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
       if (process.env.DEVELOPMENT_MODE === 'true' && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
         return callback(null, true);

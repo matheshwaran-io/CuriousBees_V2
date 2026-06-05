@@ -2,25 +2,39 @@
   "name": "curiousbees-monorepo",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@10.8.2",
   "description": "CuriousBees — AI-powered Academic Collaboration Platform",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=apps/api\"",
+    "setup": "node scripts/db-setup.js",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "tsc --noEmit --project apps/web/tsconfig.json && tsc --noEmit --project apps/api/tsconfig.json",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "db:migrate": "npm run prisma:migrate --workspace=apps/api",
     "db:generate": "npm run prisma:generate --workspace=apps/api",
     "db:seed": "npm run prisma:seed --workspace=apps/api",
-    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules"
+    "clean": "rimraf node_modules apps/*/node_modules packages/*/node_modules apps/*/.next apps/*/dist packages/*/dist",
+    "reset": "npm run clean && npm install && npm run setup",
+    "health": "node scripts/check-health.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "prisma": "^6.19.3",
+    "rimraf": "^5.0.7",
     "typescript": "^5.4.5"
   },
   "dependencies": {

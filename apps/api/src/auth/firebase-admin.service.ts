@@ -12,13 +12,15 @@ export class FirebaseAdminService implements OnModuleInit {
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
 
-    this.missingCredentials = [
-      ['FIREBASE_PROJECT_ID', projectId],
-      ['FIREBASE_CLIENT_EMAIL', clientEmail],
-      ['FIREBASE_PRIVATE_KEY', privateKeyRaw],
-    ]
-      .filter(([, value]) => !value)
-      .map(([key]) => key);
+    const credentialsToCheck = [
+      { key: 'FIREBASE_PROJECT_ID', value: projectId },
+      { key: 'FIREBASE_CLIENT_EMAIL', value: clientEmail },
+      { key: 'FIREBASE_PRIVATE_KEY', value: privateKeyRaw },
+    ];
+
+    this.missingCredentials = credentialsToCheck
+      .filter((c) => !c.value)
+      .map((c) => c.key);
 
     if (this.missingCredentials.length > 0) {
       this.logger.error(
@@ -29,7 +31,7 @@ export class FirebaseAdminService implements OnModuleInit {
 
     try {
       // Parse private key formatting (replaces string literal \n with actual newlines)
-      const privateKey = privateKeyRaw.replace(/\\n/g, '\n');
+      const privateKey = privateKeyRaw!.replace(/\\n/g, '\n');
 
       this.firebaseApp = admin.apps.length > 0
         ? admin.app()
