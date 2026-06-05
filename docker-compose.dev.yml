@@ -3,7 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: srm_curiousbees_postgres
+    container_name: srm_curiousbees_postgres_dev
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d srm_curiousbees_db"]
       interval: 5s
@@ -21,7 +21,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: srm_curiousbees_redis
+    container_name: srm_curiousbees_redis_dev
     restart: always
     ports:
       - "6379:6379"
@@ -32,13 +32,14 @@ services:
       retries: 5
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: srm_curiousbees_api
-    restart: always
+    image: node:22-alpine
+    container_name: srm_curiousbees_api_dev
+    working_dir: /app
+    command: sh -c "npm install --legacy-peer-deps && npm run db:generate && npm run dev:api"
+    ports:
+      - "4000:4000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 4000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/srm_curiousbees_db?schema=public
       DIRECT_URL: postgresql://postgres:postgres@postgres:5432/srm_curiousbees_db?schema=public
@@ -46,8 +47,11 @@ services:
       REDIS_PORT: 6379
       DEVELOPMENT_MODE: "true"
       FRONTEND_URL: http://localhost:3000
-    ports:
-      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/api/node_modules
+      - /app/apps/web/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,24 +59,25 @@ services:
         condition: service_healthy
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:4000
-        NEXT_PUBLIC_DEVELOPMENT_MODE: "true"
-    container_name: srm_curiousbees_web
-    restart: always
+    image: node:22-alpine
+    container_name: srm_curiousbees_web_dev
+    working_dir: /app
+    command: sh -c "npm install --legacy-peer-deps && npm run dev:web"
+    ports:
+      - "3000:3000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 3000
       NEXT_PUBLIC_API_URL: http://localhost:4000
       NEXT_PUBLIC_DEVELOPMENT_MODE: "true"
-    ports:
-      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/api/node_modules
     depends_on:
       - api
 
 volumes:
-  postgres_data:
+  postgres_data_dev:
     driver: local

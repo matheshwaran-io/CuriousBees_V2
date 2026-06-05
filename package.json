@@ -26,8 +26,10 @@
     "db:migrate": "npm run prisma:migrate --workspace=apps/api",
     "db:generate": "npm run prisma:generate --workspace=apps/api",
     "db:seed": "npm run prisma:seed --workspace=apps/api",
+    "db:reset": "npx prisma migrate reset --force --schema=apps/api/prisma/schema.prisma",
+    "db:setup": "npm run db:reset && npm run db:seed",
     "clean": "rimraf node_modules apps/*/node_modules packages/*/node_modules apps/*/.next apps/*/dist packages/*/dist",
-    "reset": "npm run clean && npm install && npm run setup",
+    "reset": "npm run clean && npm install --legacy-peer-deps && npm run setup",
     "health": "node scripts/check-health.js"
   },
   "devDependencies": {

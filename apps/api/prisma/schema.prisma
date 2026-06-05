@@ -58,6 +58,9 @@ model User {
   publications          Publication[]
   submittedReports      Report[]                @relation("ScholarReports")
   reviewedReports       Report[]                @relation("SupervisorReports")
+
+  @@index([departmentId])
+  @@index([supervisorId])
 }
 
 // SRM_Recollab Custom MVP Models
@@ -86,6 +89,8 @@ model Thread {
   comments  Comment[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([authorId])
 }
 
 model Comment {
@@ -97,6 +102,9 @@ model Comment {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([threadId])
+  @@index([authorId])
 }
 
 model Opportunity {
@@ -111,6 +119,8 @@ model Opportunity {
   updatedAt      DateTime @updatedAt
 
   collaborationRequests CollaborationRequest[]
+
+  @@index([authorId])
 }
 
 enum ApprovalStatus {
@@ -177,6 +187,9 @@ model Notification {
   event         Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventId])
 }
 
 model NotificationLog {
@@ -240,6 +253,7 @@ model WorkspaceMember {
   user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([workspaceId, userId])
+  @@index([userId])
 }
 
 model WorkspaceFile {
@@ -253,6 +267,9 @@ model WorkspaceFile {
 
   workspace     Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   uploadedBy    User                    @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([uploadedById])
 }
 
 model WorkspaceMilestone {
@@ -266,6 +283,8 @@ model WorkspaceMilestone {
   updatedAt     DateTime                @updatedAt
 
   workspace     Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }
 
 model WorkspaceAnnouncement {
@@ -278,6 +297,9 @@ model WorkspaceAnnouncement {
 
   workspace     Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author        User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([authorId])
 }
 
 model AuditLog {
@@ -322,6 +344,8 @@ model Publication {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Report {
@@ -337,4 +361,7 @@ model Report {
   supervisor    User     @relation("SupervisorReports", fields: [supervisorId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([scholarId])
+  @@index([supervisorId])
 }

@@ -29,13 +29,33 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
+import { WinstonModule } from 'nest-winston';
+import { winstonOptions } from './config/winston.config';
+import helmet from 'helmet';
+import * as compression from 'compression';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 // ─── Shared app bootstrap ────────────────────────────────────────────────────
 
 async function createApp(expressInstance?: express.Express) {
   const app = expressInstance
-    ? await NestFactory.create(AppModule, new ExpressAdapter(expressInstance))
-    : await NestFactory.create(AppModule);
+    ? await NestFactory.create(AppModule, new ExpressAdapter(expressInstance), {
+        logger: WinstonModule.createLogger(winstonOptions),
+      })
+    : await NestFactory.create(AppModule, {
+        logger: WinstonModule.createLogger(winstonOptions),
+      });
+
+  // Security headers
+  app.use(
+    helmet({
+      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+
+  // Response compression
+  app.use(compression());
 
   // Keep API resources under /api while allowing a lightweight root message.
   app.setGlobalPrefix('api', {
@@ -44,8 +64,20 @@ async function createApp(expressInstance?: express.Express) {
       { path: 'api', method: RequestMethod.GET },
       { path: 'health', method: RequestMethod.GET },
       { path: 'api/health', method: RequestMethod.GET },
+      { path: 'api/system', method: RequestMethod.GET },
+      { path: 'api/version', method: RequestMethod.GET },
     ],
   });
+
+  // Swagger Documentation Setup
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('CuriousBees API')
+    .setDescription('The CuriousBees Academic Collaboration Platform API')
+    .setVersion('1.0.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   // Validation
   app.useGlobalPipes(

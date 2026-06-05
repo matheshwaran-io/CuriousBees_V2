@@ -5,6 +5,25 @@ import { PrismaClient } from '@prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
+  constructor() {
+    super({
+      log: process.env.NODE_ENV === 'development'
+        ? [
+            { emit: 'event', level: 'query' },
+            { emit: 'stdout', level: 'info' },
+            { emit: 'stdout', level: 'warn' },
+            { emit: 'stdout', level: 'error' },
+          ]
+        : [{ emit: 'stdout', level: 'error' }],
+    });
+
+    if (process.env.NODE_ENV === 'development') {
+      (this as any).$on('query', (e: any) => {
+        this.logger.debug(`Query: ${e.query} | Params: ${e.params} | Duration: ${e.duration}ms`);
+      });
+    }
+  }
+
   async onModuleInit() {
     try {
       await this.$connect();

@@ -10,8 +10,6 @@ import { ToastContainer } from '@/components/Toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 
-const queryClient = new QueryClient();
-
 export default function PortalLayout({
   children,
 }: {
@@ -21,6 +19,16 @@ export default function PortalLayout({
   const pathname = usePathname();
   const { currentUser, setCurrentUser, fetchData, setTheme, syncUserSession, isLoading } = useStore();
   const [authTimedOut, setAuthTimedOut] = useState(false);
+
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
 
   // Sync local storage theme on mount
   useEffect(() => {

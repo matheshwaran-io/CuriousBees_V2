@@ -2,20 +2,58 @@ import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const SRM_DEPARTMENTS = [
+  { name: 'Computing Technologies (CSE / IT / Swe)', code: 'CSE' },
+  { name: 'Electronics & Communication Engineering (ECE)', code: 'ECE' },
+  { name: 'Electrical & Electronics Engineering (EEE)', code: 'EEE' },
+  { name: 'Biotechnology & Bioengineering', code: 'BIOTECH' },
+  { name: 'Mechanical Engineering', code: 'MECH' },
+  { name: 'Civil Engineering', code: 'CIVIL' },
+  { name: 'Chemical Engineering', code: 'CHEM' },
+  { name: 'Physics & Nanotechnology', code: 'PHYS' },
+  { name: 'Chemistry & Materials Science', code: 'CHEMISTRY' },
+  { name: 'Mathematics & Actuarial Science', code: 'MATHS' },
+  { name: 'School of Management (SOM)', code: 'SOM' },
+  { name: 'Health Sciences & Research', code: 'HEALTH' }
+];
+
 async function main() {
   console.log('🌱 Starting database seeding...');
 
   // 1. Clean database
+  await prisma.workspaceAnnouncement.deleteMany({});
+  await prisma.workspaceFile.deleteMany({});
+  await prisma.workspaceMilestone.deleteMany({});
+  await prisma.workspaceMember.deleteMany({});
+  await prisma.workspace.deleteMany({});
+  await prisma.collaborationRequest.deleteMany({});
   await prisma.userInterest.deleteMany({});
   await prisma.comment.deleteMany({});
   await prisma.thread.deleteMany({});
   await prisma.opportunity.deleteMany({});
   await prisma.researchInterest.deleteMany({});
+  await prisma.notificationToken.deleteMany({});
+  await prisma.notification.deleteMany({});
   await prisma.user.deleteMany({});
+  await prisma.department.deleteMany({});
 
   console.log('🧹 Database cleaned.');
 
-  // 2. Create Research Interests
+  // 2. Seed Departments
+  const deptMap: Record<string, any> = {};
+  for (const dept of SRM_DEPARTMENTS) {
+    const d = await prisma.department.create({
+      data: {
+        name: dept.name,
+        code: dept.code,
+        description: `${dept.name} department at SRMIST.`
+      }
+    });
+    deptMap[dept.name] = d;
+  }
+  console.log(`✅ Seeded ${SRM_DEPARTMENTS.length} departments.`);
+
+  // 3. Create Research Interests
   const interestsData = [
     'Generative AI & LLMs',
     'Quantum Computing',
@@ -39,7 +77,7 @@ async function main() {
   }
   console.log(`✅ Created ${Object.keys(interestsMap).length} research interests.`);
 
-  // 3. Create Users (Faculty & Scholars)
+  // 4. Create Users (Faculty, Scholars, and Admins)
   const users = [
     {
       name: 'Dr. Anand Ramachandran',
@@ -85,11 +123,21 @@ async function main() {
       department: 'Biotechnology & Bioengineering',
       bio: 'PhD Scholar researching nano-carriers in bioinformatics under Dr. Priya. Exploring molecular modeling using graph neural networks.',
       interests: ['Bioinformatics', 'Cancer Immunotherapy', 'Nanomaterials & Thin Films']
+    },
+    {
+      name: 'CuriousBees Admin',
+      email: 'admin@srmist.edu.in',
+      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      role: Role.INSTITUTION_ADMIN,
+      department: 'Computing Technologies (CSE / IT / Swe)',
+      bio: 'SRMIST System Administrator for CuriousBees platform.',
+      interests: []
     }
   ];
 
   const createdUsers: Record<string, any> = {};
   for (const u of users) {
+    const deptRef = deptMap[u.department];
     const user = await prisma.user.create({
       data: {
         name: u.name,
@@ -97,8 +145,10 @@ async function main() {
         image: u.image,
         role: u.role,
         department: u.department,
+        departmentId: deptRef ? deptRef.id : null,
         bio: u.bio,
-        approved: u.role === Role.RESEARCH_SUPERVISOR ? true : false
+        approved: u.role === Role.RESEARCH_SUPERVISOR || u.role === Role.INSTITUTION_ADMIN ? true : false,
+        status: u.role === Role.RESEARCH_SUPERVISOR || u.role === Role.INSTITUTION_ADMIN ? 'APPROVED' : 'ONBOARDING'
       }
     });
     createdUsers[u.email] = user;
@@ -116,54 +166,54 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Created ${Object.keys(createdUsers).length} faculty/scholar profiles with interests.`);
+  console.log(`✅ Created ${Object.keys(createdUsers).length} user profiles with department references and interests.`);
 
-  // 4. Create Threads
+  // Link supervisor relationship
+  await prisma.user.update({
+    where: { id: createdUsers['scholar.suresh@srmist.edu.in'].id },
+    data: {
+      supervisorId: createdUsers['dr.anand@srmist.edu.in'].id,
+      supervisorEmail: 'dr.anand@srmist.edu.in',
+      status: 'APPROVED',
+      approved: true
+    }
+  });
+
+  await prisma.user.update({
+    where: { id: createdUsers['scholar.divya@srmist.edu.in'].id },
+    data: {
+      supervisorId: createdUsers['dr.priya@srmist.edu.in'].id,
+      supervisorEmail: 'dr.priya@srmist.edu.in',
+      status: 'APPROVED',
+      approved: true
+    }
+  });
+  console.log('✅ Scholar supervisor associations resolved.');
+
+  // 5. Create Threads
   const t1 = await prisma.thread.create({
     data: {
       title: 'Call for Collaboration: GPGPU Resource Sharing for LLM Fine-Tuning',
-      content: `Hello Colleagues,
-
-Our lab in the Computing Technologies department has recently set up a cluster of 4x NVIDIA H100 GPUs for fine-tuning custom models on institutional datasets. 
-
-We are currently looking to collaborate with faculty members in the **Biotechnology & Bioengineering** department who need GPU cycles to accelerate protein fold sequencing or drug discovery workflows. 
-
-If your PhD scholars have computationally demanding deep learning workloads (written in PyTorch or JAX), please reach out. We would love to co-author and share these resources to produce high-impact joint publications.
-
-Best regards,
-Dr. Anand Ramachandran`,
+      content: `Hello Colleagues, Our lab in the Computing Technologies department has set up a cluster of 4x NVIDIA H100 GPUs for fine-tuning custom models...`,
       authorId: createdUsers['dr.anand@srmist.edu.in'].id,
-      tags: ['GPU Cluster', 'Generative AI & LLMs', 'Bioinformatics', 'Collaboration']
+      tags: ['GPU Cluster', 'Generative AI', 'Bioinformatics']
     }
   });
 
   const t2 = await prisma.thread.create({
     data: {
       title: 'Interdisciplinary Study on Silicon Photonics-based Genomic Sequencing Chips',
-      content: `Hi everyone,
-
-I am drafting a proposal for the upcoming **DST-SERB Core Research Grant** focusing on creating high-throughput genomic sequencing sensors integrated directly on-chip using silicon photonics.
-
-This is a highly cross-disciplinary endeavor requiring:
-1. **ECE experts** with experience in silicon waveguide fabrication and optical resonators (Dr. Ramesh's team).
-2. **Biotech experts** with experience in bio-functionalizing chip surfaces to bind DNA molecules (my team).
-3. **Computer Science experts** to design fast signal decoding algorithms directly running on raw optical sensor data.
-
-We are holding an initial brainstorming session in the ECE Seminar Hall next Friday at 2:00 PM. Please reply to this thread if you are interested in joining the proposal!
-
-Best,
-Dr. Priya Subramanian`,
+      content: `Hi everyone, I am drafting a proposal for the upcoming DST-SERB Core Research Grant...`,
       authorId: createdUsers['dr.priya@srmist.edu.in'].id,
-      tags: ['Silicon Photonics', 'Bioinformatics', 'Research Grant', 'DST-SERB']
+      tags: ['Silicon Photonics', 'Bioinformatics', 'Research Grant']
     }
   });
+  console.log('✅ Created research discussion threads.');
 
-  console.log('✅ Created research threads.');
-
-  // 5. Create Comments
+  // 6. Create Comments
   await prisma.comment.create({
     data: {
-      content: `This is incredibly timely, Dr. Priya! My PhD scholars have been exploring silicon-photonic ring modulators for optical communications, and adapting them to work as molecular refractive index sensors would be an amazing extension. Count us in!`,
+      content: `This is incredibly timely, Dr. Priya! Adaptations to silicon photonic ring modulators would be awesome.`,
       threadId: t2.id,
       authorId: createdUsers['dr.ramesh@srmist.edu.in'].id
     }
@@ -171,67 +221,75 @@ Dr. Priya Subramanian`,
 
   await prisma.comment.create({
     data: {
-      content: `Dr. Anand, my PhD scholar Divya Nambiar is currently running molecular modeling using very heavy Graph Neural Networks. Our current local RTX 3090s are taking weeks to complete the epochs. Access to your H100 cluster would speed up her thesis work by at least 10x. We would be absolutely thrilled to collaborate!`,
+      content: `Dr. Anand, my PhD scholar Divya Nambiar is currently running molecular modeling using GNNs, access to your H100 cluster would be a major accelerator.`,
       threadId: t1.id,
       authorId: createdUsers['dr.priya@srmist.edu.in'].id
     }
   });
-
-  await prisma.comment.create({
-    data: {
-      content: `Thank you Dr. Priya! Yes, Divya is welcome to share our cluster. I have asked my PhD scholar Suresh to set up Docker containers and provision SSH keys for her. Let's schedule a Zoom call this Monday to align on the technical details.`,
-      threadId: t1.id,
-      authorId: createdUsers['dr.anand@srmist.edu.in'].id
-    }
-  });
-
   console.log('✅ Created comments.');
 
-  // 6. Create Research Opportunities
+  // 7. Create Opportunities
   await prisma.opportunity.create({
     data: {
       title: 'PhD Position: Reinforcement Learning for Smart Grid Optimization',
-      description: `We are seeking an outstanding PhD candidate to join the EEE department under the joint supervision of EEE and CSE faculty.
-
-The project involves designing multi-agent reinforcement learning (MARL) algorithms to optimize energy distribution and load balancing in next-generation microgrids.
-
-**Required Qualifications:**
-- B.Tech/M.Tech in EEE, ECE, or CSE with a strong academic track record.
-- Exceptional programming skills in Python (PyTorch or TensorFlow).
-- Solid foundation in linear algebra, probability, and control systems.
-
-**Funding:** Monthly stipend of ₹38,000 + HRA as per institutional norms for the first 2 years, upgradable to SRF in the 3rd year.`,
+      description: `We are seeking an outstanding PhD candidate to join the EEE department. Funding is ₹38,000/month.`,
       department: 'Electrical & Electronics Engineering (EEE)',
       researchDomain: 'Reinforcement Learning',
       authorId: createdUsers['dr.anand@srmist.edu.in'].id
     }
   });
+  console.log('✅ Created research opportunities.');
 
-  await prisma.opportunity.create({
+  // 8. Create Workspaces
+  const ws1 = await prisma.workspace.create({
     data: {
-      title: 'Research Assistant: 2D Nanomaterials for Energy Storage',
-      description: `The Materials Science Lab is recruiting a full-time Research Assistant (RA) for a sponsored project on synthesizing transition metal dichalcogenide (TMD) thin films for supercapacitor electrodes.
-
-**Key Responsibilities:**
-- Physical vapor deposition (PVD) and chemical vapor deposition (CVD) synthesis of thin films.
-- Characterization using XRD, SEM, and Raman spectroscopy.
-- Electrochemical performance evaluation using cyclic voltammetry.
-
-**Duration:** 12 Months (extendable based on performance and fund availability).
-**Stipend:** ₹31,000 consolidated per month.`,
-      department: 'Chemistry & Materials Science',
-      researchDomain: 'Nanomaterials & Thin Films',
-      authorId: createdUsers['dr.priya@srmist.edu.in'].id
+      title: 'Genomic Sequencing & Waveguide Photonic Modulators',
+      description: 'Collaborative interdisciplinary sandbox for silicon photonics bio-sensor research.'
     }
   });
 
-  console.log('✅ Created research opportunities.');
+  // Workspace Members
+  await prisma.workspaceMember.createMany({
+    data: [
+      { workspaceId: ws1.id, userId: createdUsers['dr.priya@srmist.edu.in'].id, role: 'OWNER' },
+      { workspaceId: ws1.id, userId: createdUsers['dr.ramesh@srmist.edu.in'].id, role: 'MEMBER' },
+      { workspaceId: ws1.id, userId: createdUsers['scholar.divya@srmist.edu.in'].id, role: 'MEMBER' }
+    ]
+  });
 
-  // 7. Create Events
-  await prisma.event.deleteMany({});
+  // Workspace File
+  await prisma.workspaceFile.create({
+    data: {
+      workspaceId: ws1.id,
+      name: 'DST_SERB_Grant_Draft.pdf',
+      url: 'https://example.com/files/dst_serb_draft.pdf',
+      size: 4096000,
+      uploadedById: createdUsers['dr.priya@srmist.edu.in'].id
+    }
+  });
+
+  // Workspace Milestones
+  await prisma.workspaceMilestone.createMany({
+    data: [
+      { workspaceId: ws1.id, title: 'Draft Review Submission', completed: true, dueDate: new Date(Date.now() + 86400000 * 7) },
+      { workspaceId: ws1.id, title: 'Full Proposal Submission', completed: false, dueDate: new Date(Date.now() + 86400000 * 30) }
+    ]
+  });
+
+  // Workspace Announcement
+  await prisma.workspaceAnnouncement.create({
+    data: {
+      workspaceId: ws1.id,
+      title: 'Kickoff Proposal Sync',
+      content: 'Let us meet in ECE conference room next Tuesday at 10 AM to finalize the proposal draft.',
+      authorId: createdUsers['dr.priya@srmist.edu.in'].id
+    }
+  });
+  console.log('✅ Created collaborative workspaces and sub-resources.');
+
+  // 9. Create Events
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  const dayAfter = new Date(Date.now() + 172800000).toISOString().split('T')[0];
 
   await prisma.event.create({
     data: {
@@ -239,7 +297,9 @@ The project involves designing multi-agent reinforcement learning (MARL) algorit
       date: new Date(today),
       time: '10:00 AM',
       venue: 'ECE Seminar Hall (PG Block)',
-      status: 'PUBLISHED', eventType: 'Seminar'
+      status: 'PUBLISHED',
+      eventType: 'Defense',
+      priority: 'HIGH'
     }
   });
 
@@ -249,21 +309,31 @@ The project involves designing multi-agent reinforcement learning (MARL) algorit
       date: new Date(tomorrow),
       time: '02:30 PM',
       venue: 'Biotech Conference Room',
-      status: 'PUBLISHED', eventType: 'Seminar'
+      status: 'PUBLISHED',
+      eventType: 'Seminar',
+      priority: 'MEDIUM'
     }
   });
+  console.log('✅ Created events.');
 
-  await prisma.event.create({
+  // 10. Notifications
+  await prisma.notification.create({
     data: {
-      title: 'Workshop: DST-SERB Proposal Drafting & Grant Compliance',
-      date: new Date(dayAfter),
-      time: '11:15 AM',
-      venue: 'Main Auditorium (Administrative Block)',
-      status: 'PUBLISHED', eventType: 'Seminar'
+      userId: createdUsers['scholar.suresh@srmist.edu.in'].id,
+      title: 'Welcome to CuriousBees',
+      body: 'Your supervisor Dr. Anand Ramachandran has approved your portal access.',
+      sentStatus: true
     }
   });
 
-  console.log('✅ Created research events.');
+  await prisma.notificationToken.create({
+    data: {
+      userId: createdUsers['scholar.suresh@srmist.edu.in'].id,
+      token: 'mock-fcm-token-suresh-123456789'
+    }
+  });
+  console.log('✅ Seeded notification items and push subscription logs.');
+
   console.log('🌟 Seeding completed successfully!');
 }
 
