@@ -33,7 +33,6 @@ export default function MarketingFooter() {
             <ul className="space-y-3">
               <li><Link href="/ethics-framework" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Ethics Framework</Link></li>
               <li><Link href="/contact" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Contact Support</Link></li>
-              <li><Link href="/login" className="text-sm text-slate-500 hover:text-slate-900 transition-colors">Sign In</Link></li>
             </ul>
           </div>
           

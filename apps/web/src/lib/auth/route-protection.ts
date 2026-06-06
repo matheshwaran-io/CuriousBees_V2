@@ -31,15 +31,16 @@ export const DASHBOARD_ROUTES: Record<UserRole, string> = {
  * Unapproved scholars are always directed to /verification-pending.
  * Defaults to '/login' for unauthenticated users.
  */
-export function getDashboardRoute(user?: { role: UserRole; approved?: boolean }): string {
-  const isBypass = process.env.NEXT_PUBLIC_AUTH_MODE === 'bypass' || process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === 'true';
-  if (isBypass) {
-    if (!user) return '/dashboard';
-    return DASHBOARD_ROUTES[user.role] ?? '/dashboard';
+export function getDashboardRoute(user?: { role: UserRole; approved?: boolean; status?: string }): string {
+  if (!user) return '/sign-in';
+  if (user.status === 'REJECTED') {
+    return '/account-rejected';
   }
-  if (!user) return '/login';
-  if (user.role === 'RESEARCH_SCHOLAR' && !user.approved) {
-    return '/verification-pending';
+  if (user.status === 'PENDING_SUPERVISOR_APPROVAL' || user.status === 'PENDING_ADMIN_APPROVAL') {
+    return '/approval-pending';
+  }
+  if (!user.approved && user.role !== 'INSTITUTION_ADMIN') {
+    return '/approval-pending';
   }
   return DASHBOARD_ROUTES[user.role] ?? '/dashboard';
 }

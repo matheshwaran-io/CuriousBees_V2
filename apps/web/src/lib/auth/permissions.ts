@@ -63,13 +63,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 
 export const PUBLIC_ROUTES: string[] = [
   '/',
-  '/login',
-  '/signin',
-  '/signup',
+  '/sign-in',
+  '/sign-up',
   '/about',
   '/features',
   '/auth',
   '/verification-pending',
+  '/approval-pending',
+  '/account-rejected',
 ];
 
 // ─── Core Permission Check ────────────────────────────────────────────────────

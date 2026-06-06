@@ -24,11 +24,6 @@ export function proxy(request: NextRequest) {
 
   console.info('[Proxy] Intercepted request for path:', pathname);
 
-  // 0. Development override bypass
-  const isBypass = process.env.NEXT_PUBLIC_AUTH_MODE === 'bypass' || process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === 'true' || process.env.DEVELOPMENT_MODE === 'true';
-  if (isBypass) {
-    return NextResponse.next();
-  }
 
   // 1. Always allow public routes without any auth check
   if (isPublicRoute(pathname)) {
@@ -41,7 +36,7 @@ export function proxy(request: NextRequest) {
 
   // 3. No role cookie → user is not logged in → redirect to login
   if (!role) {
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/sign-in', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -50,7 +45,7 @@ export function proxy(request: NextRequest) {
   const validRoles: UserRole[] = ['INSTITUTION_ADMIN', 'RESEARCH_SUPERVISOR', 'RESEARCH_SCHOLAR'];
   if (!validRoles.includes(role)) {
     // Corrupt/unknown cookie — clear it and send to login
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/sign-in', request.url);
     const response = NextResponse.redirect(loginUrl);
     response.cookies.delete(ROLE_COOKIE_NAME);
     return response;
@@ -81,5 +76,6 @@ export const config = {
      * - public folder assets
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|css|woff2?)$).*)',
+    '/__clerk/:path*',
   ],
 };

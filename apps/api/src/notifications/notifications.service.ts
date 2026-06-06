@@ -116,17 +116,106 @@ export class NotificationsService {
    * Generic method to send notification using Firebase Admin SDK
    */
   async sendNotification(title: string, body: string, userId: string) {
+    try {
+      await this.prisma.notification.create({
+        data: {
+          userId,
+          title,
+          body,
+          sentStatus: true,
+        }
+      });
+    } catch (e: any) {
+      this.logger.error(`Failed to save notification to database: ${e.message}`);
+    }
     return this.sendPushToUser(userId, { title, body });
   }
 
-  // --- Notification Hooks for Future Events ---
+  // --- Notification Hooks for Auth and Approval Workflows ---
 
-  async notifyScholarApprovalRequest(scholarId: string, supervisorId: string) {
-    // TODO: Implement later
+  async notifyScholarRegistrationSubmitted(scholarId: string, supervisorId: string) {
+    try {
+      const scholar = await this.prisma.user.findUnique({ where: { id: scholarId } });
+      if (scholar) {
+        await this.sendNotification(
+          'Scholar Registration Submitted',
+          `${scholar.name || scholar.email} has requested you as their supervisor.`,
+          supervisorId
+        );
+      }
+    } catch (e: any) {
+      this.logger.error(`notifyScholarRegistrationSubmitted failed: ${e.message}`);
+    }
   }
 
-  async notifyScholarApproved(scholarId: string) {
-    // TODO: Implement later
+  async notifyScholarApproved(scholarId: string, supervisorId: string) {
+    try {
+      const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
+      await this.sendNotification(
+        'Scholar Approved',
+        `Your supervisor ${supervisor?.name || supervisor?.email || 'Faculty'} has approved your portal access.`,
+        scholarId
+      );
+    } catch (e: any) {
+      this.logger.error(`notifyScholarApproved failed: ${e.message}`);
+    }
+  }
+
+  async notifyScholarRejected(scholarId: string, supervisorId: string) {
+    try {
+      const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
+      await this.sendNotification(
+        'Scholar Rejected',
+        `Your supervisor request to ${supervisor?.name || supervisor?.email || 'Faculty'} was declined.`,
+        scholarId
+      );
+    } catch (e: any) {
+      this.logger.error(`notifyScholarRejected failed: ${e.message}`);
+    }
+  }
+
+  async notifySupervisorRegistrationSubmitted(supervisorId: string) {
+    try {
+      const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
+      if (supervisor) {
+        const admins = await this.prisma.user.findMany({
+          where: { role: 'INSTITUTION_ADMIN' }
+        });
+        for (const admin of admins) {
+          await this.sendNotification(
+            'Supervisor Registration Submitted',
+            `Faculty ${supervisor.name || supervisor.email} has registered and awaits approval.`,
+            admin.id
+          );
+        }
+      }
+    } catch (e: any) {
+      this.logger.error(`notifySupervisorRegistrationSubmitted failed: ${e.message}`);
+    }
+  }
+
+  async notifySupervisorApproved(supervisorId: string, adminId: string) {
+    try {
+      await this.sendNotification(
+        'Supervisor Approved',
+        `Institutional Admin has approved your supervisor access.`,
+        supervisorId
+      );
+    } catch (e: any) {
+      this.logger.error(`notifySupervisorApproved failed: ${e.message}`);
+    }
+  }
+
+  async notifySupervisorRejected(supervisorId: string, adminId: string) {
+    try {
+      await this.sendNotification(
+        'Supervisor Rejected',
+        `Your registration request as a supervisor was rejected.`,
+        supervisorId
+      );
+    } catch (e: any) {
+      this.logger.error(`notifySupervisorRejected failed: ${e.message}`);
+    }
   }
 
   async notifyNewOpportunity(opportunityId: string, authorId: string) {

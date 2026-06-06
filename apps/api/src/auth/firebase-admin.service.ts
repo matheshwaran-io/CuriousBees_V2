@@ -57,25 +57,4 @@ export class FirebaseAdminService implements OnModuleInit {
     return this.firebaseApp !== null;
   }
 
-  /**
-   * Securely verify a Firebase JWT ID Token passed from the frontend
-   */
-  async verifyToken(token: string): Promise<admin.auth.DecodedIdToken> {
-    if (!this.firebaseApp) {
-      const missing = this.missingCredentials.length
-        ? ` Missing env vars: ${this.missingCredentials.join(', ')}.`
-        : '';
-      throw new Error(`Firebase Admin SDK is not initialized.${missing}`);
-    }
-
-    try {
-      this.logger.debug(`Verifying Firebase ID token. tokenLength=${token.length}`);
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      this.logger.log(`Firebase token verified for uid=${decodedToken.uid}, email=${decodedToken.email || 'unknown'}`);
-      return decodedToken;
-    } catch (e: any) {
-      this.logger.error(`Firebase token verification failed: ${e.message}`);
-      throw new Error(`Firebase token verification failed: ${e.message}`);
-    }
-  }
 }

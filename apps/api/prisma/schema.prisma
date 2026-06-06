@@ -17,7 +17,7 @@ enum Role {
 
 model User {
   id            String          @id @default(cuid())
-  firebaseUid   String?         @unique
+  clerkId       String?         @unique
   name          String?
   email         String          @unique
   emailVerified DateTime?
@@ -34,6 +34,7 @@ model User {
   suspended     Boolean         @default(false)
   supervisorId  String?
   supervisorEmail String?
+  employeeId    String?         @unique
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 

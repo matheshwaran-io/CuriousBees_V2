@@ -54,6 +54,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
           { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
           { name: 'User Management', href: '/admin/users', icon: UserCog },
           { name: 'Supervisors', href: '/admin/supervisors', icon: Shield },
+          { name: 'Approval Requests', href: '/admin/approval-requests', icon: Clock },
           { name: 'Departments', href: '/admin/departments', icon: FolderOpen },
           { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
           { name: 'System Settings', href: '/admin/settings', icon: Shield },

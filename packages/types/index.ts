@@ -2,7 +2,7 @@ export type UserRole = 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR' | 'INSTITUTION
 
 export interface User {
   id: string;
-  firebaseUid: string | null;
+  clerkId: string | null;
   name: string | null;
   email: string;
   image: string | null;
@@ -18,6 +18,7 @@ export interface User {
   suspended: boolean;
   supervisorId: string | null;
   supervisorEmail: string | null;
+  employeeId: string | null;
   createdAt: Date | string;
   interests?: UserInterest[];
   threads?: Thread[];

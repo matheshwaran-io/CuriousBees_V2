@@ -33,11 +33,6 @@ export default function FeaturesPage() {
           <Link href="/features" className="hidden sm:block text-black font-sans font-medium text-[14px] transition-colors">
             Features
           </Link>
-          <Link href="/login">
-            <button className="h-[40px] px-5 bg-black hover:bg-[#222222] text-white font-sans font-semibold text-[14px] rounded-lg transition-colors cursor-pointer">
-              Sign In
-            </button>
-          </Link>
         </div>
       </header>
 

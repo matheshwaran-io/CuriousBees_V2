@@ -56,7 +56,7 @@ export default function AccessDeniedPage() {
 
         <div className="space-y-3">
           <Link
-            href="/login"
+            href="/sign-in"
             className="block w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-slate-900 hover:bg-srm-crimson transition-all text-center cursor-pointer shadow-sm"
           >
             Authenticate with Another Account

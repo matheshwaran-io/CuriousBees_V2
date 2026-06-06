@@ -9,13 +9,7 @@ export class ApprovedGuard implements CanActivate {
     if (!user) {
       return false;
     }
-
-    const isBypass = process.env.AUTH_MODE === 'bypass' || process.env.DEVELOPMENT_MODE === 'true';
-    if (isBypass) {
-      return true;
-    }
-
-    // Admin is automatically approved or bypassed.
+    // Admin is automatically approved.
     // Scholar and Supervisor must have approved === true and status === 'APPROVED'.
     if (user.role === 'INSTITUTION_ADMIN') {
       return true;

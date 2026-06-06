@@ -6,7 +6,9 @@ export const envSchema = z.object({
     if (typeof val === 'string') return val.trim();
     return val;
   }, z.enum(['true', 'false']).default('false')),
-  AUTH_MODE: z.enum(['bypass', 'firebase']).default('bypass'),
+  AUTH_MODE: z.literal('clerk', {
+    errorMap: () => ({ message: 'AUTH_MODE must be set to "clerk"' }),
+  }),
   DEV_ROLE: z.enum(['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR', 'INSTITUTION_ADMIN']).default('RESEARCH_SCHOLAR'),
   PORT: z.preprocess((val) => {
     if (typeof val === 'string') return parseInt(val, 10);
@@ -23,17 +25,10 @@ export const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url('NEXT_PUBLIC_API_URL must be a valid URL'),
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
   ALLOWED_ORIGINS: z.string().optional(),
-  FIREBASE_PROJECT_ID: z.string().optional(),
-  FIREBASE_CLIENT_EMAIL: z.string().optional(),
-  FIREBASE_PRIVATE_KEY: z.string().optional(),
-}).refine((data) => {
-  const isBypass = data.AUTH_MODE === 'bypass' || data.DEVELOPMENT_MODE === 'true';
-  if (!isBypass) {
-    return !!data.FIREBASE_PROJECT_ID && !!data.FIREBASE_CLIENT_EMAIL && !!data.FIREBASE_PRIVATE_KEY;
-  }
-  return true;
-}, {
-  message: 'Firebase Admin SDK credentials (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) are required when AUTH_MODE is firebase',
+  CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
+  FIREBASE_PROJECT_ID: z.string().min(1, 'FIREBASE_PROJECT_ID is required for FCM notifications'),
+  FIREBASE_CLIENT_EMAIL: z.string().min(1, 'FIREBASE_CLIENT_EMAIL is required for FCM notifications'),
+  FIREBASE_PRIVATE_KEY: z.string().min(1, 'FIREBASE_PRIVATE_KEY is required for FCM notifications'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

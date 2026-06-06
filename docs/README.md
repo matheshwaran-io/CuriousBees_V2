@@ -69,3 +69,4 @@ Cleanup metrics, dependency mappings, and dashboard completion checklists.
 * [Orphaned/Unused Files Audit](file:///Users/maddy/Current%20Project/CuriousBees_V2/docs/reports/UNUSED_FILES_REPORT.md): Catalog of pruned files/directories.
 * [Code Duplication Logs](file:///Users/maddy/Current%20Project/CuriousBees_V2/docs/reports/DUPLICATE_CODE_REPORT.md): Audit findings confirming zero code duplication.
 * [Dependency Hygiene Audit](file:///Users/maddy/Current%20Project/CuriousBees_V2/docs/reports/DEPENDENCY_AUDIT.md): Validations of parent/child package dependencies.
+* [Clerk Migration Plan](file:///Users/maddy/Current%20Project/CuriousBees_V2/CLERK_MIGRATION_PLAN.md): Blueprint for migrating authentication from Firebase to Clerk while keeping FCM notifications.

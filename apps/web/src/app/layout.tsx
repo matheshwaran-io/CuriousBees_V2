@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -39,9 +40,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-darkBg text-textPrimary relative min-h-screen">
-        {/* Global 3% noise texture overlay */}
-        <div className="noise-overlay" />
-        {children}
+        <ClerkProvider>
+          {/* Global 3% noise texture overlay */}
+          <div className="noise-overlay" />
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );

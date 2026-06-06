@@ -2,10 +2,14 @@ import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/com
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileInput } from '@curiousbees/types';
 import { UpdateProfileSchema } from '@curiousbees/shared-utils';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -178,6 +182,9 @@ export class UsersService {
       }
     });
 
+    // Trigger notification
+    await this.notificationsService.notifyScholarApproved(scholarId, supervisorId);
+
     return approvedUser;
   }
 
@@ -193,10 +200,10 @@ export class UsersService {
       throw new BadRequestException('Scholar mapping request not found for this supervisor.');
     }
 
-    // Reset supervisorId to null so they can request another supervisor
+    // Reject the scholar
     const declined = await this.prisma.user.update({
       where: { id: scholarId },
-      data: { supervisorId: null, supervisorEmail: null, approved: false }
+      data: { approved: false, status: 'REJECTED' }
     });
 
     // Write an audit log entry
@@ -207,6 +214,9 @@ export class UsersService {
         details: `Supervisor declined scholar ${scholar.name || scholar.email} (${scholarId})`
       }
     });
+
+    // Trigger notification
+    await this.notificationsService.notifyScholarRejected(scholarId, supervisorId);
 
     return declined;
   }
@@ -386,6 +396,9 @@ export class UsersService {
       }
     });
 
+    // Trigger notification
+    await this.notificationsService.notifySupervisorApproved(supervisorId, adminId);
+
     return approvedUser;
   }
 
@@ -404,7 +417,7 @@ export class UsersService {
       where: { id: supervisorId },
       data: { 
         approved: false,
-        status: 'ONBOARDING', // Send them back to onboarding or reject them
+        status: 'REJECTED',
       }
     });
 
@@ -416,6 +429,108 @@ export class UsersService {
       }
     });
 
+    // Trigger notification
+    await this.notificationsService.notifySupervisorRejected(supervisorId, adminId);
+
     return declined;
+  }
+
+  async register(userId: string, input: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new BadRequestException('User profile not found in database.');
+    }
+
+    const email = user.email.toLowerCase();
+    if (!email.endsWith('@srmist.edu.in')) {
+      throw new BadRequestException('Only SRM Institute email addresses are allowed.');
+    }
+
+    const { name, role, departmentId, supervisorId, employeeId } = input;
+
+    // Verify department exists
+    const department = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+    });
+    if (!department) {
+      throw new BadRequestException('Selected department does not exist.');
+    }
+
+    let status = 'PENDING_SUPERVISOR_APPROVAL';
+    let supervisorEmail = null;
+
+    if (role === 'RESEARCH_SCHOLAR') {
+      if (!supervisorId) {
+        throw new BadRequestException('Research Scholars must select a research supervisor.');
+      }
+      const supervisor = await this.prisma.user.findUnique({
+        where: { id: supervisorId },
+      });
+      if (!supervisor || supervisor.role !== 'RESEARCH_SUPERVISOR') {
+        throw new BadRequestException('Selected research supervisor is invalid.');
+      }
+      if (!supervisor.approved || supervisor.status !== 'APPROVED') {
+        throw new BadRequestException('Selected research supervisor is not approved yet.');
+      }
+      supervisorEmail = supervisor.email;
+      status = 'PENDING_SUPERVISOR_APPROVAL';
+    } else if (role === 'RESEARCH_SUPERVISOR') {
+      if (!employeeId) {
+        throw new BadRequestException('Research Supervisors must provide an Employee ID.');
+      }
+      status = 'PENDING_ADMIN_APPROVAL';
+    } else {
+      throw new BadRequestException('Invalid registration role.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        role,
+        departmentId,
+        department: department.name,
+        supervisorId: role === 'RESEARCH_SCHOLAR' ? supervisorId : null,
+        supervisorEmail,
+        employeeId: role === 'RESEARCH_SUPERVISOR' ? employeeId : null,
+        status,
+        approved: false,
+      },
+    });
+
+    // Write audit log
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'USER_REGISTER',
+        details: `User ${email} registered as ${role}. Status set to ${status}.`,
+      },
+    });
+
+    // Trigger notification
+    if (role === 'RESEARCH_SCHOLAR' && supervisorId) {
+      await this.notificationsService.notifyScholarRegistrationSubmitted(userId, supervisorId);
+    } else if (role === 'RESEARCH_SUPERVISOR') {
+      await this.notificationsService.notifySupervisorRegistrationSubmitted(userId);
+    }
+
+    return updatedUser;
+  }
+
+  async getPendingSupervisors(adminId: string) {
+    const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin || admin.role !== 'INSTITUTION_ADMIN') {
+      throw new ForbiddenException('Only administrators can access pending supervisor requests.');
+    }
+    return this.prisma.user.findMany({
+      where: {
+        role: 'RESEARCH_SUPERVISOR',
+        status: 'PENDING_ADMIN_APPROVAL',
+        approved: false,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

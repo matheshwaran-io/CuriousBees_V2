@@ -17,13 +17,8 @@ export default function CTASection() {
             Join the leading minds at SRMIST. Establish your workspace, connect with peers, and elevate your research impact on a platform built for academic excellence.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/login">
-              <button className="w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800 px-8 py-4 rounded-full text-sm font-bold transition-all shadow-lg active:scale-95">
-                Register Your Project
-              </button>
-            </Link>
             <Link href="/contact">
-              <button className="w-full sm:w-auto bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-8 py-4 rounded-full text-sm font-bold transition-all active:scale-95">
+              <button className="w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800 px-8 py-4 rounded-full text-sm font-bold transition-all shadow-lg active:scale-95">
                 Contact Administration
               </button>
             </Link>

@@ -60,25 +60,13 @@ export async function requestFcmToken(): Promise<string | null> {
   }
 }
 
-/**
- * Dispatches the registered FCM token to the secure Supabase Backend
- */
 export async function sendTokenToBackend(token: string): Promise<void> {
   try {
-    const { auth } = await import('./firebase');
-    const user = auth.currentUser;
-    if (!user) {
-      console.warn('Cannot sync FCM token: User is not authenticated.');
-      return;
-    }
-
-    const idToken = await user.getIdToken();
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const response = await fetch(`${API_URL}/api/notifications/register-token`, {
+    const { apiFetch } = await import('./api-client');
+    const response = await apiFetch('/api/notifications/register-token', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ token })
     });
@@ -86,7 +74,8 @@ export async function sendTokenToBackend(token: string): Promise<void> {
     if (response.ok) {
       console.log('[FCM] Token Registered');
     } else {
-      console.error('Failed to sync token with backend:', await response.text());
+      const errorText = await response.text().catch(() => '');
+      console.error('Failed to sync token with backend:', errorText);
     }
   } catch (error) {
     console.error('Error while sending device token to database:', error);

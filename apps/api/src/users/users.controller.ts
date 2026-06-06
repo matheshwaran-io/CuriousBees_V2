@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, Query, UseGuards, Req, BadRequestException, Param } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, Query, UseGuards, Req, BadRequestException, Param } from '@nestjs/common';
 import { FirebaseAuthGuard } from '../auth/firebase.guard';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from '@curiousbees/types';
@@ -145,5 +145,15 @@ export class UsersController {
       throw new BadRequestException('Invalid role selection.');
     }
     return this.usersService.completeOnboarding(req.user.id, payload);
+  }
+
+  @Post('register')
+  async register(@Req() req: any, @Body() body: any) {
+    return this.usersService.register(req.user.id, body);
+  }
+
+  @Get('pending-supervisors')
+  async getPendingSupervisors(@Req() req: any) {
+    return this.usersService.getPendingSupervisors(req.user.id);
   }
 }

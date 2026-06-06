@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification } from '@curiousbees/types';
-import { auth } from '@/lib/firebase';
+// Firebase auth import removed (Clerk used instead)
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@curiousbees/constants';
 import { apiFetch, getAuthHeaders, readApiError, API_URL, resetAuthPromise } from '@/lib/api-client';
@@ -35,8 +35,8 @@ interface AppState {
   opportunities: Opportunity[];
   events: Event[];
 
-  collaborators: User[];
   pendingApprovals: User[];
+  pendingSupervisors: User[];
   collaborationRequests: CollaborationRequest[];
   workspaces: Workspace[];
   activeWorkspace: Workspace | null;
@@ -80,6 +80,11 @@ interface AppState {
   approveScholar: (scholarId: string) => Promise<User>;
   declineScholar: (scholarId: string) => Promise<User>;
   requestSupervisor: (supervisorId: string) => Promise<User>;
+
+  // Admin Supervisor Approvals
+  fetchPendingSupervisors: () => Promise<User[]>;
+  approveSupervisor: (supervisorId: string) => Promise<User>;
+  declineSupervisor: (supervisorId: string) => Promise<User>;
 
   // Collaboration Requests
   fetchCollaborationRequests: () => Promise<CollaborationRequest[]>;
@@ -164,6 +169,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   collaborators: [],
   pendingApprovals: [],
+  pendingSupervisors: [],
   collaborationRequests: [],
   workspaces: [],
   activeWorkspace: null,
@@ -213,38 +219,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ theme });
   },
 
-  // 1. Sync User session from Firebase auth token with the backend
   syncUserSession: async (options) => {
     console.info('[AuthStore] syncUserSession called with options:', options);
-
-    const isBypass = process.env.NEXT_PUBLIC_AUTH_MODE === 'bypass' || process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === 'true';
-    if (isBypass) {
-      const defaultRole = process.env.NEXT_PUBLIC_DEV_ROLE || 'RESEARCH_SCHOLAR';
-      const devRole = (typeof window !== 'undefined' ? localStorage.getItem('dev_role') : null) || defaultRole;
-      const mockUser = {
-        id: 'dev-user',
-        name: 'Developer',
-        email: 'developer@local.dev',
-        role: devRole as UserRole,
-        approved: true,
-        status: 'APPROVED',
-        department: 'Development',
-        firebaseUid: 'dev-uid',
-        emailVerified: new Date(),
-        interests: []
-      } as unknown as User;
-      
-      const route = getDashboardRoute(mockUser);
-      setCookie(ROLE_COOKIE_NAME, mockUser.role);
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('dev_role', devRole);
-        localStorage.setItem('curiousbees-mock-token', `mock-bypass-token-${devRole === 'INSTITUTION_ADMIN' ? 'admin' : devRole === 'RESEARCH_SUPERVISOR' ? 'faculty' : 'scholar'}`);
-      }
-
-      set({ currentUser: mockUser, roleOverride: mockUser.role, dashboardRoute: route, isLoading: false });
-      return mockUser;
-    }
 
     // 1. Check if currentUser is already cached in Zustand (and bypass if force is true)
     if (!options?.force) {
@@ -569,13 +545,14 @@ export const useStore = create<AppState>((set, get) => ({
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('curiousbees-mock-token');
+      localStorage.removeItem('dev_role');
     }
     deleteCookie(ROLE_COOKIE_NAME);
     // Reset the auth promise singleton so re-login initializes a fresh auth listener
     resetAuthPromise();
-    import('@/lib/firebase').then(({ auth }) => {
-      auth.signOut().catch(() => { });
-    });
+    if (typeof window !== 'undefined' && window.Clerk) {
+      window.Clerk.signOut().catch(() => { });
+    }
     set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'RESEARCH_SCHOLAR' });
   },
 
@@ -597,19 +574,23 @@ export const useStore = create<AppState>((set, get) => ({
   approveScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
+      const headers = await getBearerHeader();
       const res = await apiFetch('/api/users/approve-scholar', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scholarId }),
+        headers,
+        body: JSON.stringify({ scholarId })
       });
-      if (res.ok) {
-        const data = await res.json();
-        set(state => ({
-          pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId)
-        }));
-        return data;
-      }
-      throw new Error('Failed to approve scholar.');
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to approve scholar'));
+      const updatedScholar = await res.json();
+      set(state => ({
+        pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId),
+        myScholars: [...state.myScholars, updatedScholar]
+      }));
+      get().addToast('Scholar approved successfully', 'success');
+      return updatedScholar;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
     } finally {
       set({ isLoading: false });
     }
@@ -618,19 +599,22 @@ export const useStore = create<AppState>((set, get) => ({
   declineScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
+      const headers = await getBearerHeader();
       const res = await apiFetch('/api/users/decline-scholar', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scholarId }),
+        headers,
+        body: JSON.stringify({ scholarId })
       });
-      if (res.ok) {
-        const data = await res.json();
-        set(state => ({
-          pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId)
-        }));
-        return data;
-      }
-      throw new Error('Failed to decline scholar.');
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to decline scholar'));
+      set(state => ({
+        pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId)
+      }));
+      get().addToast('Scholar request declined', 'info');
+      const declinedScholar = await res.json();
+      return declinedScholar;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
     } finally {
       set({ isLoading: false });
     }
@@ -639,23 +623,87 @@ export const useStore = create<AppState>((set, get) => ({
   requestSupervisor: async (supervisorId: string) => {
     set({ isLoading: true });
     try {
+      const headers = await getBearerHeader();
       const res = await apiFetch('/api/users/request-supervisor', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supervisorId }),
+        headers,
+        body: JSON.stringify({ supervisorId })
       });
-      if (res.ok) {
-        const data = await res.json();
-        set(state => ({
-          currentUser: {
-            ...state.currentUser,
-            supervisorId,
-            approved: false
-          } as any
-        }));
-        return data;
-      }
-      throw new Error('Failed to submit supervisor request.');
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to request supervisor'));
+      const updatedUser = await res.json();
+      set({ currentUser: updatedUser });
+      get().addToast('Supervisor requested successfully', 'success');
+      return updatedUser;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchPendingSupervisors: async () => {
+    set({ isLoading: true });
+    try {
+      const headers = await getBearerHeader();
+      const res = await apiFetch('/api/users/pending-supervisors', { headers });
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to fetch pending supervisors'));
+      const supervisors = await res.json();
+      set({ pendingSupervisors: supervisors });
+      return supervisors;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  approveSupervisor: async (supervisorId: string) => {
+    set({ isLoading: true });
+    try {
+      const headers = await getBearerHeader();
+      const res = await apiFetch('/api/users/approve-supervisor', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ supervisorId })
+      });
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to approve supervisor'));
+      const updatedUser = await res.json();
+      set(state => ({
+        pendingSupervisors: state.pendingSupervisors.filter(s => s.id !== supervisorId),
+        adminUsers: [...state.adminUsers.filter(u => u.id !== supervisorId), updatedUser]
+      }));
+      get().addToast('Supervisor approved successfully', 'success');
+      return updatedUser;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  declineSupervisor: async (supervisorId: string) => {
+    set({ isLoading: true });
+    try {
+      const headers = await getBearerHeader();
+      const res = await apiFetch('/api/users/decline-supervisor', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ supervisorId })
+      });
+      if (!res.ok) throw new Error(await readApiError(res, 'Failed to decline supervisor'));
+      const rejectedUser = await res.json();
+      set(state => ({
+        pendingSupervisors: state.pendingSupervisors.filter(s => s.id !== supervisorId),
+        adminUsers: state.adminUsers.filter(u => u.id !== supervisorId)
+      }));
+      get().addToast('Supervisor registration declined', 'info');
+      return rejectedUser;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
     } finally {
       set({ isLoading: false });
     }

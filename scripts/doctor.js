@@ -84,53 +84,44 @@ const hasPublicApi = validateUrl('NEXT_PUBLIC_API_URL');
 const hasRedisUrl = validateUrl('REDIS_URL', true);
 
 // Check Auth Mode & Dev Role Settings
-const authMode = process.env.AUTH_MODE || 'bypass';
-const pubAuthMode = process.env.NEXT_PUBLIC_AUTH_MODE || 'bypass';
-const devRole = process.env.DEV_ROLE || 'RESEARCH_SCHOLAR';
-const pubDevRole = process.env.NEXT_PUBLIC_DEV_ROLE || 'RESEARCH_SCHOLAR';
-
-const validRoles = ['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR', 'INSTITUTION_ADMIN'];
+const authMode = process.env.AUTH_MODE || 'clerk';
+const pubAuthMode = process.env.NEXT_PUBLIC_AUTH_MODE || 'clerk';
 
 console.log(`\n   --- Auth Mode & Bypass Checks ---`);
 reportSuccess(`Backend AUTH_MODE is configured as "${authMode}".`);
 reportSuccess(`Frontend NEXT_PUBLIC_AUTH_MODE is configured as "${pubAuthMode}".`);
 
-if (authMode !== pubAuthMode) {
-  reportError(`Backend AUTH_MODE (${authMode}) and Frontend NEXT_PUBLIC_AUTH_MODE (${pubAuthMode}) are out of sync!`);
-  console.log(`     -> Solution: Make sure both values match in the root .env file.`);
+if (authMode !== 'clerk' || pubAuthMode !== 'clerk') {
+  reportError(`Authentication mode is configured incorrectly. Enforced mode is "clerk". Current settings: AUTH_MODE=${authMode}, NEXT_PUBLIC_AUTH_MODE=${pubAuthMode}`);
+  console.log(`     -> Solution: Update your root .env file and set both variables to "clerk".`);
 } else {
-  reportSuccess('Backend and Frontend Auth Mode settings are synchronized.');
+  reportSuccess('Backend and Frontend Auth Mode settings are set to "clerk".');
 }
 
-if (authMode === 'bypass' || process.env.DEVELOPMENT_MODE === 'true') {
-  reportWarning('Bypass active. Firebase SSO is disabled for developer testing.');
-  
-  if (!validRoles.includes(devRole)) {
-    reportError(`Invalid DEV_ROLE value: "${devRole}". Must be one of: ${validRoles.join(', ')}`);
-  } else {
-    reportSuccess(`Backend default DEV_ROLE is set to "${devRole}".`);
-  }
-
-  if (!validRoles.includes(pubDevRole)) {
-    reportError(`Invalid NEXT_PUBLIC_DEV_ROLE value: "${pubDevRole}". Must be one of: ${validRoles.join(', ')}`);
-  } else {
-    reportSuccess(`Frontend default NEXT_PUBLIC_DEV_ROLE is set to "${pubDevRole}".`);
-  }
-
-  if (devRole !== pubDevRole) {
-    reportWarning(`Backend DEV_ROLE (${devRole}) and Frontend NEXT_PUBLIC_DEV_ROLE (${pubDevRole}) do not match.`);
-    console.log(`     -> Note: This is okay, but may result in role discrepancies unless overridden by the frontend role-switcher.`);
-  }
+if (process.env.DEVELOPMENT_MODE === 'true' || process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === 'true') {
+  reportError(`Development auth bypass is active (DEVELOPMENT_MODE=${process.env.DEVELOPMENT_MODE}). Bypass mode has been discontinued.`);
+  console.log(`     -> Solution: Update your root .env file and set DEVELOPMENT_MODE and NEXT_PUBLIC_DEVELOPMENT_MODE to "false".`);
 } else {
-  reportSuccess('Firebase SSO mode enabled. SSO credentials will be checked.');
-  // Validate Firebase credentials presence
-  const firebaseKeys = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
-  const missingKeys = firebaseKeys.filter(k => !process.env[k]);
-  if (missingKeys.length > 0) {
-    reportError(`Missing Firebase Admin credentials: ${missingKeys.join(', ')}`);
-  } else {
-    reportSuccess('Firebase Admin credentials are present.');
-  }
+  reportSuccess('Developer bypass is inactive.');
+}
+
+console.log(`\n   --- Credential Requirements ---`);
+// Validate Clerk credentials presence
+const clerkKeys = ['CLERK_SECRET_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'];
+const missingClerkKeys = clerkKeys.filter(k => !process.env[k]);
+if (missingClerkKeys.length > 0) {
+  reportError(`Missing Clerk Authentication credentials: ${missingClerkKeys.join(', ')}`);
+} else {
+  reportSuccess('Clerk Authentication credentials are present.');
+}
+
+// Always validate Firebase credentials since FCM is preserved
+const firebaseKeys = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
+const missingFbKeys = firebaseKeys.filter(k => !process.env[k]);
+if (missingFbKeys.length > 0) {
+  reportError(`Missing Firebase FCM Admin credentials: ${missingFbKeys.join(', ')}`);
+} else {
+  reportSuccess('Firebase FCM Admin credentials are present.');
 }
 
 // 3. Check Database Connections

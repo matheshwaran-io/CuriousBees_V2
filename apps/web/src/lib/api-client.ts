@@ -8,108 +8,63 @@
  *   4. Provides verbose console logging for debugging.
  */
 
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+declare global {
+  interface Window {
+    Clerk?: {
+      session?: {
+        getToken: () => Promise<string | null>;
+      };
+      signOut: () => Promise<void>;
+    };
+  }
+}
 
 // Backend base URL — set in apps/web/.env.local
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-let authInitPromise: Promise<any> | null = null;
-
-function waitForAuth(): Promise<any> {
-  if (authInitPromise) return authInitPromise;
-  console.info('[APIClient] Initializing Firebase auth state listener (with 5s timeout safety)...');
-  authInitPromise = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      console.warn('[APIClient] Firebase auth init timed out after 5s. Resolving with current state.');
-      resolve(auth.currentUser);
-    }, 5000);
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        clearTimeout(timeout);
-        unsubscribe();
-        console.info('[APIClient] Firebase auth state ready. User:', user ? user.email : 'Guest');
-        resolve(user);
-      },
-      (error) => {
-        clearTimeout(timeout);
-        unsubscribe();
-        console.error('[APIClient] Firebase auth state error:', error);
-        reject(error);
-      }
-    );
-  });
-  return authInitPromise;
+/**
+ * Robust helper to wait for the Clerk global client to load and fetch the session JWT.
+ */
+async function getClerkToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  if (!window.Clerk) {
+    await new Promise<void>((resolve) => {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (window.Clerk || attempts > 20) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+  try {
+    return (await window.Clerk?.session?.getToken()) || null;
+  } catch (err) {
+    console.warn('[APIClient] Failed to retrieve token from Clerk:', err);
+    return null;
+  }
 }
 
-/**
- * Resets the auth singleton — call after sign-out so re-login works correctly.
- * Exported for use by the store logout action.
- */
 export function resetAuthPromise() {
-  console.info('[APIClient] Resetting auth promise singleton.');
-  authInitPromise = null;
+  console.info('[APIClient] Resetting auth promise (no-op for Clerk).');
 }
 
 // ─── Token helper ────────────────────────────────────────────────────────────
 
 /**
- * Returns the Firebase Bearer token for the currently authenticated user.
- *
- * Resilience strategy:
- *   1. Try forceRefresh=false (retrieves cached token, avoiding network delay)
- *   2. If both fail, return empty object (unauthenticated request)
- *
- * Returns an empty object when there is no authenticated user (guest mode).
+ * Returns the Clerk Bearer token for the currently authenticated user.
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const isBypass = process.env.NEXT_PUBLIC_AUTH_MODE === 'bypass' || process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === 'true';
-  if (isBypass) {
-    if (typeof window !== 'undefined') {
-      const defaultRole = process.env.NEXT_PUBLIC_DEV_ROLE || 'RESEARCH_SCHOLAR';
-      const devRole = localStorage.getItem('dev_role') || defaultRole;
-      const mockToken = `mock-bypass-token-${devRole === 'INSTITUTION_ADMIN' ? 'admin' : devRole === 'RESEARCH_SUPERVISOR' ? 'faculty' : 'scholar'}`;
-      localStorage.setItem('curiousbees-mock-token', mockToken);
-      console.info('[APIClient] Auth bypass active: Using mock role token.', devRole);
-      return { Authorization: `Bearer ${mockToken}` };
-    }
-    const defaultRole = process.env.NEXT_PUBLIC_DEV_ROLE || 'RESEARCH_SCHOLAR';
-    const mockToken = `mock-bypass-token-${defaultRole === 'INSTITUTION_ADMIN' ? 'admin' : defaultRole === 'RESEARCH_SUPERVISOR' ? 'faculty' : 'scholar'}`;
-    return { Authorization: `Bearer ${mockToken}` };
+  const token = await getClerkToken();
+  if (token) {
+    console.debug('[APIClient] Attaching Clerk bearer token. tokenLength =', token.length);
+    return { Authorization: `Bearer ${token}` };
   }
 
-  await waitForAuth();
-  const user = auth.currentUser;
-
-  if (user) {
-    try {
-      console.debug('[APIClient] Fetching Firebase ID token (cached fallback allowed)...');
-      // Retrieve the token, only forcing refresh if the cached token is expired/expiring
-      const token = await user.getIdToken(/* forceRefresh */ false);
-      console.debug('[APIClient] Attaching Firebase bearer token:', {
-        uid: user.uid,
-        email: user.email,
-        tokenLength: token.length,
-      });
-      return { Authorization: `Bearer ${token}` };
-    } catch (err) {
-      console.warn('[APIClient] Token retrieval failed:', err);
-    }
-  }
-
-  // Dev bypass: check for mock token in localStorage
-  if (typeof window !== 'undefined') {
-    const mockToken = localStorage.getItem('curiousbees-mock-token');
-    if (mockToken) {
-      console.info('[APIClient] Using mock bypass token from localStorage.');
-      return { Authorization: `Bearer ${mockToken}` };
-    }
-  }
-
-  console.warn('[APIClient] No authenticated user — request will be unauthenticated.');
+  console.warn('[APIClient] No authenticated Clerk user — request will be unauthenticated.');
   return {};
 }
 

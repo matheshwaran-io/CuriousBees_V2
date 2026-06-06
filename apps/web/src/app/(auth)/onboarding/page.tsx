@@ -118,7 +118,7 @@ export default function OnboardingPage() {
 
       {/* Floating Sign Out Trigger */}
       <button 
-        onClick={() => { logout(); router.push('/login'); }}
+        onClick={() => { logout(); router.push('/sign-in'); }}
         className="absolute top-6 right-6 flex items-center space-x-1.5 px-3 py-1.5 border border-borderStroke rounded-lg text-xs font-bold text-textSecondary hover:text-primary hover:bg-slate-50 transition-all cursor-pointer z-20"
       >
         <LogOut className="w-3.5 h-3.5" />
