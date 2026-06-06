@@ -115,7 +115,7 @@ export default function ProfilePage() {
 
   // Collaborators to display on the network graph
   const graphCollaborators = collaborators
-    .filter(c => c.id !== currentUser?.id)
+    .filter((c: any) => c.id !== currentUser?.id)
     .slice(0, 3);
 
   // Fallback default network nodes if collaborators directory is empty
@@ -126,7 +126,7 @@ export default function ProfilePage() {
   ];
 
   const networkNodes = graphCollaborators.length >= 3 
-    ? graphCollaborators.map(c => ({ initials: getInitials(c.name), name: c.name || '' }))
+    ? graphCollaborators.map((c: any) => ({ initials: getInitials(c.name), name: c.name || '' }))
     : defaultNetwork;
 
   // Render stats based on user role

@@ -100,18 +100,7 @@ export default function PortalLayout({
       console.info('[PortalLayout] Authentication checks passed. Initializing data fetch...');
       fetchData(); // Trigger initial live API fetch
 
-      // Register device for FCM Push Notifications (dynamically loaded to bypass SSR constraints)
-      import('@/lib/fcm').then(async ({ requestFcmToken, sendTokenToBackend }) => {
-        try {
-          const token = await requestFcmToken();
-          if (token && active) {
-            console.info('[PortalLayout] Registering FCM token...');
-            await sendTokenToBackend(token);
-          }
-        } catch (err) {
-          console.error('[PortalLayout] FCM Registration hook failed:', err);
-        }
-      });
+
     };
 
     initAuth();

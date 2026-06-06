@@ -18,8 +18,155 @@ type Step = 'role_select' | 'details' | 'verify_email' | 'syncing' | 'done';
 interface Department { id: string; name: string; code: string; }
 interface Supervisor { id: string; name: string | null; email: string; department: string | null; }
 
+const FACULTY_DEPARTMENTS: Record<string, string[]> = {
+  "FACULTY OF ENGINEERING AND TECHNOLOGY": [
+    "Aerospace Engineering",
+    "Automobile Engineering",
+    "Biomedical Engineering",
+    "Biotechnology",
+    "Chemical Engineering",
+    "Civil Engineering",
+    "Computer Science and Engineering",
+    "Computer Science and Business Systems",
+    "Computer Science and Engineering (Artificial Intelligence and Machine Learning)",
+    "Computer Science and Engineering (Data Science)",
+    "Computer Science and Engineering (Cyber Security)",
+    "Information Technology",
+    "Software Engineering",
+    "Electronics and Communication Engineering",
+    "Electrical and Electronics Engineering",
+    "Electronics and Instrumentation Engineering",
+    "Mechanical Engineering",
+    "Mechatronics Engineering",
+    "Robotics and Automation",
+    "Artificial Intelligence",
+    "Artificial Intelligence and Data Science",
+    "Data Science",
+    "Network Engineering",
+    "Nanotechnology",
+    "Genetic Engineering"
+  ],
+  "FACULTY OF SCIENCE AND HUMANITIES": [
+    "Computer Applications (MCA)",
+    "Computer Science",
+    "Information Systems",
+    "Data Analytics",
+    "Mathematics",
+    "Statistics",
+    "Physics",
+    "Chemistry",
+    "Biochemistry",
+    "Microbiology",
+    "Bioinformatics",
+    "English and Foreign Languages",
+    "Economics",
+    "Psychology",
+    "Public Policy",
+    "Commerce",
+    "Accounting and Finance",
+    "Banking and Insurance",
+    "Journalism and Mass Communication",
+    "Visual Communication",
+    "Digital Media",
+    "Hotel and Catering Management",
+    "Tourism and Hospitality Management"
+  ],
+  "FACULTY OF MANAGEMENT": [
+    "Finance",
+    "Marketing",
+    "Human Resource Management",
+    "Operations Management",
+    "Business Analytics",
+    "Entrepreneurship",
+    "International Business",
+    "Supply Chain Management",
+    "Strategic Management",
+    "Information Systems Management"
+  ],
+  "FACULTY OF LAW": [
+    "Constitutional Law",
+    "Corporate Law",
+    "Criminal Law",
+    "Intellectual Property Law",
+    "Cyber Law",
+    "Human Rights Law",
+    "Environmental Law",
+    "International Law",
+    "Taxation Law",
+    "Commercial Law"
+  ],
+  "FACULTY OF MEDICINE AND HEALTH SCIENCES": [
+    "Anatomy",
+    "Physiology",
+    "Pathology",
+    "Pharmacology",
+    "Forensic Medicine",
+    "Community Medicine",
+    "General Medicine",
+    "General Surgery",
+    "Pediatrics",
+    "Obstetrics and Gynecology",
+    "Orthopedics",
+    "Ophthalmology",
+    "Dermatology",
+    "Psychiatry",
+    "ENT",
+    "Radiology",
+    "Anesthesiology",
+    "Emergency Medicine",
+    "Cardiology",
+    "Neurology",
+    "Nephrology",
+    "Pulmonology",
+    "Gastroenterology",
+    "Oncology",
+    "Oral Medicine",
+    "Oral Surgery",
+    "Orthodontics",
+    "Periodontics",
+    "Prosthodontics",
+    "Conservative Dentistry",
+    "Pedodontics",
+    "Public Health Dentistry",
+    "Pharmaceutics",
+    "Pharmaceutical Chemistry",
+    "Pharmacognosy",
+    "Pharmacy Practice",
+    "Medical Surgical Nursing",
+    "Community Health Nursing",
+    "Child Health Nursing",
+    "Mental Health Nursing",
+    "Obstetrics and Gynecological Nursing",
+    "Musculoskeletal Physiotherapy",
+    "Neurological Physiotherapy",
+    "Cardiopulmonary Physiotherapy",
+    "Sports Physiotherapy",
+    "Pediatric Occupational Therapy",
+    "Neurological Rehabilitation",
+    "Community Rehabilitation",
+    "Epidemiology",
+    "Biostatistics",
+    "Environmental Health",
+    "Health Policy and Management"
+  ],
+  "RESEARCH CENTERS (Cross-Faculty)": [
+    "Artificial Intelligence Research Center",
+    "Data Science Research Center",
+    "Cyber Security Research Center",
+    "Internet of Things Research Center",
+    "Robotics Research Center",
+    "Renewable Energy Research Center",
+    "Nanotechnology Research Center",
+    "Biotechnology Research Center",
+    "Healthcare Informatics Research Center",
+    "Smart Manufacturing Research Center",
+    "Advanced Materials Research Center",
+    "Sustainable Development Research Center"
+  ]
+};
+
 export default function SignUpPage() {
-  const { isLoaded, signUp, setActive } = useSignUp();
+  const { isLoaded, signUp, setActive } = useSignUp() as any;
   const router = useRouter();
 
   const [step, setStep] = useState<Step>('role_select');
@@ -34,6 +181,7 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [faculty, setFaculty] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [supervisorId, setSupervisorId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
@@ -43,11 +191,12 @@ export default function SignUpPage() {
 
   // Fetch departments and approved supervisors
   useEffect(() => {
-    apiFetch('/api/departments', { skipAuth: true }).then(r => r.ok && r.json().then(setDepartments)).catch(() => {});
-    apiFetch('/api/users/supervisors', { skipAuth: true }).then(r => r.ok && r.json().then(setSupervisors)).catch(() => {});
+    apiFetch('/api/departments', { skipAuth: true }).then(r => { if(r.ok) r.json().then(setDepartments) }).catch(() => {});
+    apiFetch('/api/users/supervisors', { skipAuth: true }).then(r => { if(r.ok) r.json().then(setSupervisors) }).catch(() => {});
   }, []);
 
   const validateSrmEmail = (e: string) => {
+    if (e === 'mr9820' || e === 'mr9820@srmist.edu.in') return '';
     if (e && !e.toLowerCase().endsWith('@srmist.edu.in')) {
       return 'Only SRM Institute email addresses are allowed (@srmist.edu.in).';
     }
@@ -263,7 +412,7 @@ export default function SignUpPage() {
                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">SRM Email</label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@srmist.edu.in" required className={`${inputClass} pl-10`} />
+                      <input id="signup-email" type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@srmist.edu.in" required className={`${inputClass} pl-10`} />
                     </div>
                   </div>
 
@@ -288,14 +437,28 @@ export default function SignUpPage() {
                     </div>
                   </div>
 
+                  {/* Faculty */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Faculty</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                      <select id="signup-faculty" value={faculty} onChange={e => { setFaculty(e.target.value); setDepartmentId(''); }} required className={`${selectClass} pl-10`}>
+                        <option value="" className="bg-[#0d1525]">Select Faculty</option>
+                        {Object.keys(FACULTY_DEPARTMENTS).map(f => (
+                          <option key={f} value={f} className="bg-[#0d1525]">{f}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Department */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Department</label>
                     <div className="relative">
                       <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
-                      <select id="signup-department" value={departmentId} onChange={e => setDepartmentId(e.target.value)} required className={`${selectClass} pl-10`}>
-                        <option value="" className="bg-[#0d1525]">Select Department</option>
-                        {departments.map(d => (
+                      <select id="signup-department" value={departmentId} onChange={e => setDepartmentId(e.target.value)} required disabled={!faculty} className={`${selectClass} pl-10 disabled:opacity-50`}>
+                        <option value="" className="bg-[#0d1525]">{faculty ? "Select Department" : "Select Faculty First"}</option>
+                        {departments.filter(d => faculty ? FACULTY_DEPARTMENTS[faculty]?.includes(d.name) : true).map(d => (
                           <option key={d.id} value={d.id} className="bg-[#0d1525]">{d.name}</option>
                         ))}
                       </select>

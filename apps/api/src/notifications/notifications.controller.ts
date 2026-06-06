@@ -1,21 +1,14 @@
 import { Controller, Post, Get, Put, Body, UseGuards, Req } from '@nestjs/common';
-import { FirebaseAuthGuard } from '../auth/firebase.guard';
+import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')
-@UseGuards(FirebaseAuthGuard, ApprovedGuard)
+@UseGuards(ClerkAuthGuard, ApprovedGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @Post('register-token')
-  async registerToken(@Req() req: any, @Body() body: { token: string }) {
-    const result = await this.notificationsService.registerToken(req.user.id, body.token);
-    return {
-      success: true,
-      deviceId: result.id
-    };
-  }
+
 
   @Get()
   async getNotifications(@Req() req: any) {

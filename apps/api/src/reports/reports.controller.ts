@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ReportsService } from './reports.service';
-import { FirebaseAuthGuard } from '../auth/firebase.guard';
+import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 
 @Controller('reports')
-@UseGuards(FirebaseAuthGuard, ApprovedGuard)
+@UseGuards(ClerkAuthGuard, ApprovedGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 

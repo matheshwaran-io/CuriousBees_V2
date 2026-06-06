@@ -14,8 +14,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_DEV_ROLE: z.enum(['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR', 'INSTITUTION_ADMIN']).default('RESEARCH_SCHOLAR'),
   NEXT_PUBLIC_SUPABASE_URL: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_URL is required'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required'),
-  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1, 'NEXT_PUBLIC_FIREBASE_API_KEY is required for FCM notifications'),
-  NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().min(1, 'NEXT_PUBLIC_FIREBASE_PROJECT_ID is required for FCM notifications'),
+
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required'),
 });
 

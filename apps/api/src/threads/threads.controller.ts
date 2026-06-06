@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, Query, Param, UseGuards, Req } from '@nestjs/common';
-import { FirebaseAuthGuard } from '../auth/firebase.guard';
+import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { ThreadsService } from './threads.service';
 import { CreateThreadInput } from '@curiousbees/types';
 
 @Controller('threads')
-@UseGuards(FirebaseAuthGuard, ApprovedGuard)
+@UseGuards(ClerkAuthGuard, ApprovedGuard)
 export class ThreadsController {
   constructor(private readonly threadsService: ThreadsService) {}
 

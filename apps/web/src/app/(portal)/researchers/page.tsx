@@ -207,7 +207,7 @@ export default function ResearchersDiscoveryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-            {filteredResearchers.map((researcher) => {
+            {filteredResearchers.map((researcher: any) => {
               const compatibilityScore = calculateCompatibility(researcher);
               return (
                 <div 

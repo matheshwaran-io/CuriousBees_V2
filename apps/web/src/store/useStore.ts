@@ -42,6 +42,7 @@ interface AppState {
   activeWorkspace: Workspace | null;
   adminUsers: User[];
   adminAuditLogs: AuditLog[];
+  collaborators: User[];
 
   publications: Publication[];
   reports: Report[];
@@ -580,7 +581,7 @@ export const useStore = create<AppState>((set, get) => ({
         headers,
         body: JSON.stringify({ scholarId })
       });
-      if (!res.ok) throw new Error(await readApiError(res, 'Failed to approve scholar'));
+      if (!res.ok) throw new Error(await readApiError(res));
       const updatedScholar = await res.json();
       set(state => ({
         pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId),
@@ -605,7 +606,7 @@ export const useStore = create<AppState>((set, get) => ({
         headers,
         body: JSON.stringify({ scholarId })
       });
-      if (!res.ok) throw new Error(await readApiError(res, 'Failed to decline scholar'));
+      if (!res.ok) throw new Error(await readApiError(res));
       set(state => ({
         pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId)
       }));
@@ -629,7 +630,7 @@ export const useStore = create<AppState>((set, get) => ({
         headers,
         body: JSON.stringify({ supervisorId })
       });
-      if (!res.ok) throw new Error(await readApiError(res, 'Failed to request supervisor'));
+      if (!res.ok) throw new Error(await readApiError(res));
       const updatedUser = await res.json();
       set({ currentUser: updatedUser });
       get().addToast('Supervisor requested successfully', 'success');
@@ -647,7 +648,7 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const headers = await getBearerHeader();
       const res = await apiFetch('/api/users/pending-supervisors', { headers });
-      if (!res.ok) throw new Error(await readApiError(res, 'Failed to fetch pending supervisors'));
+      if (!res.ok) throw new Error(await readApiError(res));
       const supervisors = await res.json();
       set({ pendingSupervisors: supervisors });
       return supervisors;
@@ -668,7 +669,7 @@ export const useStore = create<AppState>((set, get) => ({
         headers,
         body: JSON.stringify({ supervisorId })
       });
-      if (!res.ok) throw new Error(await readApiError(res, 'Failed to approve supervisor'));
+      if (!res.ok) throw new Error(await readApiError(res));
       const updatedUser = await res.json();
       set(state => ({
         pendingSupervisors: state.pendingSupervisors.filter(s => s.id !== supervisorId),
@@ -693,7 +694,7 @@ export const useStore = create<AppState>((set, get) => ({
         headers,
         body: JSON.stringify({ supervisorId })
       });
-      if (!res.ok) throw new Error(await readApiError(res, 'Failed to decline supervisor'));
+      if (!res.ok) throw new Error(await readApiError(res));
       const rejectedUser = await res.json();
       set(state => ({
         pendingSupervisors: state.pendingSupervisors.filter(s => s.id !== supervisorId),

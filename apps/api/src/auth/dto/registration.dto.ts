@@ -3,19 +3,19 @@ import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validat
 export class RegisterDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
   @IsEnum(['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR'])
-  role: 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR';
+  role!: 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR';
 
   @IsNotEmpty()
   @IsString()
-  departmentId: string;
+  departmentId!: string;
 
   @IsOptional()
   @IsString()

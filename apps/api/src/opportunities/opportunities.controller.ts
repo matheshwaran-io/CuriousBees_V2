@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Put, Body, Query, UseGuards, Req, Param, BadRequestException } from '@nestjs/common';
-import { FirebaseAuthGuard } from '../auth/firebase.guard';
+import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { OpportunitiesService } from './opportunities.service';
 import { CreateOpportunityInput } from '@curiousbees/types';
 
 @Controller('opportunities')
-@UseGuards(FirebaseAuthGuard, ApprovedGuard)
+@UseGuards(ClerkAuthGuard, ApprovedGuard)
 export class OpportunitiesController {
   constructor(private readonly opportunitiesService: OpportunitiesService) {}
 

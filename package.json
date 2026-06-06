@@ -35,6 +35,7 @@
     "health": "node scripts/health-check.js"
   },
   "devDependencies": {
+    "clerk": "^1.5.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "prisma": "^6.19.3",

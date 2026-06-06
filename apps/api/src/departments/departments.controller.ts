@@ -1,11 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
-import { FirebaseAuthGuard } from '../auth/firebase.guard';
+import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 
 @Controller('departments')
-@UseGuards(FirebaseAuthGuard, ApprovedGuard)
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
@@ -20,13 +19,13 @@ export class DepartmentsController {
   }
 
   @Post()
-  @UseGuards(AdminGuard)
+  @UseGuards(ClerkAuthGuard, ApprovedGuard, AdminGuard)
   async create(@Body() body: { name: string; code: string; description?: string }) {
     return this.departmentsService.create(body);
   }
 
   @Put(':id')
-  @UseGuards(AdminGuard)
+  @UseGuards(ClerkAuthGuard, ApprovedGuard, AdminGuard)
   async update(
     @Param('id') id: string,
     @Body() body: { name?: string; code?: string; description?: string }
@@ -35,7 +34,7 @@ export class DepartmentsController {
   }
 
   @Delete(':id')
-  @UseGuards(AdminGuard)
+  @UseGuards(ClerkAuthGuard, ApprovedGuard, AdminGuard)
   async remove(@Param('id') id: string) {
     return this.departmentsService.remove(id);
   }

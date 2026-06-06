@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { EventsService } from './events.service';
-import { FirebaseAuthGuard } from '../auth/firebase.guard';
+import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { EventStatus, Prisma } from '@prisma/client';
 
 @Controller('events')
-@UseGuards(FirebaseAuthGuard, ApprovedGuard)
+@UseGuards(ClerkAuthGuard, ApprovedGuard)
 export class EventsController {
   constructor(
     private readonly eventsService: EventsService

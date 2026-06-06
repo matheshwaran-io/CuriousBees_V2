@@ -115,14 +115,6 @@ if (missingClerkKeys.length > 0) {
   reportSuccess('Clerk Authentication credentials are present.');
 }
 
-// Always validate Firebase credentials since FCM is preserved
-const firebaseKeys = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'];
-const missingFbKeys = firebaseKeys.filter(k => !process.env[k]);
-if (missingFbKeys.length > 0) {
-  reportError(`Missing Firebase FCM Admin credentials: ${missingFbKeys.join(', ')}`);
-} else {
-  reportSuccess('Firebase FCM Admin credentials are present.');
-}
 
 // 3. Check Database Connections
 console.log(`\n${colors.bold}3. Database Connection Testing:${colors.reset}`);

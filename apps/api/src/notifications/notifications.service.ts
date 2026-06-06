@@ -3,7 +3,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Event as PrismaEvent } from '@prisma/client';
-import * as admin from 'firebase-admin';
 
 export interface NotificationJobData {
   eventId: string;
@@ -21,25 +20,7 @@ export class NotificationsService {
     @InjectQueue('event-notifications') private notificationQueue: Queue
   ) {}
 
-  /**
-   * Registers a unique FCM token to a User
-   */
-  async registerToken(userId: string, token: string) {
-    if (!token) {
-      throw new BadRequestException('FCM registration token is required.');
-    }
 
-    try {
-      return await this.prisma.notificationToken.upsert({
-        where: { token },
-        update: { userId },
-        create: { token, userId }
-      });
-    } catch (e: any) {
-      this.logger.error(`❌ Failed to register FCM token: ${e.message}`);
-      throw new BadRequestException('Failed to save device registration token.');
-    }
-  }
 
   /**
    * Retrieves log of notifications dispatched to a user
@@ -75,41 +56,11 @@ export class NotificationsService {
   }
 
   /**
-   * Dispatches a push notification directly to a user's registered devices.
-   * Used for low-volume, targeted pushes (e.g. comment alerts).
+   * Push notification logic has been disabled because Firebase was removed.
+   * In the future, this can be implemented using OneSignal, WebPush, etc.
    */
   async sendPushToUser(userId: string, payload: { title: string; body: string; url?: string }) {
-    try {
-      const devices = await this.prisma.notificationToken.findMany({ where: { userId } });
-      if (devices.length === 0) {
-        this.logger.log(`User ${userId} has no registered devices. Skipping push.`);
-        return;
-      }
-      const tokens = devices.map(d => d.token);
-      const message: any = {
-        tokens,
-        notification: { title: payload.title, body: payload.body },
-        data: payload.url ? { url: payload.url } : {},
-        webpush: { notification: { icon: '/logo.png', click_action: payload.url || '/' } }
-      };
-      const response = await admin.messaging().sendMulticast(message);
-      this.logger.log(`[FCM] Notification Sent: ${response.successCount} succeeded, ${response.failureCount} failed.`);
-      // Cleanup expired tokens
-      const expiredTokens: string[] = [];
-      response.responses.forEach((res: any, idx: number) => {
-        if (!res.success && res.error) {
-          const code = res.error.code;
-          if (code === 'messaging/invalid-registration-token' || code === 'messaging/registration-token-not-registered') {
-            expiredTokens.push(tokens[idx]);
-          }
-        }
-      });
-      if (expiredTokens.length > 0) {
-        await this.prisma.notificationToken.deleteMany({ where: { token: { in: expiredTokens } } });
-      }
-    } catch (e: any) {
-      this.logger.error(`sendPushToUser failed: ${e.message}`);
-    }
+    this.logger.log(`Skipping push to user ${userId} (Push provider removed). payload: ${payload.title}`);
   }
 
   /**

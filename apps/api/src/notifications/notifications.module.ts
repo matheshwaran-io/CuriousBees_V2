@@ -7,7 +7,6 @@ import { InterestMatcherService } from './interest-matcher.service';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationProcessor } from './notification.processor';
 import { DigestScheduler } from './digest.scheduler';
-import { FCMService } from './fcm.service';
 
 @Module({
   imports: [
@@ -19,12 +18,11 @@ import { FCMService } from './fcm.service';
   ],
   controllers: [NotificationsController],
   providers: [
-    FCMService,
     NotificationsService,
     InterestMatcherService,
     NotificationProcessor,
     DigestScheduler,
   ],
-  exports: [NotificationsService, InterestMatcherService, FCMService]
+  exports: [NotificationsService, InterestMatcherService]
 })
 export class NotificationsModule {}
