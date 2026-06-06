@@ -1,7 +1,9 @@
 import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClerkService } from './clerk.service';
 import { createClerkClient } from '@clerk/backend';
+import { IS_PUBLIC_KEY } from './public.decorator';
 
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {
@@ -11,6 +13,7 @@ export class ClerkAuthGuard implements CanActivate {
   constructor(
     private prisma: PrismaService,
     private clerkService: ClerkService,
+    private reflector: Reflector,
   ) {
     const secretKey = process.env.CLERK_SECRET_KEY;
     if (secretKey) {
@@ -19,6 +22,13 @@ export class ClerkAuthGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers['authorization'];
 

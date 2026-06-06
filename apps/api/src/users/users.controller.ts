@@ -2,6 +2,7 @@ import { Controller, Get, Put, Post, Body, Query, UseGuards, Req, BadRequestExce
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from '@curiousbees/types';
+import { Public } from '../auth/public.decorator';
 
 @Controller('users')
 @UseGuards(ClerkAuthGuard)
@@ -97,6 +98,7 @@ export class UsersController {
     return this.usersService.getAllUsers(req.user.id);
   }
 
+  @Public()
   @Get('supervisors')
   async getSupervisors() {
     return this.usersService.getSupervisors();
