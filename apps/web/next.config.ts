@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load root .env file absolutely
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url('NEXT_PUBLIC_API_URL must be a valid URL'),

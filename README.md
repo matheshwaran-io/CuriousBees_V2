@@ -49,50 +49,55 @@ curiousbees-monorepo/
 
 ---
 
-## 🚀 Development Setup (Bypass Mode)
+## 🚀 5-Minute Quick Start (Development Bypass Mode)
 
-Follow these steps to set up the project locally on any operating system without configuring Firebase.
+Set up the entire project locally on any operating system (macOS/Windows/Linux) in under 5 minutes without configuring Firebase:
 
 ### 1. Prerequisites
-Ensure you have the following installed:
-* **Node.js**: `v22.14.0` or higher (pin managed via `.nvmrc`)
+* **Node.js**: `v22.x` or higher (managed via `.nvmrc`)
 * **npm**: `v10.x` or higher
 * **Docker & Docker Compose**
 
-### 2. Install Dependencies
-Run from the root of the monorepo:
+### 2. Install Monorepo Dependencies
+From the root of the repository:
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
 
-### 3. Spin Up Infrastructure
-Launch the local PostgreSQL database and Redis queue server:
+### 3. Setup Environment variables
+Copy the consolidated global environment configuration template at the root:
 ```bash
-npm run docker:up
+cp .env.example .env
 ```
+*(By default, this file has bypass settings active, enabling instant offline logins.)*
 
-### 4. Configure Environment Variables
-Copy the example templates in each workspace:
-1. **Root**: Copy `.env.example` $\rightarrow$ `.env`
-2. **Frontend App**: Copy `apps/web/.env.example` $\rightarrow$ `apps/web/.env.local`
-3. **Backend App**: Copy `apps/api/.env.example` $\rightarrow$ `apps/api/.env`
-
-*Ensure `DEVELOPMENT_MODE=true` is set on the backend and `NEXT_PUBLIC_DEVELOPMENT_MODE=true` is set on the frontend to bypass Firebase authentication and database synchronization checks.*
-
-### 5. Build and Seed Database
-Run the cross-platform setup script to compile Prisma bindings, push the database schema, and seed mock records:
+### 4. Run Environment & Database Setup
+Compile shared packages, generate Prisma schema types, and validate typecheck compliance:
 ```bash
 npm run setup
 ```
 
-### 6. Run Application
-Start Next.js and NestJS concurrently:
+### 5. Spin Up Infrastructure
+Launch the local PostgreSQL database and Redis queue server inside Docker:
+```bash
+npm run docker:up
+```
+
+### 6. Verify System Health (Diagnostics Doctor)
+To verify your setup, ports, environment configuration, database, and Redis connectivity, run:
+```bash
+npm run doctor
+```
+
+### 7. Launch Development Servers
+Start both the NestJS API and Next.js frontend concurrently:
 ```bash
 npm run dev
 ```
-* Frontend is available at: [http://localhost:3000](http://localhost:3000)
-* API is available at: [http://localhost:4000](http://localhost:4000)
-* API Health endpoint: [http://localhost:4000/api/health](http://localhost:4000/api/health)
+* **Frontend Web Application**: [http://localhost:3000](http://localhost:3000)
+* **Backend REST API**: [http://localhost:4000](http://localhost:4000)
+* **Interactive API Documentation (Swagger)**: [http://localhost:4000/api/docs](http://localhost:4000/api/docs)
+* **API Health check Dashboard**: [http://localhost:4000/api/health](http://localhost:4000/api/health)
 
 ---
 
@@ -100,13 +105,15 @@ npm run dev
 
 All monorepo scripts are standardized to run across Windows, macOS, and Linux:
 
-* `npm run setup`: Sets up database schemas, compiles client types, and seeds data.
+* `npm run setup`: Compiles shared packages, generates Prisma database client, and runs TypeScript checks.
+* `npm run doctor`: Validates required environment variables and tests DB/Redis connectivity.
 * `npm run dev`: Starts Next.js and NestJS concurrently.
 * `npm run build`: Compiles all packages and builds applications in dependency order.
 * `npm run lint`: Runs ESLint check across all modules.
 * `npm run typecheck`: Runs tsc type validation globally.
 * `npm run clean`: Cleans Node modules, distribution outputs, and Next.js caches.
 * `npm run reset`: Completely cleans and reinstalls all dependencies, database, and seeds.
+* `npm run health`: Runs a quick query script validating if NestJS is healthy.
 
 ---
 

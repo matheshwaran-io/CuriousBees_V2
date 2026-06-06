@@ -12,7 +12,8 @@
     "packages/*"
   ],
   "scripts": {
-    "setup": "node scripts/db-setup.js",
+    "setup": "node scripts/setup.js",
+    "doctor": "node scripts/doctor.js",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",

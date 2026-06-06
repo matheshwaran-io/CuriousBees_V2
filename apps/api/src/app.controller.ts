@@ -31,12 +31,17 @@ export class AppController {
 
     let redisConnected = false;
     try {
-      const redis = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        maxRetriesPerRequest: 1,
-        connectTimeout: 2000,
-      });
+      const redis = process.env.REDIS_URL
+        ? new Redis(process.env.REDIS_URL, {
+            maxRetriesPerRequest: 1,
+            connectTimeout: 2000,
+          })
+        : new Redis({
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379', 10),
+            maxRetriesPerRequest: 1,
+            connectTimeout: 2000,
+          });
       const res = await redis.ping();
       if (res === 'PONG') {
         redisConnected = true;

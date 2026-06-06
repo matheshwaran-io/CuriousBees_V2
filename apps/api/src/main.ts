@@ -2,25 +2,20 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Dynamically locate .env when the API is started from either the repo root
-// or the apps/api workspace directory.
+// Resolve the root .env file dynamically and absolutely
 const envCandidates = [
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(__dirname, '../../../../.env'),
   path.join(process.cwd(), '.env'),
-  path.join(process.cwd(), 'apps/api/.env'),
-  path.join(process.cwd(), 'apps/web/.env'),
-  path.join(process.cwd(), '..', '.env'),
-  path.join(process.cwd(), '../..', '.env'),
-  path.join(process.cwd(), '../web/.env'),
-  path.join(process.cwd(), '../../apps/api/.env'),
-  path.join(process.cwd(), '../../apps/web/.env'),
 ];
 const envPath = envCandidates.find((candidate) => fs.existsSync(candidate));
 if (envPath) {
   dotenv.config({ path: envPath });
-  console.log(`[CuriousBees] Loaded environment from ${envPath}`);
+  console.log(`[CuriousBees] Loaded root environment from ${envPath}`);
 } else {
   dotenv.config();
-  console.warn('[CuriousBees] No .env file found in expected API/web locations.');
+  console.warn('[CuriousBees] No root .env file found.');
 }
 
 import { NestFactory } from '@nestjs/core';
