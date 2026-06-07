@@ -7,11 +7,6 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url('NEXT_PUBLIC_API_URL must be a valid URL'),
-  NEXT_PUBLIC_DEVELOPMENT_MODE: z.enum(['true', 'false']).default('false'),
-  NEXT_PUBLIC_AUTH_MODE: z.literal('clerk', {
-    errorMap: () => ({ message: 'NEXT_PUBLIC_AUTH_MODE must be set to "clerk"' }),
-  }),
-  NEXT_PUBLIC_DEV_ROLE: z.enum(['SCHOLAR', 'SUPERVISOR', 'INSTITUTE_ADMIN']).default('SCHOLAR'),
   NEXT_PUBLIC_SUPABASE_URL: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_URL is required'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required'),
 

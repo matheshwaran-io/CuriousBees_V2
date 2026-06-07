@@ -3,12 +3,39 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileInput } from '@curiousbees/types';
 import { UpdateProfileSchema } from '@curiousbees/shared-utils';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from './mail.service';
+
+const FACULTY_DEPARTMENTS: Record<string, string[]> = {
+  "Faculty of Engineering & Technology": [
+    "Computing Technologies (CSE / IT / Swe)",
+    "Electronics & Communication Engineering (ECE)",
+    "Electrical & Electronics Engineering (EEE)",
+    "Biotechnology & Bioengineering",
+    "Mechanical Engineering",
+    "Civil Engineering",
+    "Chemical Engineering"
+  ],
+  "Faculty of Science & Humanities": [
+    "Physics & Nanotechnology",
+    "Chemistry & Materials Science",
+    "Mathematics & Actuarial Science"
+  ],
+  "Faculty of Management": [
+    "School of Management (SOM)"
+  ],
+  "Faculty of Law": [],
+  "Faculty of Medicine & Health Sciences": [
+    "Health Sciences & Research"
+  ],
+  "Faculty of Research Centers": []
+};
 
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private mailService: MailService,
   ) {}
 
   async getProfile(userId: string) {
@@ -272,7 +299,11 @@ export class UsersService {
 
   async getSupervisors() {
     return this.prisma.user.findMany({
-      where: { role: 'SUPERVISOR' },
+      where: {
+        role: 'SUPERVISOR',
+        approved: true,
+        status: 'ACTIVE',
+      },
       select: {
         id: true,
         name: true,
@@ -450,7 +481,7 @@ export class UsersService {
       throw new BadRequestException('Only SRM Institute email addresses are allowed.');
     }
 
-    const { name, role, departmentId, supervisorId, employeeId } = input;
+    const { name, role, departmentId, supervisorId, employeeId, faculty } = input;
 
     // Verify department exists
     const department = await this.prisma.department.findUnique({
@@ -460,10 +491,24 @@ export class UsersService {
       throw new BadRequestException('Selected department does not exist.');
     }
 
+    // Verify Faculty-to-Department relationship
+    if (role === 'SUPERVISOR' || role === 'SCHOLAR') {
+      if (!faculty) {
+        throw new BadRequestException('Faculty selection is required.');
+      }
+      const allowedDepts = FACULTY_DEPARTMENTS[faculty];
+      if (!allowedDepts || !allowedDepts.includes(department.name)) {
+        throw new BadRequestException('Selected department does not belong to the selected faculty.');
+      }
+    }
+
     let status: import('@prisma/client').UserStatus = 'PENDING_SUPERVISOR_APPROVAL';
     let supervisorEmail = null;
 
     if (role === 'SCHOLAR') {
+      if (!employeeId) {
+        throw new BadRequestException('Research Scholars must provide a Registration Number.');
+      }
       if (!supervisorId) {
         throw new BadRequestException('Research Scholars must select a research supervisor.');
       }
@@ -475,6 +520,9 @@ export class UsersService {
       }
       if (!supervisor.approved || supervisor.status !== 'ACTIVE') {
         throw new BadRequestException('Selected research supervisor is not active.');
+      }
+      if (supervisor.departmentId !== departmentId) {
+        throw new BadRequestException('Selected research supervisor does not belong to the selected department.');
       }
       supervisorEmail = supervisor.email;
       status = 'PENDING_SUPERVISOR_APPROVAL';
@@ -494,9 +542,10 @@ export class UsersService {
         role,
         departmentId,
         department: department.name,
+        faculty: faculty || null,
         supervisorId: role === 'SCHOLAR' ? supervisorId : null,
         supervisorEmail,
-        employeeId: role === 'SUPERVISOR' ? employeeId : null,
+        employeeId: employeeId || null,
         status,
         approved: false,
       },
@@ -518,6 +567,13 @@ export class UsersService {
       await this.notificationsService.notifyScholarRegistrationSubmitted(userId, supervisorId);
     } else if (role === 'SUPERVISOR') {
       await this.notificationsService.notifySupervisorRegistrationSubmitted(userId);
+      // Send email alert to Institute Admin
+      await this.mailService.sendSupervisorRegistrationAlert({
+        name: updatedUser.name || email,
+        email: updatedUser.email,
+        department: department.name,
+        employeeId: employeeId || 'N/A',
+      });
     }
 
     return updatedUser;

@@ -42,9 +42,9 @@ export default function PortalLayout({
   useEffect(() => {
     if (!currentUser || isLoading) {
       const timer = setTimeout(() => {
-        console.warn('[PortalLayout] Auth initialization is taking longer than 5 seconds.');
+        console.warn('[PortalLayout] Auth initialization is taking longer than 15 seconds.');
         setAuthTimedOut(true);
-      }, 5000);
+      }, 15000);
       return () => clearTimeout(timer);
     } else {
       setAuthTimedOut(false);
@@ -86,8 +86,14 @@ export default function PortalLayout({
         return;
       }
 
-      if (activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' || activeUser.status === 'PENDING_ADMIN_APPROVAL') {
-        console.warn('[PortalLayout] User is pending approval. Redirecting to /approval-pending.');
+      if (activeUser.status === 'PENDING_SUPERVISOR_APPROVAL') {
+        console.warn('[PortalLayout] Scholar is awaiting supervisor approval. Redirecting to /awaiting-supervisor-approval.');
+        router.push('/awaiting-supervisor-approval');
+        return;
+      }
+
+      if (activeUser.status === 'PENDING_ADMIN_APPROVAL') {
+        console.warn('[PortalLayout] User is pending admin approval. Redirecting to /approval-pending.');
         router.push('/approval-pending');
         return;
       }

@@ -36,11 +36,14 @@ export function getDashboardRoute(user?: { role: UserRole; approved?: boolean; s
   if (user.status === 'REJECTED') {
     return '/account-rejected';
   }
-  if (user.status === 'PENDING_SUPERVISOR_APPROVAL' || user.status === 'PENDING_ADMIN_APPROVAL') {
+  if (user.status === 'PENDING_SUPERVISOR_APPROVAL') {
+    return '/awaiting-supervisor-approval';
+  }
+  if (user.status === 'PENDING_ADMIN_APPROVAL') {
     return '/approval-pending';
   }
   if (!user.approved && user.role !== 'INSTITUTE_ADMIN') {
-    return '/approval-pending';
+    return user.role === 'SCHOLAR' ? '/awaiting-supervisor-approval' : '/approval-pending';
   }
   return DASHBOARD_ROUTES[user.role] ?? '/dashboard';
 }

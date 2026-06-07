@@ -115,10 +115,6 @@ async function createApp(expressInstance?: express.Express) {
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
-      const isBypass = process.env.AUTH_MODE === 'bypass' || process.env.DEVELOPMENT_MODE === 'true';
-      if (isBypass && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
-        return callback(null, true);
-      }
       if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }

@@ -26,27 +26,58 @@ export const API_URL =
 /**
  * Robust helper to wait for the Clerk global client to load and fetch the session JWT.
  */
+/** Helper: finds an active session from any known Clerk global location */
+function getActiveClerkSession(): { getToken: () => Promise<string | null> } | null {
+  const w = window as any;
+  // v7 location
+  if (w.Clerk?.session?.getToken) return w.Clerk.session;
+  // v6 client location
+  const active = w.Clerk?.client?.activeSessions?.[0];
+  if (active?.getToken) return active;
+  // sessions array fallback
+  const first = w.Clerk?.client?.sessions?.[0];
+  if (first?.getToken) return first;
+  return null;
+}
+
 async function getClerkToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
-  if (!window.Clerk) {
-    await new Promise<void>((resolve) => {
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts++;
-        if (window.Clerk || attempts > 20) {
-          clearInterval(interval);
-          resolve();
-        }
-      }, 100);
-    });
+
+  // Wait up to 4s total for both Clerk to load AND a session to exist
+  await new Promise<void>((resolve) => {
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      const ready = !!(window as any).Clerk && !!getActiveClerkSession();
+      if (ready || attempts > 40) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 100);
+  });
+
+  const session = getActiveClerkSession();
+  if (!session) {
+    console.warn('[APIClient] No active Clerk session found after waiting.');
+    return null;
   }
+
   try {
-    return (await window.Clerk?.session?.getToken()) || null;
+    // Race getToken() against a 5s timeout to prevent hanging on JWT refresh
+    const tokenPromise = session.getToken();
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+    const token = await Promise.race([tokenPromise, timeoutPromise]);
+    if (!token) {
+      console.warn('[APIClient] getToken() timed out or returned null.');
+    }
+    return token;
   } catch (err) {
     console.warn('[APIClient] Failed to retrieve token from Clerk:', err);
     return null;
   }
 }
+
+
 
 export function resetAuthPromise() {
   console.info('[APIClient] Resetting auth promise (no-op for Clerk).');
@@ -145,9 +176,9 @@ export async function apiFetch(
   // Use AbortController for a default 8-second request timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    console.warn(`[APIClient] Request to ${url} timed out after 8s. Aborting.`);
+    console.warn(`[APIClient] Request to ${url} timed out after 15s. Aborting.`);
     controller.abort();
-  }, 8000);
+  }, 15000);
 
   // If a custom signal is provided, listen to aborts on it
   if (rest.signal) {
@@ -173,7 +204,7 @@ export async function apiFetch(
     return res;
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      throw new Error(`[APIClient] Request to ${path} timed out after 8s.`);
+      throw new Error(`[APIClient] Request to ${path} timed out after 15s.`);
     }
     throw err;
   } finally {

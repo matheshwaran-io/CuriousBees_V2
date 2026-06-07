@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   '/features(.*)',
   '/auth/denied(.*)',
   '/approval-pending(.*)',
+  '/awaiting-supervisor-approval(.*)',
   '/account-rejected(.*)',
 ]);
 

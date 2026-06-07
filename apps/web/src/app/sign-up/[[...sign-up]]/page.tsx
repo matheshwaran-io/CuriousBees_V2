@@ -19,156 +19,32 @@ interface Department { id: string; name: string; code: string; }
 interface Supervisor { id: string; name: string | null; email: string; department: string | null; }
 
 const FACULTY_DEPARTMENTS: Record<string, string[]> = {
-  "FACULTY OF ENGINEERING AND TECHNOLOGY": [
-    "Aerospace Engineering",
-    "Automobile Engineering",
-    "Biomedical Engineering",
-    "Biotechnology",
-    "Chemical Engineering",
-    "Civil Engineering",
-    "Computer Science and Engineering",
-    "Computer Science and Business Systems",
-    "Computer Science and Engineering (Artificial Intelligence and Machine Learning)",
-    "Computer Science and Engineering (Data Science)",
-    "Computer Science and Engineering (Cyber Security)",
-    "Information Technology",
-    "Software Engineering",
-    "Electronics and Communication Engineering",
-    "Electrical and Electronics Engineering",
-    "Electronics and Instrumentation Engineering",
+  "Faculty of Engineering & Technology": [
+    "Computing Technologies (CSE / IT / Swe)",
+    "Electronics & Communication Engineering (ECE)",
+    "Electrical & Electronics Engineering (EEE)",
+    "Biotechnology & Bioengineering",
     "Mechanical Engineering",
-    "Mechatronics Engineering",
-    "Robotics and Automation",
-    "Artificial Intelligence",
-    "Artificial Intelligence and Data Science",
-    "Data Science",
-    "Network Engineering",
-    "Nanotechnology",
-    "Genetic Engineering"
+    "Civil Engineering",
+    "Chemical Engineering"
   ],
-  "FACULTY OF SCIENCE AND HUMANITIES": [
-    "Computer Applications (MCA)",
-    "Computer Science",
-    "Information Systems",
-    "Data Analytics",
-    "Mathematics",
-    "Statistics",
-    "Physics",
-    "Chemistry",
-    "Biochemistry",
-    "Microbiology",
-    "Bioinformatics",
-    "English and Foreign Languages",
-    "Economics",
-    "Psychology",
-    "Public Policy",
-    "Commerce",
-    "Accounting and Finance",
-    "Banking and Insurance",
-    "Journalism and Mass Communication",
-    "Visual Communication",
-    "Digital Media",
-    "Hotel and Catering Management",
-    "Tourism and Hospitality Management"
+  "Faculty of Science & Humanities": [
+    "Physics & Nanotechnology",
+    "Chemistry & Materials Science",
+    "Mathematics & Actuarial Science"
   ],
-  "FACULTY OF MANAGEMENT": [
-    "Finance",
-    "Marketing",
-    "Human Resource Management",
-    "Operations Management",
-    "Business Analytics",
-    "Entrepreneurship",
-    "International Business",
-    "Supply Chain Management",
-    "Strategic Management",
-    "Information Systems Management"
+  "Faculty of Management": [
+    "School of Management (SOM)"
   ],
-  "FACULTY OF LAW": [
-    "Constitutional Law",
-    "Corporate Law",
-    "Criminal Law",
-    "Intellectual Property Law",
-    "Cyber Law",
-    "Human Rights Law",
-    "Environmental Law",
-    "International Law",
-    "Taxation Law",
-    "Commercial Law"
+  "Faculty of Law": [],
+  "Faculty of Medicine & Health Sciences": [
+    "Health Sciences & Research"
   ],
-  "FACULTY OF MEDICINE AND HEALTH SCIENCES": [
-    "Anatomy",
-    "Physiology",
-    "Pathology",
-    "Pharmacology",
-    "Forensic Medicine",
-    "Community Medicine",
-    "General Medicine",
-    "General Surgery",
-    "Pediatrics",
-    "Obstetrics and Gynecology",
-    "Orthopedics",
-    "Ophthalmology",
-    "Dermatology",
-    "Psychiatry",
-    "ENT",
-    "Radiology",
-    "Anesthesiology",
-    "Emergency Medicine",
-    "Cardiology",
-    "Neurology",
-    "Nephrology",
-    "Pulmonology",
-    "Gastroenterology",
-    "Oncology",
-    "Oral Medicine",
-    "Oral Surgery",
-    "Orthodontics",
-    "Periodontics",
-    "Prosthodontics",
-    "Conservative Dentistry",
-    "Pedodontics",
-    "Public Health Dentistry",
-    "Pharmaceutics",
-    "Pharmaceutical Chemistry",
-    "Pharmacognosy",
-    "Pharmacy Practice",
-    "Medical Surgical Nursing",
-    "Community Health Nursing",
-    "Child Health Nursing",
-    "Mental Health Nursing",
-    "Obstetrics and Gynecological Nursing",
-    "Musculoskeletal Physiotherapy",
-    "Neurological Physiotherapy",
-    "Cardiopulmonary Physiotherapy",
-    "Sports Physiotherapy",
-    "Pediatric Occupational Therapy",
-    "Neurological Rehabilitation",
-    "Community Rehabilitation",
-    "Epidemiology",
-    "Biostatistics",
-    "Environmental Health",
-    "Health Policy and Management"
-  ],
-  "RESEARCH CENTERS (Cross-Faculty)": [
-    "Artificial Intelligence Research Center",
-    "Data Science Research Center",
-    "Cyber Security Research Center",
-    "Internet of Things Research Center",
-    "Robotics Research Center",
-    "Renewable Energy Research Center",
-    "Nanotechnology Research Center",
-    "Biotechnology Research Center",
-    "Healthcare Informatics Research Center",
-    "Smart Manufacturing Research Center",
-    "Advanced Materials Research Center",
-    "Sustainable Development Research Center"
-  ]
+  "Faculty of Research Centers": []
 };
 
 export default function SignUpPage() {
-  const signUpHook = useSignUp() as any;
-  console.log("EXACT_USE_SIGNUP_SHAPE", signUpHook);
-  const { signUp } = signUpHook;
+  const { signUp } = useSignUp();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -188,7 +64,8 @@ export default function SignUpPage() {
   const [verificationCode, setVerificationCode] = useState('');
 
   // Form fields
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -200,11 +77,47 @@ export default function SignUpPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
 
-  // Fetch departments and approved supervisors
+  // Fetch departments and approved supervisors once
   useEffect(() => {
     apiFetch('/api/departments', { skipAuth: true }).then(r => { if(r.ok) r.json().then(setDepartments) }).catch(() => {});
     apiFetch('/api/users/supervisors', { skipAuth: true }).then(r => { if(r.ok) r.json().then(setSupervisors) }).catch(() => {});
   }, []);
+
+  const [isSupervisorDropdownOpen, setIsSupervisorDropdownOpen] = useState(false);
+  const [supervisorSearchQuery, setSupervisorSearchQuery] = useState('');
+
+  // Departments shown are filtered by manually chosen faculty
+  const filteredDepartments = departments.filter(d => {
+    return faculty ? FACULTY_DEPARTMENTS[faculty]?.includes(d.name) : true;
+  });
+
+  // Supervisors are filtered by chosen department
+  const selectedDept = departments.find(d => d.id === departmentId);
+  const filteredSupervisors = supervisors.filter(s => {
+    return selectedDept && s.department && s.department.toLowerCase() === selectedDept.name.toLowerCase();
+  });
+
+  const selectedSupervisorObj = supervisors.find(s => s.id === supervisorId);
+  const selectedSupervisorName = selectedSupervisorObj ? (selectedSupervisorObj.name || selectedSupervisorObj.email) : '';
+
+  const searchedSupervisors = filteredSupervisors.filter(s =>
+    (s.name || s.email || '').toLowerCase().includes(supervisorSearchQuery.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const container = document.getElementById('supervisor-dropdown-container');
+      if (container && !container.contains(e.target as Node)) {
+        setIsSupervisorDropdownOpen(false);
+      }
+    };
+    if (isSupervisorDropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isSupervisorDropdownOpen]);
 
   const validateSrmEmail = (e: string) => {
     if (e === 'mr9820' || e === 'mr9820@srmist.edu.in') return '';
@@ -228,18 +141,26 @@ export default function SignUpPage() {
     if (domainError) { setError(domainError); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (!firstName.trim()) { setError('Please enter your First Name.'); return; }
+    if (!lastName.trim()) { setError('Please enter your Last Name.'); return; }
+    if (!faculty) { setError('Please select your Faculty.'); return; }
     if (!departmentId) { setError('Please select your department.'); return; }
-    if (role === 'SCHOLAR' && !supervisorId) { setError('Please select your research supervisor.'); return; }
-    if (role === 'SUPERVISOR' && !employeeId.trim()) { setError('Please enter your Employee ID.'); return; }
+
+    if (role === 'SCHOLAR') {
+      if (!employeeId.trim()) { setError('Please enter your Registration Number.'); return; }
+      if (!supervisorId) { setError('Please select your Research Supervisor.'); return; }
+    } else {
+      if (!employeeId.trim()) { setError('Please enter your Employee ID.'); return; }
+    }
 
     setIsLoading(true);
     console.log(`[FRONTEND TRACE] Attempting signUp.create for email: ${email}`);
     try {
-      const result = await signUp.create({
+      const result = await (signUp as any).create({
         emailAddress: email,
         password,
-        firstName: fullName.split(' ')[0] || fullName,
-        lastName: fullName.split(' ').slice(1).join(' ') || '',
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
       });
       console.log("EXACT_SIGNUP_CREATE_RETURN", result);
       console.log("EXACT_WINDOW_CLERK_SIGNUP", typeof window !== 'undefined' ? (window as any).Clerk?.client?.signUp : null);
@@ -248,7 +169,7 @@ export default function SignUpPage() {
       const clientSignUp = (window as any).Clerk?.client?.signUp;
       if (clientSignUp && typeof clientSignUp.prepareEmailAddressVerification === 'function') {
         await clientSignUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      } else if (typeof signUp.prepareEmailAddressVerification === 'function') {
+      } else if (typeof (signUp as any).prepareEmailAddressVerification === 'function') {
         await (signUp as any).prepareEmailAddressVerification({ strategy: 'email_code' });
       } else {
         throw new Error('prepareEmailAddressVerification is not available on signUp resource');
@@ -275,7 +196,7 @@ export default function SignUpPage() {
       
       if (clientSignUp && typeof clientSignUp.attemptEmailAddressVerification === 'function') {
         result = await clientSignUp.attemptEmailAddressVerification({ code: verificationCode });
-      } else if (typeof signUp.attemptEmailAddressVerification === 'function') {
+      } else if (typeof (signUp as any).attemptEmailAddressVerification === 'function') {
         result = await (signUp as any).attemptEmailAddressVerification({ code: verificationCode });
       } else {
         throw new Error('attemptEmailAddressVerification is not available on signUp resource');
@@ -317,7 +238,14 @@ export default function SignUpPage() {
         const regRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/users/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: fullName, role, departmentId, supervisorId: role === 'SCHOLAR' ? supervisorId : undefined, employeeId: role === 'SUPERVISOR' ? employeeId : undefined }),
+          body: JSON.stringify({
+            name: `${firstName.trim()} ${lastName.trim()}`,
+            role,
+            departmentId,
+            supervisorId: role === 'SCHOLAR' ? supervisorId : undefined,
+            employeeId: employeeId.trim(),
+            faculty
+          }),
         });
         if (!regRes.ok) {
           const rawText = await regRes.text();
@@ -326,10 +254,11 @@ export default function SignUpPage() {
           console.error(`[FRONTEND TRACE] Registration sync failed. Status: ${regRes.status} ${regRes.statusText}. Response text:`, rawText);
           throw new Error(data?.message || `Registration sync failed (${regRes.status}): ${rawText.substring(0, 100)}`);
         }
-        console.log(`[FRONTEND TRACE] Sync successful, redirecting to /approval-pending`);
+        const targetPath = role === 'SCHOLAR' ? '/awaiting-supervisor-approval' : '/approval-pending';
+        console.log(`[FRONTEND TRACE] Sync successful, redirecting to ${targetPath}`);
         // We use window.location.href instead of router.push to ensure a full layout reload
         // which guarantees the layout.tsx fetch auth logic runs cleanly on the newly authenticated session.
-        window.location.href = '/approval-pending';
+        window.location.href = targetPath;
         setStep('done');
       } else {
         const missing = result?.missingFields?.join(', ') || 'unknown';
@@ -469,101 +398,386 @@ export default function SignUpPage() {
 
                 <form id="signup-details-form" onSubmit={handleDetailsSubmit} className="space-y-4">
                   <div id="clerk-captcha"></div>
-                  {/* Full Name */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="signup-name" type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Dr. / Mr. / Ms. Full Name" required className={`${inputClass} pl-10`} />
-                    </div>
-                  </div>
-
-                  {/* SRM Email */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">SRM Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="signup-email" type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@srmist.edu.in" required className={`${inputClass} pl-10`} />
-                    </div>
-                  </div>
-
-                  {/* Password */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="signup-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" required className={`${inputClass} pl-10 pr-10`} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-white/30 hover:text-white/60 transition-colors">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Confirm Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="signup-confirm-password" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repeat password" required className={`${inputClass} pl-10`} />
-                    </div>
-                  </div>
-
-                  {/* Faculty */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Faculty</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
-                      <select id="signup-faculty" value={faculty} onChange={e => { setFaculty(e.target.value); setDepartmentId(''); }} required className={`${selectClass} pl-10`}>
-                        <option value="" className="bg-[#0d1525]">Select Faculty</option>
-                        {Object.keys(FACULTY_DEPARTMENTS).map(f => (
-                          <option key={f} value={f} className="bg-[#0d1525]">{f}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Department */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Department</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
-                      <select id="signup-department" value={departmentId} onChange={e => setDepartmentId(e.target.value)} required disabled={!faculty} className={`${selectClass} pl-10 disabled:opacity-50`}>
-                        <option value="" className="bg-[#0d1525]">{faculty ? "Select Department" : "Select Faculty First"}</option>
-                        {departments.filter(d => faculty ? FACULTY_DEPARTMENTS[faculty]?.includes(d.name) : true).map(d => (
-                          <option key={d.id} value={d.id} className="bg-[#0d1525]">{d.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Scholar: Supervisor Dropdown */}
-                  {role === 'SCHOLAR' && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Research Supervisor</label>
-                      <div className="relative">
-                        <BookOpen className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
-                        <select id="signup-supervisor" value={supervisorId} onChange={e => setSupervisorId(e.target.value)} required className={`${selectClass} pl-10`}>
-                          <option value="" className="bg-[#0d1525]">Select Supervisor</option>
-                          {supervisors.map(s => (
-                            <option key={s.id} value={s.id} className="bg-[#0d1525]">{s.name || s.email} {s.department ? `— ${s.department}` : ''}</option>
-                          ))}
-                        </select>
+                  {role === 'SUPERVISOR' ? (
+                    // Supervisor specific fields
+                    <>
+                      {/* Employee ID */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Employee ID</label>
+                        <div className="relative">
+                          <CreditCard className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-employee-id"
+                            type="text"
+                            value={employeeId}
+                            onChange={e => setEmployeeId(e.target.value)}
+                            placeholder="e.g. SRM20240001"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
                       </div>
-                      {supervisors.length === 0 && (
-                        <p className="text-[10px] text-amber-400/60">No approved supervisors found. Please contact admin.</p>
+
+                      {/* First Name & Last Name (grid side-by-side) */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">First Name</label>
+                          <div className="relative">
+                            <User className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <input
+                              id="signup-firstname"
+                              type="text"
+                              value={firstName}
+                              onChange={e => setFirstName(e.target.value)}
+                              placeholder="First Name"
+                              required
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Last Name</label>
+                          <div className="relative">
+                            <User className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <input
+                              id="signup-lastname"
+                              type="text"
+                              value={lastName}
+                              onChange={e => setLastName(e.target.value)}
+                              placeholder="Last Name"
+                              required
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SRM Email */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">SRM Email</label>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-email"
+                            type="text"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="you@srmist.edu.in"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Password */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            placeholder="Min. 8 characters"
+                            required
+                            className={`${inputClass} pl-10 pr-10`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3.5 text-white/30 hover:text-white/60 transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Confirm Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-confirm-password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            placeholder="Repeat password"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Faculty Dropdown */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Faculty</label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <select
+                            id="signup-faculty"
+                            value={faculty}
+                            onChange={e => { setFaculty(e.target.value); setDepartmentId(''); }}
+                            required
+                            className={`${selectClass} pl-10`}
+                          >
+                            <option value="" className="bg-[#0d1525]">Select Faculty</option>
+                            {Object.keys(FACULTY_DEPARTMENTS).map(f => (
+                              <option key={f} value={f} className="bg-[#0d1525]">{f}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Department Dropdown - ONLY appears if Faculty is selected */}
+                      {faculty && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Department</label>
+                          <div className="relative">
+                            <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <select
+                              id="signup-department"
+                              value={departmentId}
+                              onChange={e => setDepartmentId(e.target.value)}
+                              required
+                              className={`${selectClass} pl-10`}
+                            >
+                              <option value="" className="bg-[#0d1525]">Select Department</option>
+                              {filteredDepartments.map(d => (
+                                <option key={d.id} value={d.id} className="bg-[#0d1525]">{d.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Supervisor: Employee ID */}
-                  {role === 'SUPERVISOR' && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Employee ID</label>
-                      <div className="relative">
-                        <CreditCard className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                        <input id="signup-employee-id" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} placeholder="e.g. SRM20240001" required className={`${inputClass} pl-10`} />
+                    </>
+                  ) : (
+                    // Scholar specific fields (Redesigned)
+                    <>
+                      {/* Registration Number */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Registration Number</label>
+                        <div className="relative">
+                          <CreditCard className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-registration-number"
+                            type="text"
+                            value={employeeId}
+                            onChange={e => setEmployeeId(e.target.value)}
+                            placeholder="e.g. RA2411003010001"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
                       </div>
-                    </div>
+
+                      {/* First Name & Last Name (grid side-by-side) */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">First Name</label>
+                          <div className="relative">
+                            <User className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <input
+                              id="signup-firstname"
+                              type="text"
+                              value={firstName}
+                              onChange={e => setFirstName(e.target.value)}
+                              placeholder="First Name"
+                              required
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Last Name</label>
+                          <div className="relative">
+                            <User className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <input
+                              id="signup-lastname"
+                              type="text"
+                              value={lastName}
+                              onChange={e => setLastName(e.target.value)}
+                              placeholder="Last Name"
+                              required
+                              className={`${inputClass} pl-10`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SRM Email */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">SRM Email</label>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-email"
+                            type="text"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="you@srmist.edu.in"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Password */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            placeholder="Min. 8 characters"
+                            required
+                            className={`${inputClass} pl-10 pr-10`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3.5 text-white/30 hover:text-white/60 transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Confirm Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <input
+                            id="signup-confirm-password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            placeholder="Repeat password"
+                            required
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Faculty Dropdown */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Faculty</label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                          <select
+                            id="signup-faculty"
+                            value={faculty}
+                            onChange={e => { setFaculty(e.target.value); setDepartmentId(''); setSupervisorId(''); }}
+                            required
+                            className={`${selectClass} pl-10`}
+                          >
+                            <option value="" className="bg-[#0d1525]">Select Faculty</option>
+                            {Object.keys(FACULTY_DEPARTMENTS).map(f => (
+                              <option key={f} value={f} className="bg-[#0d1525]">{f}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Department Dropdown - ONLY appears if Faculty is selected */}
+                      {faculty && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Department</label>
+                          <div className="relative">
+                            <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <select
+                              id="signup-department"
+                              value={departmentId}
+                              onChange={e => { setDepartmentId(e.target.value); setSupervisorId(''); }}
+                              required
+                              className={`${selectClass} pl-10`}
+                            >
+                              <option value="" className="bg-[#0d1525]">Select Department</option>
+                              {filteredDepartments.map(d => (
+                                <option key={d.id} value={d.id} className="bg-[#0d1525]">{d.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Research Supervisor Dropdown - ONLY appears if Department is selected */}
+                      {faculty && departmentId && (
+                        <div className="space-y-1 relative" id="supervisor-dropdown-container">
+                          <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Research Supervisor</label>
+                          <div className="relative">
+                            <BookOpen className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25 pointer-events-none" />
+                            <button
+                              id="signup-supervisor-trigger"
+                              type="button"
+                              onClick={() => setIsSupervisorDropdownOpen(!isSupervisorDropdownOpen)}
+                              className={`${inputClass} pl-10 text-left flex items-center justify-between cursor-pointer`}
+                            >
+                              <span className={selectedSupervisorName ? 'text-white' : 'text-white/30'}>
+                                {selectedSupervisorName || 'Select Supervisor'}
+                              </span>
+                              <ChevronRight className={`w-4 h-4 text-white/30 transition-transform duration-200 shrink-0 ${isSupervisorDropdownOpen ? 'rotate-90' : ''}`} />
+                            </button>
+                          </div>
+
+                          <AnimatePresence>
+                            {isSupervisorDropdownOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute z-50 w-full mt-1.5 bg-[#090e18] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-60 flex flex-col"
+                              >
+                                <div className="p-2 border-b border-white/10 bg-[#090e18]">
+                                  <input
+                                    id="signup-supervisor-search"
+                                    type="text"
+                                    value={supervisorSearchQuery}
+                                    onChange={e => setSupervisorSearchQuery(e.target.value)}
+                                    placeholder="Search by name or email..."
+                                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </div>
+                                <div className="overflow-y-auto flex-1 py-1 custom-scrollbar">
+                                  {searchedSupervisors.length > 0 ? (
+                                    searchedSupervisors.map(s => (
+                                      <button
+                                        key={s.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSupervisorId(s.id);
+                                          setIsSupervisorDropdownOpen(false);
+                                          setSupervisorSearchQuery('');
+                                        }}
+                                        className={`w-full text-left px-4 py-2.5 text-xs transition-colors flex flex-col gap-0.5 hover:bg-blue-500/10 ${
+                                          supervisorId === s.id ? 'bg-blue-500/20 text-white font-medium' : 'text-white/70'
+                                        }`}
+                                      >
+                                        <span className="font-semibold text-white">{s.name || 'Unnamed Supervisor'}</span>
+                                        <span className="text-[10px] text-white/40">{s.email}</span>
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <div className="px-4 py-3 text-xs text-white/40 text-center">
+                                      No approved supervisors found
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                          {filteredSupervisors.length === 0 && (
+                            <p className="text-[10px] text-amber-400/60 mt-1">No approved supervisors found in this department.</p>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {error && (
@@ -580,7 +794,7 @@ export default function SignUpPage() {
                     <button
                       id="signup-submit-btn"
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isLoading || (role === 'SCHOLAR' && !supervisorId)}
                       className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-blue-600/25"
                     >
                       {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Continue</span><ArrowRight className="w-4 h-4" /></>}

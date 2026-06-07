@@ -155,7 +155,7 @@ async function main() {
         departmentId: deptRef ? deptRef.id : null,
         bio: u.bio,
         approved: u.role === Role.SUPERVISOR || u.role === Role.INSTITUTE_ADMIN ? true : false,
-        status: u.role === Role.SUPERVISOR || u.role === Role.INSTITUTE_ADMIN ? 'APPROVED' : 'ONBOARDING'
+        status: u.role === Role.SUPERVISOR || u.role === Role.INSTITUTE_ADMIN ? 'ACTIVE' : 'PENDING_SUPERVISOR_APPROVAL'
       }
     });
     createdUsers[u.email] = user;
@@ -181,7 +181,7 @@ async function main() {
     data: {
       supervisorId: createdUsers['dr.anand@srmist.edu.in'].id,
       supervisorEmail: 'dr.anand@srmist.edu.in',
-      status: 'APPROVED',
+      status: 'ACTIVE',
       approved: true
     }
   });
@@ -191,7 +191,7 @@ async function main() {
     data: {
       supervisorId: createdUsers['dr.priya@srmist.edu.in'].id,
       supervisorEmail: 'dr.priya@srmist.edu.in',
-      status: 'APPROVED',
+      status: 'ACTIVE',
       approved: true
     }
   });

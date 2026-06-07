@@ -33,6 +33,7 @@ model User {
   department    String?
   departmentId  String?
   departmentRef Department?     @relation(fields: [departmentId], references: [id])
+  faculty       String?
   bio           String?
   approved      Boolean         @default(false)
   status        UserStatus      @default(PENDING_SUPERVISOR_APPROVAL)

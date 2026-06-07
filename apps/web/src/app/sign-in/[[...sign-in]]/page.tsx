@@ -13,9 +13,7 @@ import {
 type AuthView = 'login' | 'forgot_password' | 'reset_code' | 'new_password' | 'success';
 
 export default function SignInPage() {
-  const signInHook = useSignIn() as any;
-  console.log("EXACT_USE_SIGNIN_SHAPE", signInHook);
-  const { signIn } = signInHook;
+  const { signIn } = useSignIn();
   const { setActive } = useClerk();
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const router = useRouter();
@@ -47,59 +45,47 @@ export default function SignInPage() {
   };
 
   const handleLogin = async (e: React.FormEvent) => {
-    console.log("FORM_SUBMITTED");
     e.preventDefault();
-    if (!signIn) {
-      console.log("Clerk signIn object is unavailable, aborting.");
-      return;
-    }
+    if (!signIn) return;
     setError('');
     const domainError = validateSrmEmail(email);
     if (domainError) { setError(domainError); return; }
-    console.log("VALIDATION_PASSED");
     setIsLoading(true);
-    console.log("CLERK_SIGNIN_START");
     try {
-      const result = await signIn.create({ identifier: email, password });
-      console.log("EXACT_SIGNIN_CREATE_RETURN", result);
-      console.log("EXACT_WINDOW_CLERK_SIGNIN", typeof window !== 'undefined' ? (window as any).Clerk?.client?.signIn : null);
-      
-      let finalStatus = result?.status;
-      let finalSessionId = result?.createdSessionId;
-      
-      // Attempt to extract from Clerk Client if result is void wrapper or empty
-      if (!finalStatus && typeof window !== 'undefined') {
-         const clientSignIn = (window as any).Clerk?.client?.signIn;
-         if (clientSignIn && clientSignIn.status) {
-            finalStatus = clientSignIn.status;
-            finalSessionId = clientSignIn.createdSessionId;
-         } else if ((window as any).Clerk?.session) {
-            finalStatus = 'complete';
-            finalSessionId = (window as any).Clerk.session.id;
-         } else if ((window as any).Clerk?.client?.activeSessions?.length > 0) {
-            finalStatus = 'complete';
-            finalSessionId = (window as any).Clerk.client.activeSessions[0].id;
-         } else if ((window as any).Clerk?.client?.sessions?.length > 0) {
-            finalStatus = 'complete';
-            finalSessionId = (window as any).Clerk.client.sessions[0].id;
-         }
-      }
+      // In Clerk v7, signIn.create() may return void — we must read state
+      // from the reactive `signIn` object (from the hook) after the call.
+      await signIn.create({ identifier: email, password });
+
+      // Give Clerk's reactive state a tick to update
+      await new Promise(r => setTimeout(r, 200));
+
+      // Read status from all known locations in order of preference
+      const w = window as any;
+      const hookStatus = signIn?.status;
+      const clientStatus = w.Clerk?.client?.signIn?.status;
+      const activeSession = w.Clerk?.client?.activeSessions?.[0]
+        || w.Clerk?.client?.sessions?.[0]
+        || w.Clerk?.session;
+
+      const finalStatus = hookStatus || clientStatus || (activeSession ? 'complete' : null);
+      const finalSessionId = signIn?.createdSessionId
+        || w.Clerk?.client?.signIn?.createdSessionId
+        || activeSession?.id;
 
       if (finalStatus === 'complete') {
-        console.log("CLERK_SIGNIN_SUCCESS");
         await setActive({ session: finalSessionId });
-        console.log("SESSION_ACTIVATED");
-        console.log("ROUTER_REDIRECT");
+        router.push('/dashboard');
+      } else if (activeSession) {
+        // Session exists even if status wasn't 'complete' — activate it
+        await setActive({ session: activeSession.id });
         router.push('/dashboard');
       } else {
-        console.log(`[FRONTEND TRACE] signIn.create incomplete. Result:`, result);
-        const supportedFactors = result?.supportedFirstFactors?.map((f: any) => f.strategy).join(', ') || 'none';
-        setError(`Sign in incomplete. Status: ${finalStatus}. Supported factors: ${supportedFactors}`);
+        const supportedFactors = signIn?.supportedFirstFactors?.map((f: any) => f.strategy).join(', ') || 'none';
+        setError(`Sign in incomplete. Status: ${finalStatus ?? 'unknown'}. Supported factors: ${supportedFactors}`);
       }
     } catch (err: any) {
-      console.error(`[FRONTEND TRACE] signIn.create FAILED:`, err);
-      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Sign in failed.';
-      if (msg.includes('already signed in') || (err.message && err.message.includes('already signed in'))) {
+      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Sign in failed.';
+      if (msg.toLowerCase().includes('already signed in')) {
         router.push('/dashboard');
         return;
       }
@@ -109,6 +95,7 @@ export default function SignInPage() {
     }
   };
 
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signIn) return;
@@ -117,8 +104,8 @@ export default function SignInPage() {
     if (domainError) { setError(domainError); return; }
     setIsLoading(true);
     try {
-      await signIn.create({ identifier: email });
-      await signIn.prepareFirstFactor({ strategy: 'reset_password_email_code', emailAddressId: '' });
+      await (signIn as any).create({ identifier: email });
+      await (signIn as any).prepareFirstFactor({ strategy: 'reset_password_email_code', emailAddressId: '' });
       setView('reset_code');
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Failed to send reset email.';
@@ -134,7 +121,7 @@ export default function SignInPage() {
     setError('');
     setIsLoading(true);
     try {
-      const result = await signIn.attemptFirstFactor({
+      const result = await (signIn as any).attemptFirstFactor({
         strategy: 'reset_password_email_code',
         code: resetCode,
       });
@@ -165,7 +152,7 @@ export default function SignInPage() {
     if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setIsLoading(true);
     try {
-      const result = await signIn.resetPassword({ password: newPassword });
+      const result = await (signIn as any).resetPassword({ password: newPassword });
       let finalStatus = result?.status;
       let finalSessionId = result?.createdSessionId;
       if (!finalStatus && typeof window !== 'undefined') {

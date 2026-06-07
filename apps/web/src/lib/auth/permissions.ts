@@ -70,6 +70,7 @@ export const PUBLIC_ROUTES: string[] = [
   '/auth',
   '/verification-pending',
   '/approval-pending',
+  '/awaiting-supervisor-approval',
   '/account-rejected',
 ];
 

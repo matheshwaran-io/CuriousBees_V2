@@ -2,14 +2,6 @@ import { z } from 'zod';
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  DEVELOPMENT_MODE: z.preprocess((val) => {
-    if (typeof val === 'string') return val.trim();
-    return val;
-  }, z.enum(['true', 'false']).default('false')),
-  AUTH_MODE: z.literal('clerk', {
-    errorMap: () => ({ message: 'AUTH_MODE must be set to "clerk"' }),
-  }),
-  DEV_ROLE: z.enum(['SCHOLAR', 'SUPERVISOR', 'INSTITUTE_ADMIN']).default('SCHOLAR'),
   PORT: z.preprocess((val) => {
     if (typeof val === 'string') return parseInt(val, 10);
     return val;
