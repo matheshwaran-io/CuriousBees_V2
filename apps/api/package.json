@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "dotenv -e ../../.env -- prisma generate && nest build",
+    "build": "npm run build:packages --prefix ../.. && dotenv -e ../../.env -- prisma generate && nest build",
     "vercel-build": "cd ../../packages/types && tsc && cd ../shared-utils && tsc && cd ../../apps/api && dotenv -e ../../.env -- prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",
