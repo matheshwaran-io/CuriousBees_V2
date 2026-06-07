@@ -7,7 +7,7 @@
     "vercel-build": "cd ../../packages/types && tsc && cd ../shared-utils && tsc && cd ../../apps/api && dotenv -e ../../.env -- prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",
-    "start:prod": "node dist/src/main",
+    "start:prod": "node dist/main",
     "prisma:generate": "dotenv -e ../../.env -- prisma generate",
     "prisma:validate": "dotenv -e ../../.env -- prisma validate",
     "prisma:push": "dotenv -e ../../.env -- prisma db push",
