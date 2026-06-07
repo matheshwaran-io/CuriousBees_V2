@@ -18,6 +18,22 @@ if (envPath) {
   console.warn('[CuriousBees] No root .env file found.');
 }
 
+// Startup Validation Layer
+const requiredEnvVars = ['DATABASE_URL', 'CLERK_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
+if (missingEnvVars.length > 0) {
+  console.error('\n================================================================');
+  console.error('❌ CRITICAL STARTUP ERROR: Missing Required Environment Variables');
+  console.error('================================================================');
+  missingEnvVars.forEach((v) => {
+    console.error(`  - ${v} is not set in the environment.`);
+  });
+  console.error('\nPlease configure these variables in your environment or .env file');
+  console.error('before starting the application.');
+  console.error('================================================================\n');
+  process.exit(1);
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
@@ -91,13 +107,16 @@ async function createApp(expressInstance?: express.Express) {
   app.enableShutdownHooks();
 
   // CORS — supports local dev + all Vercel preview/production deployments
+  const parseCommaSeparated = (val?: string): string[] => {
+    if (!val) return [];
+    return val.split(',').map((o) => o.trim()).filter(Boolean);
+  };
+
   const configuredOrigins = [
-    process.env.FRONTEND_URL,
-    process.env.WEB_URL,
-    ...(process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-      : []),
-  ].filter(Boolean) as string[];
+    ...parseCommaSeparated(process.env.FRONTEND_URL),
+    ...parseCommaSeparated(process.env.WEB_URL),
+    ...parseCommaSeparated(process.env.ALLOWED_ORIGINS),
+  ];
 
   const allowedOrigins = Array.from(new Set([
     'http://localhost:3000',
@@ -122,7 +141,7 @@ async function createApp(expressInstance?: express.Express) {
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    allowedHeaders: 'Authorization, Content-Type, Accept',
   });
 
   return app;
@@ -132,9 +151,9 @@ async function createApp(expressInstance?: express.Express) {
 
 async function bootstrap() {
   const app = await createApp();
-  const port = process.env.PORT || 4000;
-  await app.listen(port);
-  console.log(`🚀 CuriousBees API running on: http://localhost:${port}`);
+  const port = Number(process.env.PORT) || 4000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 CuriousBees API running on: http://0.0.0.0:${port}`);
 }
 
 // ─── Vercel serverless: export a request handler ─────────────────────────────

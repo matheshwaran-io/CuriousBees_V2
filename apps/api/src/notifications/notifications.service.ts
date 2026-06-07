@@ -230,16 +230,20 @@ export class NotificationsService {
     const body = `${event.title} is happening at ${event.venue} on ${new Date(event.date).toLocaleDateString()}`;
 
     // Push to Queue for Async Delivery
-    await this.notificationQueue.add('send-event-push', {
-      eventId: event.id,
-      userIds: recipients,
-      title,
-      body,
-    }, {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 2000 }, // Exponential backoff for network transient errors
-      removeOnComplete: true,
-      removeOnFail: false
-    });
+    try {
+      await this.notificationQueue.add('send-event-push', {
+        eventId: event.id,
+        userIds: recipients,
+        title,
+        body,
+      }, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 }, // Exponential backoff for network transient errors
+        removeOnComplete: true,
+        removeOnFail: false
+      });
+    } catch (err: any) {
+      this.logger.warn(`⚠️ Failed to queue event notification (Redis may be offline): ${err.message}`);
+    }
   }
 }

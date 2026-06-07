@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import * as path from 'path';
 import * as fs from 'fs';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
+import Redis from 'ioredis';
 
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -36,13 +37,39 @@ import { ReportsModule } from './reports/reports.module';
       validate: validateEnv,
     }),
 
-    BullModule.forRoot({
-      connection: (process.env.REDIS_URL
-        ? process.env.REDIS_URL
-        : {
+    BullModule.forRootAsync({
+      useFactory: () => {
+        const redisUrl = process.env.REDIS_URL;
+        let redisInstance: Redis;
+
+        if (redisUrl) {
+          redisInstance = new Redis(redisUrl, {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            retryStrategy(times) {
+              return Math.min(times * 500, 5000);
+            },
+          });
+        } else {
+          redisInstance = new Redis({
             host: process.env.REDIS_HOST || 'localhost',
             port: parseInt(process.env.REDIS_PORT || '6379', 10),
-          }) as any,
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            retryStrategy(times) {
+              return Math.min(times * 500, 5000);
+            },
+          });
+        }
+
+        redisInstance.on('error', (err) => {
+          console.warn(`⚠️ Redis Connection Warning (Queues): ${err.message}`);
+        });
+
+        return {
+          connection: redisInstance as any,
+        };
+      },
     }),
 
     ThrottlerModule.forRoot([{

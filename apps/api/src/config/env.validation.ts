@@ -18,6 +18,7 @@ export const envSchema = z.object({
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
   ALLOWED_ORIGINS: z.string().optional(),
   CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

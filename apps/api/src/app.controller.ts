@@ -30,8 +30,9 @@ export class AppController {
     }
 
     let redisConnected = false;
+    let redis: Redis | null = null;
     try {
-      const redis = process.env.REDIS_URL
+      redis = process.env.REDIS_URL
         ? new Redis(process.env.REDIS_URL, {
             maxRetriesPerRequest: 1,
             connectTimeout: 2000,
@@ -42,25 +43,33 @@ export class AppController {
             maxRetriesPerRequest: 1,
             connectTimeout: 2000,
           });
+
+      redis.on('error', () => {});
+
       const res = await redis.ping();
       if (res === 'PONG') {
         redisConnected = true;
       }
-      redis.disconnect();
     } catch (err: any) {
       // Redis offline
+    } finally {
+      if (redis) {
+        try {
+          redis.disconnect();
+        } catch {
+          // ignore
+        }
+      }
     }
 
     const isHealthy = databaseConnected && redisConnected;
-    const memory = process.memoryUsage();
 
     return {
-      status: isHealthy ? 'healthy' : 'unhealthy',
-      database: databaseConnected ? 'healthy' : 'unhealthy',
-      redis: redisConnected ? 'healthy' : 'unhealthy',
-      uptime: `${Math.round(process.uptime() * 100) / 100}s`,
-      memory: `${Math.round((memory.rss / 1024 / 1024) * 100) / 100} MB`,
-      environment: process.env.NODE_ENV || 'development',
+      status: isHealthy ? 'ok' : 'unhealthy',
+      database: databaseConnected ? 'connected' : 'disconnected',
+      redis: redisConnected ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'production',
     };
   }
 

@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "npm run build:packages --prefix ../.. && dotenv -e ../../.env -- prisma generate && nest build",
-    "vercel-build": "cd ../../packages/types && tsc && cd ../shared-utils && tsc && cd ../../apps/api && dotenv -e ../../.env -- prisma generate && nest build",
+    "build": "npm run build:packages --prefix ../.. && prisma generate && nest build",
+    "vercel-build": "cd ../../packages/types && tsc && cd ../shared-utils && tsc && cd ../../apps/api && prisma generate && nest build",
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/main",
-    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
-    "prisma:validate": "dotenv -e ../../.env -- prisma validate",
-    "prisma:push": "dotenv -e ../../.env -- prisma db push",
-    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
