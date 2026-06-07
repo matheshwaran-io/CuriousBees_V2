@@ -16,11 +16,12 @@ export class ClerkService implements OnModuleInit {
     }
 
     try {
+      this.logger.log('Initializing Clerk Backend Client...');
       this.clerkClient = createClerkClient({
         secretKey,
         publishableKey,
       });
-      this.logger.log('Clerk Backend Client initialized successfully.');
+      this.logger.log('✅ Clerk Backend Client initialized successfully.');
     } catch (e: any) {
       this.logger.error(`Failed to initialize Clerk Backend Client: ${e.message}`);
     }

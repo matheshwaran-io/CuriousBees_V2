@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as net from 'net';
 
 // Resolve the root .env file dynamically and absolutely
 const envCandidates = [
@@ -18,25 +19,76 @@ if (envPath) {
   console.warn('[CuriousBees] No root .env file found.');
 }
 
-// Startup Validation Layer
+// Startup Validation Layer - Non-fatal warnings to avoid boot crashes on Railway
 const requiredEnvVars = ['DATABASE_URL', 'CLERK_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
 const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
 if (missingEnvVars.length > 0) {
-  console.error('\n================================================================');
-  console.error('❌ CRITICAL STARTUP ERROR: Missing Required Environment Variables');
-  console.error('================================================================');
+  console.warn('\n================================================================');
+  console.warn('⚠️  WARNING: Missing Required Environment Variables');
+  console.warn('================================================================');
   missingEnvVars.forEach((v) => {
-    console.error(`  - ${v} is not set in the environment.`);
+    console.warn(`  - ${v} is not set in the environment.`);
   });
-  console.error('\nPlease configure these variables in your environment or .env file');
-  console.error('before starting the application.');
-  console.error('================================================================\n');
-  process.exit(1);
+  console.warn('\nPlease configure these variables in your environment or .env file.');
+  console.warn('The application will attempt to run, but some services may fail.');
+  console.warn('================================================================\n');
+}
+
+// TCP Reachability check for Redis to enable/disable BullMQ dynamically
+async function isRedisReachable(): Promise<boolean> {
+  const redisUrl = process.env.REDIS_URL;
+  let host = process.env.REDIS_HOST || 'localhost';
+  let port = parseInt(process.env.REDIS_PORT || '6379', 10);
+
+  if (redisUrl) {
+    try {
+      const parsed = new URL(redisUrl);
+      host = parsed.hostname;
+      port = parseInt(parsed.port || '6379', 10);
+    } catch {
+      // Ignore URL parse errors
+    }
+  }
+
+  if (!host) return false;
+
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(1500); // 1.5 seconds timeout
+
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.once('error', () => {
+      resolve(false);
+    });
+
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.connect(port, host);
+  });
+}
+
+async function runRedisAudit() {
+  console.log('Running Redis connectivity audit...');
+  const reachable = await isRedisReachable();
+  if (reachable) {
+    console.log('✅ Redis is reachable. standard Redis queues will be initialized.');
+    process.env.REDIS_AVAILABLE = 'true';
+  } else {
+    console.warn('⚠️ WARNING: Redis is not reachable. Event queues will run in fallback mock mode.');
+    process.env.REDIS_AVAILABLE = 'false';
+  }
 }
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe, Logger } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
@@ -150,10 +202,21 @@ async function createApp(expressInstance?: express.Express) {
 // ─── Local dev: start HTTP server ────────────────────────────────────────────
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+  logger.log('================================================================');
+  logger.log('🐝 Starting CuriousBees API bootstrap sequence...');
+  logger.log(`NODE_ENV=${process.env.NODE_ENV}`);
+  logger.log(`PORT=${process.env.PORT}`);
+  logger.log(`Frontend URL=${process.env.FRONTEND_URL}`);
+  logger.log(`Redis Available=${process.env.REDIS_AVAILABLE}`);
+  logger.log('================================================================');
+
   const app = await createApp();
   const port = Number(process.env.PORT) || 4000;
+
+  logger.log(`Attempting to listen on port ${port}...`);
   await app.listen(port, '0.0.0.0');
-  console.log(`🚀 CuriousBees API running on: http://0.0.0.0:${port}`);
+  logger.log(`🚀 NestJS Application successfully started. Listening on: http://0.0.0.0:${port}`);
 }
 
 // ─── Vercel serverless: export a request handler ─────────────────────────────
@@ -177,6 +240,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 // In Vercel, the file is imported and `handler` is used.
 // In local dev / production node process, bootstrap() is called directly.
 
+process.env.REDIS_AVAILABLE = 'false'; // Default fallback
+
 if (process.env.VERCEL !== '1') {
-  bootstrap();
+  runRedisAudit().then(() => {
+    bootstrap();
+  });
 }

@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { BullModule } from '@nestjs/bullmq';
@@ -24,6 +24,8 @@ import { DepartmentsModule } from './departments/departments.module';
 import { PublicationsModule } from './publications/publications.module';
 import { ReportsModule } from './reports/reports.module';
 
+const isRedisAvailable = process.env.REDIS_AVAILABLE !== 'false';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,40 +39,51 @@ import { ReportsModule } from './reports/reports.module';
       validate: validateEnv,
     }),
 
-    BullModule.forRootAsync({
-      useFactory: () => {
-        const redisUrl = process.env.REDIS_URL;
-        let redisInstance: Redis;
+    ...(isRedisAvailable
+      ? [
+          BullModule.forRootAsync({
+            useFactory: () => {
+              const logger = new Logger('RedisInit');
+              const redisUrl = process.env.REDIS_URL;
+              let redisInstance: Redis;
 
-        if (redisUrl) {
-          redisInstance = new Redis(redisUrl, {
-            maxRetriesPerRequest: null,
-            enableReadyCheck: false,
-            retryStrategy(times) {
-              return Math.min(times * 500, 5000);
+              logger.log(`Connecting to Redis... (URL=${redisUrl ? 'present' : 'absent'}, HOST=${process.env.REDIS_HOST || 'localhost'}, PORT=${process.env.REDIS_PORT || '6379'})`);
+
+              if (redisUrl) {
+                redisInstance = new Redis(redisUrl, {
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  retryStrategy(times) {
+                    return Math.min(times * 500, 5000);
+                  },
+                });
+              } else {
+                redisInstance = new Redis({
+                  host: process.env.REDIS_HOST || 'localhost',
+                  port: parseInt(process.env.REDIS_PORT || '6379', 10),
+                  maxRetriesPerRequest: null,
+                  enableReadyCheck: false,
+                  retryStrategy(times) {
+                    return Math.min(times * 500, 5000);
+                  },
+                });
+              }
+
+              redisInstance.on('connect', () => {
+                logger.log('✅ Redis connected successfully.');
+              });
+
+              redisInstance.on('error', (err) => {
+                logger.warn(`⚠️ Redis Connection Warning (Queues): ${err.message}`);
+              });
+
+              return {
+                connection: redisInstance as any,
+              };
             },
-          });
-        } else {
-          redisInstance = new Redis({
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379', 10),
-            maxRetriesPerRequest: null,
-            enableReadyCheck: false,
-            retryStrategy(times) {
-              return Math.min(times * 500, 5000);
-            },
-          });
-        }
-
-        redisInstance.on('error', (err) => {
-          console.warn(`⚠️ Redis Connection Warning (Queues): ${err.message}`);
-        });
-
-        return {
-          connection: redisInstance as any,
-        };
-      },
-    }),
+          }),
+        ]
+      : []),
 
     ThrottlerModule.forRoot([{
       ttl: 60000,

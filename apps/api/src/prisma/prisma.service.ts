@@ -26,10 +26,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     try {
+      this.logger.log('Connecting to PostgreSQL database via Prisma...');
       await this.$connect();
       this.logger.log('✅ Database connected successfully.');
     } catch (e: any) {
-      this.logger.warn('⚠️ Database connection failed. NestJS will operate in demo mode with fallback mock services.');
+      this.logger.warn(`⚠️ Database connection failed: ${e.message}. NestJS will operate in demo mode with fallback mock services.`);
     }
   }
 

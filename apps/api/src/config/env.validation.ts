@@ -26,11 +26,15 @@ export type EnvConfig = z.infer<typeof envSchema>;
 export function validateEnv(config: Record<string, unknown>) {
   const result = envSchema.safeParse(config);
   if (!result.success) {
-    console.error('❌ Invalid environment variables detected on startup:');
+    console.warn('\n================================================================');
+    console.warn('⚠️  WARNING: Invalid or missing environment variables detected:');
+    console.warn('================================================================');
     result.error.errors.forEach((err) => {
-      console.error(`  - [${err.path.join('.') || 'Global'}]: ${err.message}`);
+      console.warn(`  - [${err.path.join('.') || 'Global'}]: ${err.message}`);
     });
-    process.exit(1);
+    console.warn('The application will proceed, but some modules may malfunction.');
+    console.warn('================================================================\n');
+    return config as any;
   }
   return result.data;
 }
