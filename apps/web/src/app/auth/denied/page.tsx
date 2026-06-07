@@ -63,7 +63,7 @@ export default function AccessDeniedPage() {
           </Link>
           <Link
             href="/"
-            className="block w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all text-center flex items-center justify-center space-x-1"
+            className="w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all text-center flex items-center justify-center space-x-1"
           >
             <ArrowLeft className="w-4 h-4 shrink-0" />
             <span>Return to Landing Portal</span>
