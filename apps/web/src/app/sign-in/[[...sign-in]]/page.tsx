@@ -52,36 +52,40 @@ export default function SignInPage() {
     if (domainError) { setError(domainError); return; }
     setIsLoading(true);
     try {
-      // In Clerk v7, signIn.create() may return void — we must read state
-      // from the reactive `signIn` object (from the hook) after the call.
-      await signIn.create({ identifier: email, password });
+      console.log('[Clerk] Initiating sign-in for:', email);
+      let result = await (signIn as any).create({ identifier: email });
 
-      // Give Clerk's reactive state a tick to update
-      await new Promise(r => setTimeout(r, 200));
+      if (result.status === 'needs_first_factor') {
+        const hasPasswordStrategy = result.supportedFirstFactors?.some(
+          (f: any) => f.strategy === 'password'
+        );
+        if (hasPasswordStrategy) {
+          console.log('[Clerk] Attempting password verification...');
+          result = await (signIn as any).attemptFirstFactor({
+            strategy: 'password',
+            password,
+          });
+        }
+      }
 
-      // Read status from all known locations in order of preference
-      const w = window as any;
-      const hookStatus = signIn?.status;
-      const clientStatus = w.Clerk?.client?.signIn?.status;
-      const activeSession = w.Clerk?.client?.activeSessions?.[0]
-        || w.Clerk?.client?.sessions?.[0]
-        || w.Clerk?.session;
-
-      const finalStatus = hookStatus || clientStatus || (activeSession ? 'complete' : null);
-      const finalSessionId = signIn?.createdSessionId
-        || w.Clerk?.client?.signIn?.createdSessionId
-        || activeSession?.id;
-
-      if (finalStatus === 'complete') {
-        await setActive({ session: finalSessionId });
-        router.push('/dashboard');
-      } else if (activeSession) {
-        // Session exists even if status wasn't 'complete' — activate it
-        await setActive({ session: activeSession.id });
+      if (result.status === 'complete') {
+        console.log('[Clerk] Sign-in complete. Setting active session...');
+        await setActive({ session: result.createdSessionId });
         router.push('/dashboard');
       } else {
-        const supportedFactors = signIn?.supportedFirstFactors?.map((f: any) => f.strategy).join(', ') || 'none';
-        setError(`Sign in incomplete. Status: ${finalStatus ?? 'unknown'}. Supported factors: ${supportedFactors}`);
+        const w = window as any;
+        const activeSession = w.Clerk?.client?.activeSessions?.[0]
+          || w.Clerk?.client?.sessions?.[0]
+          || w.Clerk?.session;
+
+        if (activeSession) {
+          console.log('[Clerk] Active session fallback found. Logging in...');
+          await setActive({ session: activeSession.id });
+          router.push('/dashboard');
+        } else {
+          const strategies = result.supportedFirstFactors?.map((f: any) => f.strategy).join(', ') || 'none';
+          setError(`Sign in incomplete. Status: ${result.status}. Supported strategies: ${strategies}`);
+        }
       }
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Sign in failed.';
