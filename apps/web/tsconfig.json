@@ -26,6 +26,18 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@curiousbees/constants": [
+        "../../packages/constants/src"
+      ],
+      "@curiousbees/types": [
+        "../../packages/types/src"
+      ],
+      "@curiousbees/shared-utils": [
+        "../../packages/shared-utils/src"
+      ],
+      "@curiousbees/ui": [
+        "../../packages/ui/src"
       ]
     }
   },

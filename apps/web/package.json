@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.4.3",
-    "@curiousbees/constants": "^1.0.0",
+    "@curiousbees/constants": "*",
     "@curiousbees/shared-utils": "*",
     "@curiousbees/types": "*",
-    "@curiousbees/ui": "^1.0.0",
+    "@curiousbees/ui": "*",
     "@fullcalendar/core": "^6.1.20",
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/interaction": "^6.1.20",

@@ -26,7 +26,12 @@ if (!result.success) {
 
 const nextConfig = {
   env: {},
-  transpilePackages: ['@curiousbees/ui', '@curiousbees/constants'],
+  transpilePackages: [
+    "@curiousbees/constants",
+    "@curiousbees/types",
+    "@curiousbees/shared-utils",
+    "@curiousbees/ui"
+  ],
 };
 
 export default nextConfig;
