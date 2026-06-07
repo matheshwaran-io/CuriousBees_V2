@@ -20,7 +20,7 @@ CuriousBees employs a decoupled client-server monorepo architecture:
 * **Frontend**: Next.js 15+ (App Router), Tailwind CSS, Zustand, React Query.
 * **Backend API**: NestJS 11+, Prisma ORM, BullMQ.
 * **Database**: PostgreSQL and Redis.
-* **Authentication**: Firebase Authentication (Google SSO) & Local Development Mode Bypass.
+* **Authentication**: Clerk Authentication & Local Development Mode Bypass.
 
 For a detailed breakdown of the internal systems, data flows, and relational schemas, refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -51,7 +51,7 @@ curiousbees-monorepo/
 
 ## 🚀 5-Minute Quick Start (Development Bypass Mode)
 
-Set up the entire project locally on any operating system (macOS/Windows/Linux) in under 5 minutes without configuring Firebase:
+Set up the entire project locally on any operating system (macOS/Windows/Linux) in under 5 minutes without configuring Clerk:
 
 ### 1. Prerequisites
 * **Node.js**: `v22.x` or higher (managed via `.nvmrc`)

@@ -20,8 +20,7 @@ export class NotificationProcessor extends WorkerHost {
     const { eventId, userIds, title, body } = job.data;
     this.logger.log(`Processing notification job ${job.id} for event ${eventId} to ${userIds.length} users.`);
 
-    // 1. Fetch device tokens for all matched users (Skipped because Firebase removed)
-    // 2. Multicast using FCM (Skipped because Firebase removed)
+    // FCM multicast logic removed as part of Firebase deletion.
 
 
     // 3. Persist success to NotificationLog and standard Notification table

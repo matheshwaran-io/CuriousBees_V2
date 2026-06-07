@@ -3,7 +3,7 @@
  *
  * All API requests MUST go through here. This module:
  *   1. Resolves the backend base URL from the env variable.
- *   2. Automatically attaches the Firebase ID token as a Bearer header.
+ *   2. Automatically attaches the Clerk ID token as a Bearer header.
  *   3. Safely parses JSON and never tries to parse HTML error pages.
  *   4. Provides verbose console logging for debugging.
  */
@@ -119,7 +119,7 @@ export interface ApiRequestInit extends Omit<RequestInit, 'headers'> {
 /**
  * Drop-in replacement for `fetch` that:
  *   • Prepends API_URL to relative paths
- *   • Injects the Firebase Bearer token
+ *   • Injects the Clerk Bearer token
  *   • Logs the request and response for debugging
  */
 export async function apiFetch(

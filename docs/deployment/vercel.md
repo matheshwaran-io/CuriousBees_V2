@@ -9,12 +9,8 @@ The Next.js frontend (`apps/web`) is optimized for deployment on Vercel.
 ## Environment Variables
 In the Vercel Dashboard, ensure the following are set for `apps/web`:
 - `NEXT_PUBLIC_API_URL` (URL of your deployed backend)
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
-- `NEXT_PUBLIC_FIREBASE_VAPID_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
 
 ## Deployment Steps
 1. Navigate to the project root.

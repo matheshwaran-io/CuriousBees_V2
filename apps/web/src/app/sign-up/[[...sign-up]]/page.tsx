@@ -222,6 +222,7 @@ export default function SignUpPage() {
     if (role === 'RESEARCH_SUPERVISOR' && !employeeId.trim()) { setError('Please enter your Employee ID.'); return; }
 
     setIsLoading(true);
+    console.log(`[FRONTEND TRACE] Attempting signUp.create for email: ${email}`);
     try {
       await signUp.create({
         emailAddress: email,
@@ -229,9 +230,12 @@ export default function SignUpPage() {
         firstName: fullName.split(' ')[0] || fullName,
         lastName: fullName.split(' ').slice(1).join(' ') || '',
       });
+      console.log(`[FRONTEND TRACE] signUp.create SUCCESS`);
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      console.log(`[FRONTEND TRACE] Email verification prepared`);
       setStep('verify_email');
     } catch (err: any) {
+      console.error(`[FRONTEND TRACE] signUp.create FAILED:`, err);
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Registration failed.';
       setError(msg);
     } finally {
@@ -246,7 +250,9 @@ export default function SignUpPage() {
     setIsLoading(true);
     try {
       const result = await signUp.attemptEmailAddressVerification({ code: verificationCode });
+      console.log(`[FRONTEND TRACE] attemptEmailAddressVerification status: ${result.status}`);
       if (result.status === 'complete') {
+        console.log(`[FRONTEND TRACE] setting Active session: ${result.createdSessionId}`);
         await setActive({ session: result.createdSessionId });
         setStep('syncing');
         // Get Clerk token and POST to /api/users/register
@@ -259,8 +265,10 @@ export default function SignUpPage() {
         });
         if (!regRes.ok) {
           const data = await regRes.json();
+          console.error(`[FRONTEND TRACE] Registration sync failed. Response:`, data);
           throw new Error(data?.message || 'Registration sync failed.');
         }
+        console.log(`[FRONTEND TRACE] Sync successful, redirecting to /approval-pending`);
         setStep('done');
         setTimeout(() => router.push('/approval-pending'), 1500);
       } else {

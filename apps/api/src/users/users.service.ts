@@ -436,6 +436,8 @@ export class UsersService {
   }
 
   async register(userId: string, input: any) {
+    console.log(`[BACKEND TRACE] register() called with userId=${userId}`);
+    console.log(`[BACKEND TRACE] register() input payload:`, JSON.stringify(input));
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -499,6 +501,8 @@ export class UsersService {
         approved: false,
       },
     });
+
+    console.log(`[BACKEND TRACE] User database sync completed for ${email}. Status assigned: ${status}`);
 
     // Write audit log
     await this.prisma.auditLog.create({

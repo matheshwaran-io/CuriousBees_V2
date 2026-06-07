@@ -14,6 +14,9 @@ const isPublicRoute = createRouteMatcher([
 
 export default clerkMiddleware(async (auth, request) => {
   const { userId, sessionClaims } = await auth();
+  console.log(`[MIDDLEWARE TRACE] Route: ${request.nextUrl.pathname}`);
+  console.log(`[MIDDLEWARE TRACE] userId: ${userId ? userId : 'null'}`);
+  console.log(`[MIDDLEWARE TRACE] sessionClaims exists: ${!!sessionClaims}`);
 
   // Enforce SRMIST email domain restriction
   if (userId && sessionClaims) {
@@ -24,13 +27,17 @@ export default clerkMiddleware(async (auth, request) => {
     
     if (email && !email.toLowerCase().endsWith('@srmist.edu.in')) {
       if (!request.nextUrl.pathname.startsWith('/auth/denied')) {
+        console.log(`[MIDDLEWARE TRACE] Redirecting to /auth/denied due to non-srmist email: ${email}`);
         return NextResponse.redirect(new URL('/auth/denied', request.url));
       }
     }
   }
 
   if (!isPublicRoute(request)) {
+    console.log(`[MIDDLEWARE TRACE] Route is protected, invoking auth.protect()`);
     await auth.protect();
+  } else {
+    console.log(`[MIDDLEWARE TRACE] Route is public, skipping auth.protect()`);
   }
 });
 

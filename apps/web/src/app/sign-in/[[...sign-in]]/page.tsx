@@ -36,21 +36,32 @@ export default function SignInPage() {
   };
 
   const handleLogin = async (e: React.FormEvent) => {
+    console.log("FORM_SUBMITTED");
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!isLoaded) {
+      console.log("Clerk isLoaded is false, aborting.");
+      return;
+    }
     setError('');
     const domainError = validateSrmEmail(email);
     if (domainError) { setError(domainError); return; }
+    console.log("VALIDATION_PASSED");
     setIsLoading(true);
+    console.log("CLERK_SIGNIN_START");
     try {
       const result = await signIn.create({ identifier: email, password });
       if (result.status === 'complete') {
+        console.log("CLERK_SIGNIN_SUCCESS");
         await setActive({ session: result.createdSessionId });
+        console.log("SESSION_ACTIVATED");
+        console.log("ROUTER_REDIRECT");
         router.push('/dashboard');
       } else {
+        console.log(`[FRONTEND TRACE] signIn.create incomplete. Result:`, result);
         setError('Sign in incomplete. Please try again.');
       }
     } catch (err: any) {
+      console.error(`[FRONTEND TRACE] signIn.create FAILED:`, err);
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Sign in failed.';
       setError(msg);
     } finally {
@@ -214,6 +225,7 @@ export default function SignInPage() {
                     id="signin-submit-btn"
                     type="submit"
                     disabled={isLoading}
+                    onClick={() => console.log("SIGNIN_BUTTON_CLICKED")}
                     className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-blue-600/25 cursor-pointer"
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>}

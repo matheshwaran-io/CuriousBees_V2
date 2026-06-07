@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification } from '@curiousbees/types';
-// Firebase auth import removed (Clerk used instead)
+// Clerk is used for authentication
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@curiousbees/constants';
 import { apiFetch, getAuthHeaders, readApiError, API_URL, resetAuthPromise } from '@/lib/api-client';
@@ -61,7 +61,7 @@ interface AppState {
   toggleTheme: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
 
-  // Live REST API Actions (Integrates Firebase Bearer JWT)
+  // Live REST API Actions (Integrates Clerk Bearer JWT)
   syncUserSession: (options?: { throwOnError?: boolean; force?: boolean }) => Promise<User | null>;
   fetchData: () => Promise<void>;
   fetchCollaborators: (search?: string, department?: string) => Promise<User[]>;
@@ -249,7 +249,7 @@ export const useStore = create<AppState>((set, get) => ({
           deleteCookie(ROLE_COOKIE_NAME);
           set({ currentUser: null });
           if (options?.throwOnError) {
-            throw new Error('No Firebase ID token is available. Complete Google sign-in before syncing with the backend.');
+            throw new Error('No Auth ID token is available. Complete sign-in before syncing with the backend.');
           }
           return null;
         }

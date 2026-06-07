@@ -56,7 +56,7 @@ export class NotificationsService {
   }
 
   /**
-   * Push notification logic has been disabled because Firebase was removed.
+   * Push notification logic has been disabled and removed.
    * In the future, this can be implemented using OneSignal, WebPush, etc.
    */
   async sendPushToUser(userId: string, payload: { title: string; body: string; url?: string }) {
@@ -64,7 +64,7 @@ export class NotificationsService {
   }
 
   /**
-   * Generic method to send notification using Firebase Admin SDK
+   * Generic method to create an in-app notification
    */
   async sendNotification(title: string, body: string, userId: string) {
     try {
