@@ -47,7 +47,7 @@ export default function MyScholarsPage() {
                   <AvatarRing
                     src={scholar.image || undefined}
                     name={scholar.name || undefined}
-                    role="RESEARCH_SCHOLAR"
+                    role="SCHOLAR"
                     size="md"
                   />
                   <div>

@@ -86,14 +86,23 @@ export default function PortalLayout({
         return;
       }
 
-      if (activeUser.role !== 'INSTITUTION_ADMIN' && (
-        activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
-        activeUser.status === 'PENDING_ADMIN_APPROVAL' ||
-        !activeUser.approved ||
-        activeUser.status !== 'APPROVED'
-      )) {
+      if (activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' || activeUser.status === 'PENDING_ADMIN_APPROVAL') {
         console.warn('[PortalLayout] User is pending approval. Redirecting to /approval-pending.');
         router.push('/approval-pending');
+        return;
+      }
+
+      // Enforce path-based role protection
+      if (pathname.startsWith('/institute-admin') && activeUser.role !== 'INSTITUTE_ADMIN') {
+        router.push('/unauthorized');
+        return;
+      }
+      if (pathname.startsWith('/supervisor') && activeUser.role !== 'SUPERVISOR') {
+        router.push('/unauthorized');
+        return;
+      }
+      if (pathname.startsWith('/scholar') && activeUser.role !== 'SCHOLAR') {
+        router.push('/unauthorized');
         return;
       }
 

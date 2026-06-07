@@ -101,7 +101,7 @@ export default function WorkspacePage() {
 
   // Find if current user is owner of workspace
   const userMemberRecord = activeWorkspace.members?.find(m => m.userId === currentUser?.id);
-  const isOwner = userMemberRecord?.role === 'OWNER' || currentUser?.role === 'RESEARCH_SUPERVISOR' || currentUser?.role === 'INSTITUTION_ADMIN';
+  const isOwner = userMemberRecord?.role === 'OWNER' || currentUser?.role === 'SUPERVISOR' || currentUser?.role === 'INSTITUTE_ADMIN';
 
   // Handle file upload
   const handleUploadFile = async (e: React.FormEvent) => {

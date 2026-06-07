@@ -41,12 +41,12 @@ export class OpportunitiesService {
 
     const { title, description, department, researchDomain } = parsed.data;
 
-    // Verify user role is RESEARCH_SUPERVISOR (only faculty can post opportunities)
+    // Verify user role is SUPERVISOR (only faculty can post opportunities)
     const author = await this.prisma.user.findUnique({
       where: { id: authorId }
     });
 
-    if (!author || author.role !== 'RESEARCH_SUPERVISOR') {
+    if (!author || author.role !== 'SUPERVISOR') {
       throw new BadRequestException('Only verified faculty members are authorized to post research opportunities.');
     }
 
@@ -81,7 +81,7 @@ export class OpportunitiesService {
     if (!scholar) {
       throw new BadRequestException('Scholar not found.');
     }
-    if (scholar.role !== 'RESEARCH_SCHOLAR') {
+    if (scholar.role !== 'SCHOLAR') {
       throw new BadRequestException('Only scholars can submit collaboration requests.');
     }
     if (!scholar.approved) {

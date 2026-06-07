@@ -64,7 +64,7 @@ export class PublicationsService {
     const pub = await this.findOne(id);
 
     // Only owner, supervisor, or admin can edit
-    if (pub.userId !== userId && role !== 'RESEARCH_SUPERVISOR' && role !== 'INSTITUTION_ADMIN') {
+    if (pub.userId !== userId && role !== 'SUPERVISOR' && role !== 'INSTITUTE_ADMIN') {
       throw new ForbiddenException('Access denied. You cannot edit this publication.');
     }
 
@@ -78,7 +78,7 @@ export class PublicationsService {
     const pub = await this.findOne(id);
 
     // Only owner, supervisor, or admin can delete
-    if (pub.userId !== userId && role !== 'RESEARCH_SUPERVISOR' && role !== 'INSTITUTION_ADMIN') {
+    if (pub.userId !== userId && role !== 'SUPERVISOR' && role !== 'INSTITUTE_ADMIN') {
       throw new ForbiddenException('Access denied. You cannot delete this publication.');
     }
 

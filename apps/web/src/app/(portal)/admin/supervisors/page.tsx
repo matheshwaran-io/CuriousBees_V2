@@ -21,27 +21,27 @@ export default function AdminSupervisorsPage() {
 
   // Security check: Only Admins can access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTION_ADMIN') {
+    if (currentUser?.role === 'INSTITUTE_ADMIN') {
       fetchAdminUsers();
     }
   }, [currentUser, fetchAdminUsers]);
 
-  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
+  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return null;
   }
 
   // Filter supervisors
-  const supervisors = adminUsers.filter((u) => u.role === 'RESEARCH_SUPERVISOR');
+  const supervisors = adminUsers.filter((u) => u.role === 'SUPERVISOR');
   
   // Calculate scholars under each supervisor
   const getScholarsForSupervisor = (supervisorId: string) => {
-    return adminUsers.filter((u) => u.role === 'RESEARCH_SCHOLAR' && u.supervisorId === supervisorId);
+    return adminUsers.filter((u) => u.role === 'SCHOLAR' && u.supervisorId === supervisorId);
   };
 
   const handleSuspendToggle = async (userId: string, currentSuspended: boolean) => {
@@ -75,7 +75,7 @@ export default function AdminSupervisorsPage() {
   // Calculate Metrics
   const totalSupervisorsCount = supervisors.length;
   const totalScholarsWithSupervisor = adminUsers.filter(
-    (u) => u.role === 'RESEARCH_SCHOLAR' && u.supervisorId
+    (u) => u.role === 'SCHOLAR' && u.supervisorId
   ).length;
   const averageLoad = totalSupervisorsCount > 0 ? (totalScholarsWithSupervisor / totalSupervisorsCount).toFixed(1) : '0';
   

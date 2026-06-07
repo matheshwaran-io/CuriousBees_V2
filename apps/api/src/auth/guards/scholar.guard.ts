@@ -6,7 +6,7 @@ export class ScholarGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user || user.role !== 'RESEARCH_SCHOLAR') {
+    if (!user || user.role !== 'SCHOLAR') {
       throw new ForbiddenException('Access denied. Scholar role required.');
     }
     

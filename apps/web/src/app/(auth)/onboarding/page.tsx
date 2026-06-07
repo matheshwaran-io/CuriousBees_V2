@@ -25,7 +25,7 @@ export default function OnboardingPage() {
     logout 
   } = useStore();
 
-  const [role, setRole] = useState<'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR' | null>(null);
+  const [role, setRole] = useState<'SCHOLAR' | 'SUPERVISOR' | null>(null);
   const [supervisors, setSupervisors] = useState<any[]>([]);
   const [selectedSupervisor, setSelectedSupervisor] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +38,7 @@ export default function OnboardingPage() {
     if (currentUser && currentUser.status !== 'ONBOARDING') {
       const route = 
         currentUser.status === 'APPROVED' 
-          ? (currentUser.role === 'INSTITUTION_ADMIN' ? '/admin/dashboard' : '/dashboard')
+          ? (currentUser.role === 'INSTITUTE_ADMIN' ? '/admin/dashboard' : '/dashboard')
           : '/verification-pending';
       router.replace(route);
     }
@@ -46,7 +46,7 @@ export default function OnboardingPage() {
 
   // Fetch supervisors when role is set to Scholar
   useEffect(() => {
-    if (role === 'RESEARCH_SCHOLAR') {
+    if (role === 'SCHOLAR') {
       const fetchSupervisors = async () => {
         setLoadingSupervisors(true);
         try {
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
       setErrorMsg('Please select a role.');
       return;
     }
-    if (role === 'RESEARCH_SCHOLAR' && !selectedSupervisor) {
+    if (role === 'SCHOLAR' && !selectedSupervisor) {
       setErrorMsg('Please select a faculty supervisor.');
       return;
     }
@@ -88,7 +88,7 @@ export default function OnboardingPage() {
         method: 'PUT',
         body: JSON.stringify({
           role,
-          supervisorId: role === 'RESEARCH_SCHOLAR' ? selectedSupervisor : undefined,
+          supervisorId: role === 'SCHOLAR' ? selectedSupervisor : undefined,
         }),
       });
 
@@ -147,44 +147,44 @@ export default function OnboardingPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setRole('RESEARCH_SCHOLAR')}
+                onClick={() => setRole('SCHOLAR')}
                 className={cn(
                   "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
-                  role === 'RESEARCH_SCHOLAR' 
+                  role === 'SCHOLAR' 
                     ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
                     : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
                 )}
               >
-                <div className={cn("p-2 rounded-full", role === 'RESEARCH_SCHOLAR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
+                <div className={cn("p-2 rounded-full", role === 'SCHOLAR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className={cn("text-xs font-bold", role === 'RESEARCH_SCHOLAR' ? "text-primary" : "text-black")}>Research Scholar</h3>
+                  <h3 className={cn("text-xs font-bold", role === 'SCHOLAR' ? "text-primary" : "text-black")}>Research Scholar</h3>
                   <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I am pursuing my PhD</p>
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => setRole('RESEARCH_SUPERVISOR')}
+                onClick={() => setRole('SUPERVISOR')}
                 className={cn(
                   "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
-                  role === 'RESEARCH_SUPERVISOR' 
+                  role === 'SUPERVISOR' 
                     ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
                     : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
                 )}
               >
-                <div className={cn("p-2 rounded-full", role === 'RESEARCH_SUPERVISOR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
+                <div className={cn("p-2 rounded-full", role === 'SUPERVISOR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
                   <Briefcase className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className={cn("text-xs font-bold", role === 'RESEARCH_SUPERVISOR' ? "text-primary" : "text-black")}>Faculty Guide</h3>
+                  <h3 className={cn("text-xs font-bold", role === 'SUPERVISOR' ? "text-primary" : "text-black")}>Faculty Guide</h3>
                   <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I supervise scholars</p>
                 </div>
               </button>
             </div>
 
-            {role === 'RESEARCH_SCHOLAR' && (
+            {role === 'SCHOLAR' && (
               <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                 <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="supervisor-search">
                   Select Faculty Supervisor
@@ -256,7 +256,7 @@ export default function OnboardingPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting || !role || (role === 'RESEARCH_SCHOLAR' && !selectedSupervisor)}
+              disabled={isSubmitting || !role || (role === 'SCHOLAR' && !selectedSupervisor)}
               className="w-full py-3 flex items-center justify-center bg-primary hover:bg-[#004495]/95 text-white font-bold text-xs rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99] shadow"
             >
               {isSubmitting ? (

@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { createClerkClient } from '@clerk/backend';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 
 @Injectable()
 export class ClerkService implements OnModuleInit {
@@ -36,7 +36,8 @@ export class ClerkService implements OnModuleInit {
 
     try {
       this.logger.debug(`Verifying Clerk token. tokenLength=${token.length}`);
-      const decoded = await this.clerkClient.verifyToken(token);
+      const secretKey = process.env.CLERK_SECRET_KEY as string;
+      const decoded = await verifyToken(token, { secretKey });
       this.logger.log(`Clerk token verified for user sub=${decoded.sub}`);
       return decoded;
     } catch (e: any) {

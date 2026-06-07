@@ -10,8 +10,8 @@ export class RegisterDto {
   email!: string;
 
   @IsNotEmpty()
-  @IsEnum(['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR'])
-  role!: 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR';
+  @IsEnum(['SCHOLAR', 'SUPERVISOR'])
+  role!: 'SCHOLAR' | 'SUPERVISOR';
 
   @IsNotEmpty()
   @IsString()

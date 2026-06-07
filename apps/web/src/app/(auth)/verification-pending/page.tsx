@@ -24,7 +24,7 @@ export default function VerificationPendingPage() {
     const checkStatus = async () => {
       const user = await syncUserSession({ force: true });
       if (user && user.status === 'APPROVED') {
-        const route = user.role === 'INSTITUTION_ADMIN' ? '/admin/dashboard' : '/dashboard';
+        const route = user.role === 'INSTITUTE_ADMIN' ? '/admin/dashboard' : '/dashboard';
         router.replace(route);
       }
     };
@@ -34,7 +34,7 @@ export default function VerificationPendingPage() {
     return () => clearInterval(interval);
   }, [syncUserSession, router]);
 
-  const isSupervisorPending = currentUser?.role === 'RESEARCH_SUPERVISOR';
+  const isSupervisorPending = currentUser?.role === 'SUPERVISOR';
 
   return (
     <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6 relative overflow-hidden font-sans w-full">

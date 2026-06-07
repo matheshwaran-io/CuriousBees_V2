@@ -1,7 +1,7 @@
 'use client';
 
-import { useSignIn } from '@clerk/nextjs';
-import { useState } from 'react';
+import { useSignIn, useAuth, useClerk } from '@clerk/nextjs';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,8 +13,19 @@ import {
 type AuthView = 'login' | 'forgot_password' | 'reset_code' | 'new_password' | 'success';
 
 export default function SignInPage() {
-  const { isLoaded, signIn, setActive } = useSignIn() as any;
+  const signInHook = useSignIn() as any;
+  console.log("EXACT_USE_SIGNIN_SHAPE", signInHook);
+  const { signIn } = signInHook;
+  const { setActive } = useClerk();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (authLoaded && isSignedIn) {
+      router.push('/dashboard');
+    }
+  }, [authLoaded, isSignedIn, router]);
+
 
   const [view, setView] = useState<AuthView>('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,8 +49,8 @@ export default function SignInPage() {
   const handleLogin = async (e: React.FormEvent) => {
     console.log("FORM_SUBMITTED");
     e.preventDefault();
-    if (!isLoaded) {
-      console.log("Clerk isLoaded is false, aborting.");
+    if (!signIn) {
+      console.log("Clerk signIn object is unavailable, aborting.");
       return;
     }
     setError('');
@@ -50,19 +61,48 @@ export default function SignInPage() {
     console.log("CLERK_SIGNIN_START");
     try {
       const result = await signIn.create({ identifier: email, password });
-      if (result.status === 'complete') {
+      console.log("EXACT_SIGNIN_CREATE_RETURN", result);
+      console.log("EXACT_WINDOW_CLERK_SIGNIN", typeof window !== 'undefined' ? (window as any).Clerk?.client?.signIn : null);
+      
+      let finalStatus = result?.status;
+      let finalSessionId = result?.createdSessionId;
+      
+      // Attempt to extract from Clerk Client if result is void wrapper or empty
+      if (!finalStatus && typeof window !== 'undefined') {
+         const clientSignIn = (window as any).Clerk?.client?.signIn;
+         if (clientSignIn && clientSignIn.status) {
+            finalStatus = clientSignIn.status;
+            finalSessionId = clientSignIn.createdSessionId;
+         } else if ((window as any).Clerk?.session) {
+            finalStatus = 'complete';
+            finalSessionId = (window as any).Clerk.session.id;
+         } else if ((window as any).Clerk?.client?.activeSessions?.length > 0) {
+            finalStatus = 'complete';
+            finalSessionId = (window as any).Clerk.client.activeSessions[0].id;
+         } else if ((window as any).Clerk?.client?.sessions?.length > 0) {
+            finalStatus = 'complete';
+            finalSessionId = (window as any).Clerk.client.sessions[0].id;
+         }
+      }
+
+      if (finalStatus === 'complete') {
         console.log("CLERK_SIGNIN_SUCCESS");
-        await setActive({ session: result.createdSessionId });
+        await setActive({ session: finalSessionId });
         console.log("SESSION_ACTIVATED");
         console.log("ROUTER_REDIRECT");
         router.push('/dashboard');
       } else {
         console.log(`[FRONTEND TRACE] signIn.create incomplete. Result:`, result);
-        setError('Sign in incomplete. Please try again.');
+        const supportedFactors = result?.supportedFirstFactors?.map((f: any) => f.strategy).join(', ') || 'none';
+        setError(`Sign in incomplete. Status: ${finalStatus}. Supported factors: ${supportedFactors}`);
       }
     } catch (err: any) {
       console.error(`[FRONTEND TRACE] signIn.create FAILED:`, err);
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Sign in failed.';
+      if (msg.includes('already signed in') || (err.message && err.message.includes('already signed in'))) {
+        router.push('/dashboard');
+        return;
+      }
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -71,7 +111,7 @@ export default function SignInPage() {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signIn) return;
     setError('');
     const domainError = validateSrmEmail(email);
     if (domainError) { setError(domainError); return; }
@@ -90,7 +130,7 @@ export default function SignInPage() {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signIn) return;
     setError('');
     setIsLoading(true);
     try {
@@ -98,7 +138,13 @@ export default function SignInPage() {
         strategy: 'reset_password_email_code',
         code: resetCode,
       });
-      if (result.status === 'needs_new_password') {
+      let finalStatus = result?.status;
+      if (!finalStatus && typeof window !== 'undefined') {
+         const clientSignIn = (window as any).Clerk?.client?.signIn;
+         if (clientSignIn) finalStatus = clientSignIn.status;
+      }
+
+      if (finalStatus === 'needs_new_password') {
         setView('new_password');
       } else {
         setError('Unexpected response. Please try again.');
@@ -113,15 +159,25 @@ export default function SignInPage() {
 
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signIn) return;
     setError('');
     if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setIsLoading(true);
     try {
       const result = await signIn.resetPassword({ password: newPassword });
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId });
+      let finalStatus = result?.status;
+      let finalSessionId = result?.createdSessionId;
+      if (!finalStatus && typeof window !== 'undefined') {
+         const clientSignIn = (window as any).Clerk?.client?.signIn;
+         if (clientSignIn) {
+            finalStatus = clientSignIn.status;
+            finalSessionId = clientSignIn.createdSessionId;
+         }
+      }
+
+      if (finalStatus === 'complete') {
+        await setActive({ session: finalSessionId });
         setView('success');
         setTimeout(() => router.push('/dashboard'), 1500);
       }

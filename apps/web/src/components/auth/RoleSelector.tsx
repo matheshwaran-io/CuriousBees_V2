@@ -4,8 +4,8 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface RoleSelectorProps {
-  value: 'RESEARCH_SUPERVISOR' | 'RESEARCH_SCHOLAR';
-  onChange: (value: 'RESEARCH_SUPERVISOR' | 'RESEARCH_SCHOLAR') => void;
+  value: 'SUPERVISOR' | 'SCHOLAR';
+  onChange: (value: 'SUPERVISOR' | 'SCHOLAR') => void;
 }
 
 export default function RoleSelector({ value, onChange }: RoleSelectorProps) {
@@ -24,15 +24,15 @@ export default function RoleSelector({ value, onChange }: RoleSelectorProps) {
           <input
             type="radio"
             name="role"
-            value="RESEARCH_SUPERVISOR"
-            checked={value === 'RESEARCH_SUPERVISOR'}
-            onChange={() => onChange('RESEARCH_SUPERVISOR')}
+            value="SUPERVISOR"
+            checked={value === 'SUPERVISOR'}
+            onChange={() => onChange('SUPERVISOR')}
             className="sr-only peer"
           />
           <div
             className={cn(
               "py-2 px-4 rounded-md font-label-md text-label-md text-on-surface-variant transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 outline-none",
-              value === 'RESEARCH_SUPERVISOR'
+              value === 'SUPERVISOR'
                 ? "bg-primary text-on-primary font-semibold shadow-sm"
                 : "hover:bg-surface-container-highest/30 text-on-surface-variant"
             )}
@@ -46,15 +46,15 @@ export default function RoleSelector({ value, onChange }: RoleSelectorProps) {
           <input
             type="radio"
             name="role"
-            value="RESEARCH_SCHOLAR"
-            checked={value === 'RESEARCH_SCHOLAR'}
-            onChange={() => onChange('RESEARCH_SCHOLAR')}
+            value="SCHOLAR"
+            checked={value === 'SCHOLAR'}
+            onChange={() => onChange('SCHOLAR')}
             className="sr-only peer"
           />
           <div
             className={cn(
               "py-2 px-4 rounded-md font-label-md text-label-md text-on-surface-variant transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 outline-none",
-              value === 'RESEARCH_SCHOLAR'
+              value === 'SCHOLAR'
                 ? "bg-primary text-on-primary font-semibold shadow-sm"
                 : "hover:bg-surface-container-highest/30 text-on-surface-variant"
             )}

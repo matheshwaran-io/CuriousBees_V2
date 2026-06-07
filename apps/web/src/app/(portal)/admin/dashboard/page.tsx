@@ -43,20 +43,20 @@ export default function AdminPage() {
 
   // 1. Guard against non-admin access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   // 2. Fetch admin data
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTION_ADMIN') {
+    if (currentUser?.role === 'INSTITUTE_ADMIN') {
       fetchAdminUsers();
       fetchAdminAuditLogs();
     }
   }, [currentUser, fetchAdminUsers, fetchAdminAuditLogs]);
 
-  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
+  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
         <Lock className="w-12 h-12 text-dangerAlert" />
@@ -123,7 +123,7 @@ export default function AdminPage() {
     { id: 'audit', label: 'Audit Logs', icon: <History className="w-4 h-4" /> },
   ];
 
-  const pendingSupervisors = adminUsers.filter(u => u.role === 'RESEARCH_SUPERVISOR' && (u.status === 'PENDING_ADMIN' || !u.approved));
+  const pendingSupervisors = adminUsers.filter(u => u.role === 'SUPERVISOR' && (u.status === 'PENDING_ADMIN_APPROVAL' || !u.approved));
 
   return (
     <div className="space-y-6 text-left font-sans select-none">
@@ -157,7 +157,7 @@ export default function AdminPage() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Faculty Supervisors</p>
             <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">
-              {adminUsers.filter(u => u.role === 'RESEARCH_SUPERVISOR').length}
+              {adminUsers.filter(u => u.role === 'SUPERVISOR').length}
             </h4>
           </div>
           <div className="w-9 h-9 bg-[#775a00]/5 text-[#775a00] border border-[#775a00]/15 rounded-lg flex items-center justify-center shrink-0">
@@ -284,7 +284,7 @@ export default function AdminPage() {
                             <td className="p-3.5 text-slate-500 font-semibold">{user.department || 'Not Configured'}</td>
                             <td className="p-3.5 font-bold text-slate-800">{user.role}</td>
                             <td className="p-3.5">
-                              {user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' ? (
+                              {user.approved || user.role === 'SUPERVISOR' || user.role === 'INSTITUTE_ADMIN' ? (
                                 <span className="cb-status-success text-[10px]">
                                   <CheckCircle className="w-3.5 h-3.5" />
                                   <span>Approved</span>
@@ -302,9 +302,9 @@ export default function AdminPage() {
                                 onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                 className="bg-white border border-slate-200 rounded px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:border-slate-300 focus:border-primary outline-none cursor-pointer transition-colors"
                               >
-                                <option value="RESEARCH_SCHOLAR">Scholar</option>
-                                <option value="RESEARCH_SUPERVISOR">Faculty PI</option>
-                                <option value="INSTITUTION_ADMIN">Admin</option>
+                                <option value="SCHOLAR">Scholar</option>
+                                <option value="SUPERVISOR">Faculty PI</option>
+                                <option value="INSTITUTE_ADMIN">Admin</option>
                               </select>
                             </td>
                           </tr>
@@ -338,7 +338,7 @@ export default function AdminPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-450 font-semibold">Status:</span>
-                          {user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' ? (
+                          {user.approved || user.role === 'SUPERVISOR' || user.role === 'INSTITUTE_ADMIN' ? (
                             <span className="text-emerald-700 font-bold">Approved</span>
                           ) : (
                             <span className="text-amber-700 font-bold">Pending Approval</span>
@@ -351,9 +351,9 @@ export default function AdminPage() {
                             onChange={(e) => handleRoleChange(user.id, e.target.value)}
                             className="bg-white border border-slate-200 rounded px-2.5 py-1 text-[11px] font-bold text-slate-700 outline-none cursor-pointer"
                           >
-                            <option value="RESEARCH_SCHOLAR">Scholar</option>
-                            <option value="RESEARCH_SUPERVISOR">Faculty PI</option>
-                            <option value="INSTITUTION_ADMIN">Admin</option>
+                            <option value="SCHOLAR">Scholar</option>
+                            <option value="SUPERVISOR">Faculty PI</option>
+                            <option value="INSTITUTE_ADMIN">Admin</option>
                           </select>
                         </div>
                       </div>

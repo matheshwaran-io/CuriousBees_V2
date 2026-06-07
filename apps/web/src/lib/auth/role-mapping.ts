@@ -13,9 +13,9 @@ import type { UserRole } from '@curiousbees/types';
 // ─── Role Labels (human-readable) ────────────────────────────────────────────
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  RESEARCH_SUPERVISOR: 'Supervisor',
-  RESEARCH_SCHOLAR: 'Scholar',
-  INSTITUTION_ADMIN: 'Admin',
+  SUPERVISOR: 'Supervisor',
+  SCHOLAR: 'Scholar',
+  INSTITUTE_ADMIN: 'Admin',
 };
 
 // ─── Core resolver ───────────────────────────────────────────────────────────
@@ -24,10 +24,10 @@ export const ROLE_LABELS: Record<UserRole, string> = {
  * Returns the platform role for a given email dynamically based on development patterns.
  * 
  * Pattern:
- * - username contains '.' -> INSTITUTION_ADMIN
- * - username contains letters + numbers -> RESEARCH_SCHOLAR
- * - username contains only letters -> RESEARCH_SUPERVISOR
- * - fallback -> RESEARCH_SCHOLAR
+ * - username contains '.' -> INSTITUTE_ADMIN
+ * - username contains letters + numbers -> SCHOLAR
+ * - username contains only letters -> SUPERVISOR
+ * - fallback -> SCHOLAR
  *
  * @returns The UserRole resolved from email pattern.
  */
@@ -36,14 +36,14 @@ export function getRoleForEmail(email: string): UserRole {
   const username = normalized.split('@')[0];
 
   if (username.includes('.')) {
-    return 'INSTITUTION_ADMIN';
+    return 'INSTITUTE_ADMIN';
   } else if (/[a-zA-Z]/.test(username) && /[0-9]/.test(username)) {
-    return 'RESEARCH_SCHOLAR';
+    return 'SCHOLAR';
   } else if (/^[a-zA-Z]+$/.test(username)) {
-    return 'RESEARCH_SUPERVISOR';
+    return 'SUPERVISOR';
   }
 
-  return 'RESEARCH_SCHOLAR';
+  return 'SCHOLAR';
 }
 
 /**

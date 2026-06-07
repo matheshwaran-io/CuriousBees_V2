@@ -43,7 +43,7 @@ export class UsersController {
 
   @Get('approvals')
   async getApprovals(@Req() req: any) {
-    if (req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only faculty supervisors can fetch pending approvals.');
     }
     return this.usersService.getApprovals(req.user.id);
@@ -51,7 +51,7 @@ export class UsersController {
 
   @Put('approve-scholar')
   async approveScholar(@Req() req: any, @Body('scholarId') scholarId: string) {
-    if (req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only faculty supervisors can approve scholars.');
     }
     if (!scholarId) {
@@ -62,7 +62,7 @@ export class UsersController {
 
   @Put('approve-supervisor')
   async approveSupervisor(@Req() req: any, @Body('supervisorId') supervisorId: string) {
-    if (req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can approve supervisors.');
     }
     if (!supervisorId) {
@@ -73,7 +73,7 @@ export class UsersController {
 
   @Put('decline-supervisor')
   async declineSupervisor(@Req() req: any, @Body('supervisorId') supervisorId: string) {
-    if (req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can decline supervisors.');
     }
     if (!supervisorId) {
@@ -84,7 +84,7 @@ export class UsersController {
 
   @Put('decline-scholar')
   async declineScholar(@Req() req: any, @Body('scholarId') scholarId: string) {
-    if (req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only faculty supervisors can decline scholars.');
     }
     if (!scholarId) {
@@ -106,7 +106,7 @@ export class UsersController {
 
   @Get('my-scholars')
   async getMyScholars(@Req() req: any) {
-    if (req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only supervisors can view their assigned scholars.');
     }
     return this.usersService.getMyScholars(req.user.id);
@@ -116,9 +116,9 @@ export class UsersController {
   async updateUserRole(
     @Req() req: any,
     @Param('id') targetUserId: string,
-    @Body('role') role: 'RESEARCH_SUPERVISOR' | 'RESEARCH_SCHOLAR' | 'INSTITUTION_ADMIN'
+    @Body('role') role: 'SUPERVISOR' | 'SCHOLAR' | 'INSTITUTE_ADMIN'
   ) {
-    if (!role || !['RESEARCH_SUPERVISOR', 'RESEARCH_SCHOLAR', 'INSTITUTION_ADMIN'].includes(role)) {
+    if (!role || !['SUPERVISOR', 'SCHOLAR', 'INSTITUTE_ADMIN'].includes(role)) {
       throw new BadRequestException('Invalid user role.');
     }
     return this.usersService.updateUserRole(req.user.id, targetUserId, role);
@@ -141,9 +141,9 @@ export class UsersController {
   @Put('onboard')
   async completeOnboarding(
     @Req() req: any,
-    @Body() payload: { role: 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR'; supervisorId?: string }
+    @Body() payload: { role: 'SCHOLAR' | 'SUPERVISOR'; supervisorId?: string }
   ) {
-    if (!payload.role || !['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR'].includes(payload.role)) {
+    if (!payload.role || !['SCHOLAR', 'SUPERVISOR'].includes(payload.role)) {
       throw new BadRequestException('Invalid role selection.');
     }
     return this.usersService.completeOnboarding(req.user.id, payload);

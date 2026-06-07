@@ -19,9 +19,9 @@ const IS_DEV = process.env.NODE_ENV === 'development';
 
 // Role badge accent colors for the Navbar inline badge
 const ROLE_BADGE_STYLES: Record<UserRole, string> = {
-  INSTITUTION_ADMIN:       'bg-rose-50 text-rose-700 border-rose-200',
-  RESEARCH_SUPERVISOR:     'bg-indigo-50 text-indigo-700 border-indigo-200',
-  RESEARCH_SCHOLAR: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  INSTITUTE_ADMIN:       'bg-rose-50 text-rose-700 border-rose-200',
+  SUPERVISOR:     'bg-indigo-50 text-indigo-700 border-indigo-200',
+  SCHOLAR: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
 export default function Navbar() {

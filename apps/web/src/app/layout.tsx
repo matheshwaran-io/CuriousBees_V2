@@ -30,6 +30,7 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
+                  console.log('[CLERK TRACE] Document head script executing, process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY present:', !!'${process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}');
                   document.documentElement.classList.add('light');
                   document.documentElement.classList.remove('dark');
                   localStorage.setItem('curiousbees-theme', 'light');
@@ -40,6 +41,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-darkBg text-textPrimary relative min-h-screen">
+
         <ClerkProvider>
           {/* Global 3% noise texture overlay */}
           <div className="noise-overlay" />

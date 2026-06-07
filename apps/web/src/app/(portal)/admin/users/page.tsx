@@ -22,18 +22,18 @@ export default function AdminUsersPage() {
 
   // Guard against non-admin access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTION_ADMIN') {
+    if (currentUser?.role === 'INSTITUTE_ADMIN') {
       fetchAdminUsers();
     }
   }, [currentUser, fetchAdminUsers]);
 
-  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
+  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return null;
   }
 
@@ -99,9 +99,9 @@ export default function AdminUsersPage() {
           className="w-full px-3 h-[42px] text-xs font-semibold rounded-lg bg-white border border-slate-200 focus:outline-none transition-all cursor-pointer"
         >
           <option value="">All Roles</option>
-          <option value="RESEARCH_SCHOLAR">Scholar</option>
-          <option value="RESEARCH_SUPERVISOR">Supervisor</option>
-          <option value="INSTITUTION_ADMIN">Admin</option>
+          <option value="SCHOLAR">Scholar</option>
+          <option value="SUPERVISOR">Supervisor</option>
+          <option value="INSTITUTE_ADMIN">Admin</option>
         </select>
       </div>
 
@@ -157,14 +157,14 @@ export default function AdminUsersPage() {
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
                           className="bg-white border border-slate-200 rounded px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:border-slate-350 outline-none cursor-pointer"
                         >
-                          <option value="RESEARCH_SCHOLAR">Scholar</option>
-                          <option value="RESEARCH_SUPERVISOR">Faculty Guide</option>
-                          <option value="INSTITUTION_ADMIN">Admin</option>
+                          <option value="SCHOLAR">Scholar</option>
+                          <option value="SUPERVISOR">Faculty Guide</option>
+                          <option value="INSTITUTE_ADMIN">Admin</option>
                         </select>
                       </td>
 
                       <td className="p-4">
-                        {user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' ? (
+                        {user.approved || user.role === 'SUPERVISOR' || user.role === 'INSTITUTE_ADMIN' ? (
                           <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-bold">
                             <CheckCircle className="w-3.5 h-3.5" />
                             <span>Approved</span>
@@ -233,7 +233,7 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-450 font-semibold">Approval:</span>
-                    {user.approved || user.role === 'RESEARCH_SUPERVISOR' || user.role === 'INSTITUTION_ADMIN' ? (
+                    {user.approved || user.role === 'SUPERVISOR' || user.role === 'INSTITUTE_ADMIN' ? (
                       <span className="text-emerald-700 font-bold">Approved</span>
                     ) : (
                       <span className="text-amber-700 font-bold">Pending Approval</span>
@@ -246,9 +246,9 @@ export default function AdminUsersPage() {
                       onChange={(e) => handleRoleChange(user.id, e.target.value)}
                       className="bg-white border border-slate-250 rounded px-2.5 py-1 text-[11px] font-bold text-slate-700 outline-none cursor-pointer"
                     >
-                      <option value="RESEARCH_SCHOLAR">Scholar</option>
-                      <option value="RESEARCH_SUPERVISOR">Faculty Guide</option>
-                      <option value="INSTITUTION_ADMIN">Admin</option>
+                      <option value="SCHOLAR">Scholar</option>
+                      <option value="SUPERVISOR">Faculty Guide</option>
+                      <option value="INSTITUTE_ADMIN">Admin</option>
                     </select>
                   </div>
                 </div>

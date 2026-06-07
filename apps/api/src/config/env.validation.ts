@@ -9,7 +9,7 @@ export const envSchema = z.object({
   AUTH_MODE: z.literal('clerk', {
     errorMap: () => ({ message: 'AUTH_MODE must be set to "clerk"' }),
   }),
-  DEV_ROLE: z.enum(['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR', 'INSTITUTION_ADMIN']).default('RESEARCH_SCHOLAR'),
+  DEV_ROLE: z.enum(['SCHOLAR', 'SUPERVISOR', 'INSTITUTE_ADMIN']).default('SCHOLAR'),
   PORT: z.preprocess((val) => {
     if (typeof val === 'string') return parseInt(val, 10);
     return val;

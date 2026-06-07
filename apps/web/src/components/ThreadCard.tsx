@@ -48,7 +48,7 @@ export default function ThreadCard({ thread }: ThreadCardProps) {
                     {thread.author?.name || 'Academic Scholar'}
                   </span>
                   <span className="bg-slate-50 border border-slate-200/60 text-slate-500 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full leading-none">
-                    {thread.author?.role === 'RESEARCH_SUPERVISOR' ? 'Faculty' : 'Scholar'}
+                    {thread.author?.role === 'SUPERVISOR' ? 'Faculty' : 'Scholar'}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-none">

@@ -234,7 +234,7 @@ export default function ResearchersDiscoveryPage() {
                           </h3>
                           <div className="flex items-center flex-wrap gap-2 mt-1">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-semibold uppercase bg-surface-container text-on-surface-variant border border-outline-variant/30 leading-none">
-                              {researcher.role === 'RESEARCH_SUPERVISOR' ? (
+                              {researcher.role === 'SUPERVISOR' ? (
                                 <>
                                   <GraduationCap className="w-2.5 h-2.5 mr-0.5" />
                                   Faculty Guide

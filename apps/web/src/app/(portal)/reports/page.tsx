@@ -29,8 +29,8 @@ export default function ReportsPage() {
   // Supervisor Review Form states
   const [feedback, setFeedback] = useState('');
 
-  const isSupervisor = currentUser?.role === 'RESEARCH_SUPERVISOR';
-  const isAdmin = currentUser?.role === 'INSTITUTION_ADMIN';
+  const isSupervisor = currentUser?.role === 'SUPERVISOR';
+  const isAdmin = currentUser?.role === 'INSTITUTE_ADMIN';
 
   useEffect(() => {
     fetchReports();

@@ -22,18 +22,18 @@ export default function SupervisorRequestsPage() {
 
   // Security check: Only Admins can access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTION_ADMIN') {
+    if (currentUser?.role === 'INSTITUTE_ADMIN') {
       fetchPendingSupervisors();
     }
   }, [currentUser, fetchPendingSupervisors]);
 
-  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
+  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return null;
   }
 

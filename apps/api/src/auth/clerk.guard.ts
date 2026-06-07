@@ -91,9 +91,9 @@ export class ClerkAuthGuard implements CanActivate {
         const mainAdminEmail = process.env.MAIN_ADMIN_EMAIL || 'mr9820@srmist.edu.in';
         const isMainAdmin = normalizedEmail === mainAdminEmail.toLowerCase() || normalizedEmail === 'admin@srmist.edu.in';
         
-        const role = isMainAdmin ? 'INSTITUTION_ADMIN' : 'RESEARCH_SCHOLAR';
+        const role = isMainAdmin ? 'INSTITUTE_ADMIN' : 'SCHOLAR';
         const approved = isMainAdmin;
-        const status = isMainAdmin ? 'APPROVED' : 'ONBOARDING';
+        const status = isMainAdmin ? 'ACTIVE' : 'PENDING_SUPERVISOR_APPROVAL';
 
         this.logger.log(`Creating CuriousBees user for ${normalizedEmail}: Assigned role=${role}, status=${status}`);
         user = await this.prisma.user.create({
@@ -126,10 +126,10 @@ export class ClerkAuthGuard implements CanActivate {
           emailVerified: user.emailVerified || new Date(),
         };
 
-        if (isMainAdmin && user.role !== 'INSTITUTION_ADMIN') {
-          this.logger.log(`Upgrading existing user ${normalizedEmail} to INSTITUTION_ADMIN.`);
-          updateData.role = 'INSTITUTION_ADMIN';
-          updateData.status = 'APPROVED';
+        if (isMainAdmin && user.role !== 'INSTITUTE_ADMIN') {
+          this.logger.log(`Upgrading existing user ${normalizedEmail} to INSTITUTE_ADMIN.`);
+          updateData.role = 'INSTITUTE_ADMIN';
+          updateData.status = 'ACTIVE';
           updateData.approved = true;
         }
 

@@ -33,7 +33,7 @@ export class OpportunitiesController {
 
   @Get('requests')
   async getCollaborationRequests(@Req() req: any) {
-    if (req.user.role === 'RESEARCH_SUPERVISOR' || req.user.role === 'INSTITUTION_ADMIN') {
+    if (req.user.role === 'SUPERVISOR' || req.user.role === 'INSTITUTE_ADMIN') {
       return this.opportunitiesService.getRequestsForSupervisor(req.user.id);
     } else {
       return this.opportunitiesService.getRequestsForScholar(req.user.id);
@@ -46,7 +46,7 @@ export class OpportunitiesController {
     @Param('id') requestId: string,
     @Body('status') status: 'PUBLISHED' | 'REJECTED' | 'NEEDS_INFO'
   ) {
-    if (req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'INSTITUTION_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only supervisors can update request status.');
     }
     if (!status || !['PUBLISHED', 'REJECTED', 'NEEDS_INFO'].includes(status)) {

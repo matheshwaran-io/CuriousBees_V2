@@ -17,12 +17,12 @@ export default function AdminSettingsPage() {
 
   // Guard against non-admin access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
-  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
+  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return null;
   }
 

@@ -90,7 +90,7 @@ async function main() {
       name: 'Dr. Anand Ramachandran',
       email: 'dr.anand@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-      role: Role.RESEARCH_SUPERVISOR,
+      role: Role.SUPERVISOR,
       department: 'Computing Technologies (CSE / IT / Swe)',
       bio: 'Professor of Computer Science. Researching distributed systems, edge computing, and large language model optimizations for low-resource environments.',
       interests: ['Generative AI & LLMs', 'Reinforcement Learning', 'Blockchains & Smart Contracts']
@@ -99,7 +99,7 @@ async function main() {
       name: 'Dr. Priya Subramanian',
       email: 'dr.priya@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-      role: Role.RESEARCH_SUPERVISOR,
+      role: Role.SUPERVISOR,
       department: 'Biotechnology & Bioengineering',
       bio: 'Associate Professor of Bioengineering. Focused on genomic sequencing algorithms, targeted drug delivery, and computational oncology.',
       interests: ['Cancer Immunotherapy', 'Bioinformatics', 'Nanomaterials & Thin Films']
@@ -108,7 +108,7 @@ async function main() {
       name: 'Dr. Ramesh Kumar',
       email: 'dr.ramesh@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      role: Role.RESEARCH_SUPERVISOR,
+      role: Role.SUPERVISOR,
       department: 'Electronics & Communication Engineering (ECE)',
       bio: 'Professor & Head of ECE Dept. Researching high-speed transceiver design, silicon-photonic modulators, and 6G cellular networks.',
       interests: ['Silicon Photonics', '5G/6G Wireless Networks', 'VLSI System Design']
@@ -117,7 +117,7 @@ async function main() {
       name: 'Suresh Karthik',
       email: 'scholar.suresh@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-      role: Role.RESEARCH_SCHOLAR,
+      role: Role.SCHOLAR,
       department: 'Computing Technologies (CSE / IT / Swe)',
       bio: 'PhD Candidate supervised by Dr. Anand. Working on parameter-efficient fine-tuning (PEFT) methods for vision-language models.',
       interests: ['Generative AI & LLMs', 'Reinforcement Learning']
@@ -126,7 +126,7 @@ async function main() {
       name: 'Divya Nambiar',
       email: 'scholar.divya@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-      role: Role.RESEARCH_SCHOLAR,
+      role: Role.SCHOLAR,
       department: 'Biotechnology & Bioengineering',
       bio: 'PhD Scholar researching nano-carriers in bioinformatics under Dr. Priya. Exploring molecular modeling using graph neural networks.',
       interests: ['Bioinformatics', 'Cancer Immunotherapy', 'Nanomaterials & Thin Films']
@@ -135,7 +135,7 @@ async function main() {
       name: 'CuriousBees Admin',
       email: 'admin@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      role: Role.INSTITUTION_ADMIN,
+      role: Role.INSTITUTE_ADMIN,
       department: 'Computing Technologies (CSE / IT / Swe)',
       bio: 'SRMIST System Administrator for CuriousBees platform.',
       interests: []
@@ -154,8 +154,8 @@ async function main() {
         department: u.department,
         departmentId: deptRef ? deptRef.id : null,
         bio: u.bio,
-        approved: u.role === Role.RESEARCH_SUPERVISOR || u.role === Role.INSTITUTION_ADMIN ? true : false,
-        status: u.role === Role.RESEARCH_SUPERVISOR || u.role === Role.INSTITUTION_ADMIN ? 'APPROVED' : 'ONBOARDING'
+        approved: u.role === Role.SUPERVISOR || u.role === Role.INSTITUTE_ADMIN ? true : false,
+        status: u.role === Role.SUPERVISOR || u.role === Role.INSTITUTE_ADMIN ? 'APPROVED' : 'ONBOARDING'
       }
     });
     createdUsers[u.email] = user;

@@ -19,9 +19,9 @@ import type { UserRole } from '@curiousbees/types';
  * conditionally renders the correct view based on currentUser.role.
  */
 export const DASHBOARD_ROUTES: Record<UserRole, string> = {
-  RESEARCH_SUPERVISOR: '/dashboard',
-  RESEARCH_SCHOLAR: '/dashboard',
-  INSTITUTION_ADMIN: '/admin/dashboard',
+  SUPERVISOR: '/dashboard',
+  SCHOLAR: '/dashboard',
+  INSTITUTE_ADMIN: '/admin/dashboard',
 };
 
 // ─── Core Helpers ─────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export function getDashboardRoute(user?: { role: UserRole; approved?: boolean; s
   if (user.status === 'PENDING_SUPERVISOR_APPROVAL' || user.status === 'PENDING_ADMIN_APPROVAL') {
     return '/approval-pending';
   }
-  if (!user.approved && user.role !== 'INSTITUTION_ADMIN') {
+  if (!user.approved && user.role !== 'INSTITUTE_ADMIN') {
     return '/approval-pending';
   }
   return DASHBOARD_ROUTES[user.role] ?? '/dashboard';

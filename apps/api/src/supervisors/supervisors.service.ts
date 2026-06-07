@@ -10,7 +10,7 @@ export class SupervisorsService {
   async getSupervisors(search?: string) {
     const supervisors = await this.prisma.user.findMany({
       where: {
-        role: 'RESEARCH_SUPERVISOR',
+        role: 'SUPERVISOR',
         approved: true,
         ...(search && {
           OR: [
@@ -37,7 +37,7 @@ export class SupervisorsService {
     return this.prisma.user.findMany({
       where: {
         supervisorId: supervisorId,
-        role: 'RESEARCH_SCHOLAR',
+        role: 'SCHOLAR',
         approved: false,
       },
       select: {
@@ -56,7 +56,7 @@ export class SupervisorsService {
       where: {
         id: scholarId,
         supervisorId: supervisorId,
-        role: 'RESEARCH_SCHOLAR',
+        role: 'SCHOLAR',
       },
     });
 
@@ -75,7 +75,7 @@ export class SupervisorsService {
       where: {
         id: scholarId,
         supervisorId: supervisorId,
-        role: 'RESEARCH_SCHOLAR',
+        role: 'SCHOLAR',
       },
     });
 

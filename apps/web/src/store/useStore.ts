@@ -154,7 +154,7 @@ let activeSyncPromise: Promise<User | null> | null = null;
 
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null, // Default to null for strict live login checking
-  roleOverride: 'RESEARCH_SCHOLAR',
+  roleOverride: 'SCHOLAR',
   dashboardRoute: '/dashboard',
   interestsList: MOCK_INTERESTS,
 
@@ -192,7 +192,7 @@ export const useStore = create<AppState>((set, get) => ({
       set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
     } else {
       deleteCookie(ROLE_COOKIE_NAME);
-      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/dashboard' });
+      set({ currentUser: null, roleOverride: 'SCHOLAR', dashboardRoute: '/dashboard' });
     }
   },
   setDashboardRoute: (route) => set({ dashboardRoute: route }),
@@ -554,7 +554,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (typeof window !== 'undefined' && window.Clerk) {
       window.Clerk.signOut().catch(() => { });
     }
-    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'RESEARCH_SCHOLAR' });
+    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {

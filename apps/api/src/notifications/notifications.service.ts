@@ -130,7 +130,7 @@ export class NotificationsService {
       const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
       if (supervisor) {
         const admins = await this.prisma.user.findMany({
-          where: { role: 'INSTITUTION_ADMIN' }
+          where: { role: 'INSTITUTE_ADMIN' }
         });
         for (const admin of admins) {
           await this.sendNotification(

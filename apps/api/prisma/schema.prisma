@@ -10,9 +10,16 @@ generator client {
 }
 
 enum Role {
-  RESEARCH_SUPERVISOR
-  RESEARCH_SCHOLAR
-  INSTITUTION_ADMIN
+  INSTITUTE_ADMIN
+  SUPERVISOR
+  SCHOLAR
+}
+
+enum UserStatus {
+  PENDING_ADMIN_APPROVAL
+  PENDING_SUPERVISOR_APPROVAL
+  ACTIVE
+  REJECTED
 }
 
 model User {
@@ -22,13 +29,13 @@ model User {
   email         String          @unique
   emailVerified DateTime?
   image         String?
-  role          Role            @default(RESEARCH_SCHOLAR)
+  role          Role            @default(SCHOLAR)
   department    String?
   departmentId  String?
   departmentRef Department?     @relation(fields: [departmentId], references: [id])
   bio           String?
   approved      Boolean         @default(false)
-  status        String          @default("ONBOARDING")
+  status        UserStatus      @default(PENDING_SUPERVISOR_APPROVAL)
   approvedBy    String?
   approvedAt    DateTime?
   suspended     Boolean         @default(false)

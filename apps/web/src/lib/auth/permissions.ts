@@ -20,7 +20,7 @@ import type { UserRole } from '@curiousbees/types';
  * Rules are prefix-matched: '/dashboard' covers '/dashboard', '/dashboard/...', etc.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
-  INSTITUTION_ADMIN: [
+  INSTITUTE_ADMIN: [
     '/admin',
     '/dashboard',
     '/events',
@@ -31,7 +31,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/workspace',
     '/notifications',
   ],
-  RESEARCH_SUPERVISOR: [
+  SUPERVISOR: [
     '/dashboard',
     '/events',
     '/threads',
@@ -45,7 +45,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/notifications',
     '/approval-requests',
   ],
-  RESEARCH_SCHOLAR: [
+  SCHOLAR: [
     '/dashboard',
     '/events',
     '/threads',

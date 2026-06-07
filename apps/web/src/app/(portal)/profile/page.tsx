@@ -55,7 +55,7 @@ export default function ProfilePage() {
     resolver: zodResolver(UpdateProfileSchema),
     defaultValues: {
       name: currentUser?.name || '',
-      role: currentUser?.role || 'RESEARCH_SCHOLAR',
+      role: currentUser?.role || 'SCHOLAR',
       department: currentUser?.department || '',
       bio: currentUser?.bio || '',
     }
@@ -66,7 +66,7 @@ export default function ProfilePage() {
     if (currentUser) {
       reset({
         name: currentUser.name || '',
-        role: currentUser.role || 'RESEARCH_SCHOLAR',
+        role: currentUser.role || 'SCHOLAR',
         department: currentUser.department || '',
         bio: currentUser.bio || '',
       });
@@ -130,7 +130,7 @@ export default function ProfilePage() {
     : defaultNetwork;
 
   // Render stats based on user role
-  const isFaculty = roleOverride === 'RESEARCH_SUPERVISOR';
+  const isFaculty = roleOverride === 'SUPERVISOR';
   const citationsVal = isFaculty ? 142 : 24;
   const publicationsVal = userThreads.length > 0 ? userThreads.length : (isFaculty ? 12 : 3);
   const thirdStatName = isFaculty ? 'Active Grants' : 'Synergy Matches';
@@ -555,8 +555,8 @@ export default function ProfilePage() {
                               {...register('role')}
                               className="cb-input cursor-pointer"
                             >
-                              <option value="RESEARCH_SCHOLAR">PhD Research Scholar</option>
-                              <option value="RESEARCH_SUPERVISOR">Verified Faculty Guide</option>
+                              <option value="SCHOLAR">PhD Research Scholar</option>
+                              <option value="SUPERVISOR">Verified Faculty Guide</option>
                             </select>
                             {errors.role && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-1">{errors.role.message as string}</p>}
                           </div>

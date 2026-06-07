@@ -22,21 +22,21 @@ export default function ApprovalRequestsPage() {
     isLoading
   } = useStore();
 
-  // Guard: Only RESEARCH_SUPERVISOR can access
+  // Guard: Only SUPERVISOR can access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'RESEARCH_SUPERVISOR') {
+    if (currentUser && currentUser.role !== 'SUPERVISOR') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   useEffect(() => {
-    if (currentUser?.role === 'RESEARCH_SUPERVISOR') {
+    if (currentUser?.role === 'SUPERVISOR') {
       fetchPendingApprovals();
       fetchCollaborationRequests();
     }
   }, [currentUser, fetchPendingApprovals, fetchCollaborationRequests]);
 
-  if (currentUser?.role !== 'RESEARCH_SUPERVISOR') {
+  if (currentUser?.role !== 'SUPERVISOR') {
     return null;
   }
 

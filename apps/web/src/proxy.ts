@@ -42,7 +42,7 @@ export function proxy(request: NextRequest) {
   }
 
   // 4. Validate the role value is a known role
-  const validRoles: UserRole[] = ['INSTITUTION_ADMIN', 'RESEARCH_SUPERVISOR', 'RESEARCH_SCHOLAR'];
+  const validRoles: UserRole[] = ['INSTITUTE_ADMIN', 'SUPERVISOR', 'SCHOLAR'];
   if (!validRoles.includes(role)) {
     // Corrupt/unknown cookie — clear it and send to login
     const loginUrl = new URL('/sign-in', request.url);

@@ -37,18 +37,18 @@ export default function AdminAnalyticsPage() {
 
   // Guard against non-admin access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTION_ADMIN') {
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
       router.replace('/dashboard');
     }
   }, [currentUser, router]);
 
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTION_ADMIN') {
+    if (currentUser?.role === 'INSTITUTE_ADMIN') {
       fetchAdminUsers();
     }
   }, [currentUser, fetchAdminUsers]);
 
-  if (currentUser?.role !== 'INSTITUTION_ADMIN') {
+  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return null;
   }
 
@@ -88,7 +88,7 @@ export default function AdminAnalyticsPage() {
           <div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Supervisors</p>
             <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">
-              {adminUsers.filter((u) => u.role === 'RESEARCH_SUPERVISOR').length}
+              {adminUsers.filter((u) => u.role === 'SUPERVISOR').length}
             </h4>
           </div>
           <div className="w-10 h-10 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg flex items-center justify-center shrink-0">

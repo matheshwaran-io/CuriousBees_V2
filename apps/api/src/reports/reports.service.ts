@@ -27,7 +27,7 @@ export class ReportsService {
   }
 
   async findAll(userId: string, role: string) {
-    if (role === 'RESEARCH_SCHOLAR') {
+    if (role === 'SCHOLAR') {
       return this.prisma.report.findMany({
         where: { scholarId: userId },
         include: {
@@ -37,7 +37,7 @@ export class ReportsService {
         },
         orderBy: { createdAt: 'desc' },
       });
-    } else if (role === 'RESEARCH_SUPERVISOR') {
+    } else if (role === 'SUPERVISOR') {
       return this.prisma.report.findMany({
         where: { supervisorId: userId },
         include: {
@@ -47,7 +47,7 @@ export class ReportsService {
         },
         orderBy: { createdAt: 'desc' },
       });
-    } else if (role === 'INSTITUTION_ADMIN') {
+    } else if (role === 'INSTITUTE_ADMIN') {
       return this.prisma.report.findMany({
         include: {
           scholar: {
@@ -83,7 +83,7 @@ export class ReportsService {
     if (
       report.scholarId !== userId &&
       report.supervisorId !== userId &&
-      role !== 'INSTITUTION_ADMIN'
+      role !== 'INSTITUTE_ADMIN'
     ) {
       throw new ForbiddenException('Access denied. You cannot view this report.');
     }

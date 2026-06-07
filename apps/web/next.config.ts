@@ -11,7 +11,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_AUTH_MODE: z.literal('clerk', {
     errorMap: () => ({ message: 'NEXT_PUBLIC_AUTH_MODE must be set to "clerk"' }),
   }),
-  NEXT_PUBLIC_DEV_ROLE: z.enum(['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR', 'INSTITUTION_ADMIN']).default('RESEARCH_SCHOLAR'),
+  NEXT_PUBLIC_DEV_ROLE: z.enum(['SCHOLAR', 'SUPERVISOR', 'INSTITUTE_ADMIN']).default('SCHOLAR'),
   NEXT_PUBLIC_SUPABASE_URL: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_URL is required'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required'),
 

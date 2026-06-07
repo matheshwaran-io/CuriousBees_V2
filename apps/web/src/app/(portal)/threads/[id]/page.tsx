@@ -77,7 +77,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
   };
 
   const getRoleBadge = (role: string) => {
-    return role === 'RESEARCH_SUPERVISOR' 
+    return role === 'SUPERVISOR' 
       ? 'bg-[#ba1a1a]/5 text-[#ba1a1a] border-[#ba1a1a]/15'
       : 'bg-[#004495]/5 text-[#004495] border-[#004495]/15';
   };
@@ -120,7 +120,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
                   {thread.author?.name}
                 </h3>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border leading-none ${getRoleBadge(thread.author?.role || '')}`}>
-                  {thread.author?.role === 'RESEARCH_SUPERVISOR' ? (
+                  {thread.author?.role === 'SUPERVISOR' ? (
                     <>
                       <GraduationCap className="w-2.5 h-2.5 mr-0.5" />
                       Faculty
@@ -225,7 +225,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold text-slate-800">{comment.author?.name}</span>
                       <span className={`inline-flex px-1.5 py-0.2 rounded-full text-[8px] font-bold uppercase border leading-none ${getRoleBadge(comment.author?.role || '')}`}>
-                        {comment.author?.role === 'RESEARCH_SUPERVISOR' ? 'Faculty' : 'Scholar'}
+                        {comment.author?.role === 'SUPERVISOR' ? 'Faculty' : 'Scholar'}
                       </span>
                     </div>
                     <span className="text-[9px] text-slate-400 font-bold uppercase">

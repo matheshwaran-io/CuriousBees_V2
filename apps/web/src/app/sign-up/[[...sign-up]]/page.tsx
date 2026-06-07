@@ -1,6 +1,6 @@
 'use client';
 
-import { useSignUp } from '@clerk/nextjs';
+import { useSignUp, useClerk, useAuth } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
 
-type Role = 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR';
+type Role = 'SCHOLAR' | 'SUPERVISOR';
 type Step = 'role_select' | 'details' | 'verify_email' | 'syncing' | 'done';
 
 interface Department { id: string; name: string; code: string; }
@@ -166,8 +166,19 @@ const FACULTY_DEPARTMENTS: Record<string, string[]> = {
 };
 
 export default function SignUpPage() {
-  const { isLoaded, signUp, setActive } = useSignUp() as any;
+  const signUpHook = useSignUp() as any;
+  console.log("EXACT_USE_SIGNUP_SHAPE", signUpHook);
+  const { signUp } = signUpHook;
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (authLoaded && isSignedIn) {
+      router.push('/dashboard');
+    }
+  }, [authLoaded, isSignedIn, router]);
+
+  const { setActive } = useClerk();
 
   const [step, setStep] = useState<Step>('role_select');
   const [role, setRole] = useState<Role | null>(null);
@@ -211,27 +222,37 @@ export default function SignUpPage() {
 
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || !role) return;
+    if (!signUp || !role) return;
     setError('');
     const domainError = validateSrmEmail(email);
     if (domainError) { setError(domainError); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (!departmentId) { setError('Please select your department.'); return; }
-    if (role === 'RESEARCH_SCHOLAR' && !supervisorId) { setError('Please select your research supervisor.'); return; }
-    if (role === 'RESEARCH_SUPERVISOR' && !employeeId.trim()) { setError('Please enter your Employee ID.'); return; }
+    if (role === 'SCHOLAR' && !supervisorId) { setError('Please select your research supervisor.'); return; }
+    if (role === 'SUPERVISOR' && !employeeId.trim()) { setError('Please enter your Employee ID.'); return; }
 
     setIsLoading(true);
     console.log(`[FRONTEND TRACE] Attempting signUp.create for email: ${email}`);
     try {
-      await signUp.create({
+      const result = await signUp.create({
         emailAddress: email,
         password,
         firstName: fullName.split(' ')[0] || fullName,
         lastName: fullName.split(' ').slice(1).join(' ') || '',
       });
+      console.log("EXACT_SIGNUP_CREATE_RETURN", result);
+      console.log("EXACT_WINDOW_CLERK_SIGNUP", typeof window !== 'undefined' ? (window as any).Clerk?.client?.signUp : null);
+      
       console.log(`[FRONTEND TRACE] signUp.create SUCCESS`);
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      const clientSignUp = (window as any).Clerk?.client?.signUp;
+      if (clientSignUp && typeof clientSignUp.prepareEmailAddressVerification === 'function') {
+        await clientSignUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      } else if (typeof signUp.prepareEmailAddressVerification === 'function') {
+        await (signUp as any).prepareEmailAddressVerification({ strategy: 'email_code' });
+      } else {
+        throw new Error('prepareEmailAddressVerification is not available on signUp resource');
+      }
       console.log(`[FRONTEND TRACE] Email verification prepared`);
       setStep('verify_email');
     } catch (err: any) {
@@ -245,15 +266,50 @@ export default function SignUpPage() {
 
   const handleVerifyEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signUp) return;
     setError('');
     setIsLoading(true);
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: verificationCode });
-      console.log(`[FRONTEND TRACE] attemptEmailAddressVerification status: ${result.status}`);
-      if (result.status === 'complete') {
-        console.log(`[FRONTEND TRACE] setting Active session: ${result.createdSessionId}`);
-        await setActive({ session: result.createdSessionId });
+      let result: any = null;
+      const clientSignUp = (window as any).Clerk?.client?.signUp;
+      
+      if (clientSignUp && typeof clientSignUp.attemptEmailAddressVerification === 'function') {
+        result = await clientSignUp.attemptEmailAddressVerification({ code: verificationCode });
+      } else if (typeof signUp.attemptEmailAddressVerification === 'function') {
+        result = await (signUp as any).attemptEmailAddressVerification({ code: verificationCode });
+      } else {
+        throw new Error('attemptEmailAddressVerification is not available on signUp resource');
+      }
+      console.log("EXACT_SIGNUP_ATTEMPT_RETURN", result);
+      
+      let finalStatus = result?.status;
+      let finalSessionId = result?.createdSessionId;
+      
+      if (!finalStatus && typeof window !== 'undefined') {
+         const clientSignUp = (window as any).Clerk?.client?.signUp;
+         if (clientSignUp && clientSignUp.status) {
+            finalStatus = clientSignUp.status;
+            finalSessionId = clientSignUp.createdSessionId;
+            result = clientSignUp;
+         } else if ((window as any).Clerk?.session) {
+            finalStatus = 'complete';
+            finalSessionId = (window as any).Clerk.session.id;
+         } else if ((window as any).Clerk?.client?.activeSessions?.length > 0) {
+            finalStatus = 'complete';
+            finalSessionId = (window as any).Clerk.client.activeSessions[0].id;
+         } else if ((window as any).Clerk?.client?.sessions?.length > 0) {
+            finalStatus = 'complete';
+            finalSessionId = (window as any).Clerk.client.sessions[0].id;
+         }
+      }
+
+      console.log(`[FRONTEND TRACE] attemptEmailAddressVerification status: ${finalStatus}`);
+      console.log(`[FRONTEND TRACE] missingFields:`, result?.missingFields);
+      console.log(`[FRONTEND TRACE] unverifiedFields:`, result?.unverifiedFields);
+
+      if (finalStatus === 'complete') {
+        console.log(`[FRONTEND TRACE] setting Active session: ${finalSessionId}`);
+        await setActive({ session: finalSessionId });
         setStep('syncing');
         // Get Clerk token and POST to /api/users/register
         const token = await window.Clerk?.session?.getToken();
@@ -261,18 +317,24 @@ export default function SignUpPage() {
         const regRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/users/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: fullName, role, departmentId, supervisorId: role === 'RESEARCH_SCHOLAR' ? supervisorId : undefined, employeeId: role === 'RESEARCH_SUPERVISOR' ? employeeId : undefined }),
+          body: JSON.stringify({ name: fullName, role, departmentId, supervisorId: role === 'SCHOLAR' ? supervisorId : undefined, employeeId: role === 'SUPERVISOR' ? employeeId : undefined }),
         });
         if (!regRes.ok) {
-          const data = await regRes.json();
-          console.error(`[FRONTEND TRACE] Registration sync failed. Response:`, data);
-          throw new Error(data?.message || 'Registration sync failed.');
+          const rawText = await regRes.text();
+          let data: any = {};
+          try { data = JSON.parse(rawText); } catch (e) {}
+          console.error(`[FRONTEND TRACE] Registration sync failed. Status: ${regRes.status} ${regRes.statusText}. Response text:`, rawText);
+          throw new Error(data?.message || `Registration sync failed (${regRes.status}): ${rawText.substring(0, 100)}`);
         }
         console.log(`[FRONTEND TRACE] Sync successful, redirecting to /approval-pending`);
+        // We use window.location.href instead of router.push to ensure a full layout reload
+        // which guarantees the layout.tsx fetch auth logic runs cleanly on the newly authenticated session.
+        window.location.href = '/approval-pending';
         setStep('done');
-        setTimeout(() => router.push('/approval-pending'), 1500);
       } else {
-        setError('Verification incomplete. Please retry.');
+        const missing = result?.missingFields?.join(', ') || 'unknown';
+        const unverified = result?.unverifiedFields?.join(', ') || 'none';
+        setError(`Verification incomplete. Missing fields: ${missing}. Unverified fields: ${unverified}`);
       }
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Verification failed.';
@@ -352,7 +414,7 @@ export default function SignUpPage() {
                     id="role-scholar-btn"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => handleRoleSelect('RESEARCH_SCHOLAR')}
+                    onClick={() => handleRoleSelect('SCHOLAR')}
                     className="w-full p-5 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-blue-500/10 hover:border-blue-500/30 text-left flex items-center gap-4 transition-all duration-200 cursor-pointer group"
                   >
                     <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500/20 transition-colors shrink-0">
@@ -369,7 +431,7 @@ export default function SignUpPage() {
                     id="role-supervisor-btn"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => handleRoleSelect('RESEARCH_SUPERVISOR')}
+                    onClick={() => handleRoleSelect('SUPERVISOR')}
                     className="w-full p-5 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-purple-500/10 hover:border-purple-500/30 text-left flex items-center gap-4 transition-all duration-200 cursor-pointer group"
                   >
                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20 transition-colors shrink-0">
@@ -394,18 +456,19 @@ export default function SignUpPage() {
             {step === 'details' && role && (
               <motion.div key="details" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${role === 'RESEARCH_SCHOLAR' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
-                    {role === 'RESEARCH_SCHOLAR' ? <GraduationCap className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${role === 'SCHOLAR' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
+                    {role === 'SCHOLAR' ? <GraduationCap className="w-5 h-5" /> : <Users className="w-5 h-5" />}
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-white tracking-tight">
-                      {role === 'RESEARCH_SCHOLAR' ? 'Scholar Registration' : 'Supervisor Registration'}
+                      {role === 'SCHOLAR' ? 'Scholar Registration' : 'Supervisor Registration'}
                     </h1>
                     <p className="text-white/40 text-sm">Fill in your details below</p>
                   </div>
                 </div>
 
                 <form id="signup-details-form" onSubmit={handleDetailsSubmit} className="space-y-4">
+                  <div id="clerk-captcha"></div>
                   {/* Full Name */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Full Name</label>
@@ -474,7 +537,7 @@ export default function SignUpPage() {
                   </div>
 
                   {/* Scholar: Supervisor Dropdown */}
-                  {role === 'RESEARCH_SCHOLAR' && (
+                  {role === 'SCHOLAR' && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Research Supervisor</label>
                       <div className="relative">
@@ -493,7 +556,7 @@ export default function SignUpPage() {
                   )}
 
                   {/* Supervisor: Employee ID */}
-                  {role === 'RESEARCH_SUPERVISOR' && (
+                  {role === 'SUPERVISOR' && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Employee ID</label>
                       <div className="relative">
