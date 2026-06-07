@@ -31,10 +31,10 @@
         "../../packages/constants/src"
       ],
       "@curiousbees/types": [
-        "../../packages/types/src"
+        "../../packages/types"
       ],
       "@curiousbees/shared-utils": [
-        "../../packages/shared-utils/src"
+        "../../packages/shared-utils"
       ],
       "@curiousbees/ui": [
         "../../packages/ui/src"

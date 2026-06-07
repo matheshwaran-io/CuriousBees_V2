@@ -8,8 +8,8 @@
   "packageManager": "npm@10.8.2",
   "description": "CuriousBees — AI-powered Academic Collaboration Platform",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "setup": "node scripts/setup.js",
