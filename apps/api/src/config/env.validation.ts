@@ -8,12 +8,6 @@ export const envSchema = z.object({
   }, z.number().int().default(4000)),
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid connection URL'),
   DIRECT_URL: z.string().url('DIRECT_URL must be a valid connection URL'),
-  REDIS_URL: z.string().url('REDIS_URL must be a valid Redis connection URL').optional(),
-  REDIS_HOST: z.string().optional(),
-  REDIS_PORT: z.preprocess((val) => {
-    if (typeof val === 'string') return parseInt(val, 10);
-    return val;
-  }, z.number().int().optional()),
   NEXT_PUBLIC_API_URL: z.string().url('NEXT_PUBLIC_API_URL must be a valid URL'),
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
   ALLOWED_ORIGINS: z.string().optional(),

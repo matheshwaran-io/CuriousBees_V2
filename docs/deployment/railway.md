@@ -19,7 +19,6 @@ These variables must be set for the application to boot successfully:
 ### Optional Variables
 These variables enable additional integrations but will not prevent startup if omitted:
 
-* `REDIS_URL`: Connection URL for Railway's Redis instance (e.g. `redis://...`). Used for BullMQ queues. If not set, background queues will log warnings and operate in fallback mode.
 * `GEMINI_API_KEY`: API key for Gemini LLM AI features.
 * `RESEND_API_KEY`: API key for Resend email notifications.
 
@@ -59,9 +58,8 @@ A healthy application responds with `200 OK` and the following payload structure
 {
   "status": "ok",
   "database": "connected",
-  "redis": "connected",
   "timestamp": "2026-06-07T12:00:00.000Z",
   "environment": "production"
 }
 ```
-If a service is offline, the endpoint will gracefully report it (e.g., `"redis": "disconnected"`, `"status": "unhealthy"`).
+If the database connection is offline, the endpoint will report `"database": "disconnected"` and `"status": "unhealthy"`.

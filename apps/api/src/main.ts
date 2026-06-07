@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as net from 'net';
 
 // Resolve the root .env file dynamically and absolutely
 const envCandidates = [
@@ -32,58 +31,6 @@ if (missingEnvVars.length > 0) {
   console.warn('\nPlease configure these variables in your environment or .env file.');
   console.warn('The application will attempt to run, but some services may fail.');
   console.warn('================================================================\n');
-}
-
-// TCP Reachability check for Redis to enable/disable BullMQ dynamically
-async function isRedisReachable(): Promise<boolean> {
-  const redisUrl = process.env.REDIS_URL;
-  let host = process.env.REDIS_HOST || 'localhost';
-  let port = parseInt(process.env.REDIS_PORT || '6379', 10);
-
-  if (redisUrl) {
-    try {
-      const parsed = new URL(redisUrl);
-      host = parsed.hostname;
-      port = parseInt(parsed.port || '6379', 10);
-    } catch {
-      // Ignore URL parse errors
-    }
-  }
-
-  if (!host) return false;
-
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    socket.setTimeout(1500); // 1.5 seconds timeout
-
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve(true);
-    });
-
-    socket.once('error', () => {
-      resolve(false);
-    });
-
-    socket.once('timeout', () => {
-      socket.destroy();
-      resolve(false);
-    });
-
-    socket.connect(port, host);
-  });
-}
-
-async function runRedisAudit() {
-  console.log('Running Redis connectivity audit...');
-  const reachable = await isRedisReachable();
-  if (reachable) {
-    console.log('✅ Redis is reachable. standard Redis queues will be initialized.');
-    process.env.REDIS_AVAILABLE = 'true';
-  } else {
-    console.warn('⚠️ WARNING: Redis is not reachable. Event queues will run in fallback mock mode.');
-    process.env.REDIS_AVAILABLE = 'false';
-  }
 }
 
 import { NestFactory } from '@nestjs/core';
@@ -208,7 +155,6 @@ async function bootstrap() {
   logger.log(`NODE_ENV=${process.env.NODE_ENV}`);
   logger.log(`PORT=${process.env.PORT}`);
   logger.log(`Frontend URL=${process.env.FRONTEND_URL}`);
-  logger.log(`Redis Available=${process.env.REDIS_AVAILABLE}`);
   logger.log('================================================================');
 
   const app = await createApp();
@@ -240,10 +186,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 // In Vercel, the file is imported and `handler` is used.
 // In local dev / production node process, bootstrap() is called directly.
 
-process.env.REDIS_AVAILABLE = 'false'; // Default fallback
-
 if (process.env.VERCEL !== '1') {
-  runRedisAudit().then(() => {
-    bootstrap();
-  });
+  bootstrap();
 }

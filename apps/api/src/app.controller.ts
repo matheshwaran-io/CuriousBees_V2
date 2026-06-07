@@ -1,6 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
-import Redis from 'ioredis';
 import * as os from 'os';
 
 @Controller()
@@ -29,45 +28,9 @@ export class AppController {
       // Database offline
     }
 
-    let redisConnected = false;
-    let redis: Redis | null = null;
-    try {
-      redis = process.env.REDIS_URL
-        ? new Redis(process.env.REDIS_URL, {
-            maxRetriesPerRequest: 1,
-            connectTimeout: 2000,
-          })
-        : new Redis({
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT || '6379', 10),
-            maxRetriesPerRequest: 1,
-            connectTimeout: 2000,
-          });
-
-      redis.on('error', () => {});
-
-      const res = await redis.ping();
-      if (res === 'PONG') {
-        redisConnected = true;
-      }
-    } catch (err: any) {
-      // Redis offline
-    } finally {
-      if (redis) {
-        try {
-          redis.disconnect();
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    const isHealthy = databaseConnected && redisConnected;
-
     return {
-      status: isHealthy ? 'ok' : 'unhealthy',
+      status: databaseConnected ? 'ok' : 'unhealthy',
       database: databaseConnected ? 'connected' : 'disconnected',
-      redis: redisConnected ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'production',
     };

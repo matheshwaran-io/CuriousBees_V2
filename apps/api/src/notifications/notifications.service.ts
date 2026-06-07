@@ -1,8 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Event as PrismaEvent } from '@prisma/client';
+import { NotificationProcessor } from './notification.processor';
 
 export interface NotificationJobData {
   eventId: string;
@@ -17,7 +16,7 @@ export class NotificationsService {
 
   constructor(
     private prisma: PrismaService,
-    @InjectQueue('event-notifications') private notificationQueue: Queue
+    private readonly notificationProcessor: NotificationProcessor,
   ) {}
 
 
@@ -229,21 +228,14 @@ export class NotificationsService {
     const title = `📅 New Event: ${event.eventType}`;
     const body = `${event.title} is happening at ${event.venue} on ${new Date(event.date).toLocaleDateString()}`;
 
-    // Push to Queue for Async Delivery
-    try {
-      await this.notificationQueue.add('send-event-push', {
-        eventId: event.id,
-        userIds: recipients,
-        title,
-        body,
-      }, {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 }, // Exponential backoff for network transient errors
-        removeOnComplete: true,
-        removeOnFail: false
-      });
-    } catch (err: any) {
-      this.logger.warn(`⚠️ Failed to queue event notification (Redis may be offline): ${err.message}`);
-    }
+    // Process notification delivery asynchronously in-memory (no Redis queue required)
+    this.notificationProcessor.process({
+      eventId: event.id,
+      userIds: recipients,
+      title,
+      body,
+    }).catch((err: any) => {
+      this.logger.error(`Failed to process event notifications: ${err.message}`);
+    });
   }
 }

@@ -23,26 +23,25 @@ The application has been successfully audited, modified, and built locally. All 
 * **Location**: `apps/api/src/main.ts`
 * **Fix**: Rewrote the CORS config to split comma-separated origins from `ALLOWED_ORIGINS`, `FRONTEND_URL`, and `WEB_URL`. Allowed headers explicitly include `Authorization`, `Content-Type`, and `Accept`.
 
-### III. Railway Environment Validation
+### III. Railway Environment Validation (Graceful Startup)
 * **Location**: `apps/api/src/main.ts`, `apps/api/src/config/env.validation.ts`
-* **Fix**: Implemented a startup validation layer. Before NestJS boots, it validates that `DATABASE_URL`, `CLERK_SECRET_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` exist in the environment. If any are missing, it logs a clean error and calls `process.exit(1)`, avoiding vague connection errors. Added `SUPABASE_SERVICE_ROLE_KEY` to the Zod config schema.
+* **Fix**: Implemented a startup validation layer. Before NestJS boots, it checks that `DATABASE_URL`, `CLERK_SECRET_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` exist. Missing keys log a warning to `console.warn` but **do not crash the application**, ensuring the HTTP server boots and successfully answers Railway's health checks. Modified `validateEnv` in `env.validation.ts` to log Zod schema issues as warnings instead of calling `process.exit(1)`.
 
 ### IV. Prisma Production Audit
 * **Location**: `apps/api/prisma/schema.prisma`, `apps/api/package.json`
 * **Fix**: Verified database URLs are fetched dynamically using `env("DATABASE_URL")` and `env("DIRECT_URL")`. Removed the `dotenv-cli` dependency (`dotenv -e ../../.env`) prefix in `apps/api/package.json` scripts so that build/prisma commands run correctly using system-level environment variables supplied by Railway.
 
-### V. Redis Production Audit
-* **Location**: `apps/api/src/app.module.ts`, `apps/api/src/notifications/notifications.service.ts`
-* **Fix**: Updated `BullModule` initialization to load asynchronously (`forRootAsync`) and instantiate an explicit `Redis` connection with a custom `retryStrategy` and an `error` listener. This registers connection warnings to `console.warn` without bubbling up as unhandled exceptions. Wrapped `notificationQueue.add` inside `notifications.service.ts` in a `try/catch` block to ensure that if Redis is offline/missing, the rest of the application (e.g. user registrations, database writes) remains fully functional.
+### V. Complete Redis & BullMQ Removal
+* **Location**: `apps/api/src/app.module.ts`, `apps/api/src/notifications/notifications.module.ts`, `apps/api/src/notifications/notifications.service.ts`, `apps/api/src/notifications/notification.processor.ts`, `apps/api/package.json`
+* **Fix**: Completely uninstalled and removed Redis, `ioredis`, `bullmq`, and `@nestjs/bullmq` dependencies. Converted the async `NotificationProcessor` from a BullMQ queue worker into a standard NestJS `@Injectable()` service. Updated `NotificationsService` to invoke `NotificationProcessor` directly and asynchronously in-memory. This removes all external queue configurations, allowing the app to run fully without Redis.
 
 ### VI. Health Endpoint Upgrade
 * **Location**: `apps/api/src/app.controller.ts`
-* **Fix**: Re-implemented the `/api/health` handler to output the exact requested JSON shape. Wrapped the Redis connection checking in a `try/catch/finally` block to guarantee that the temporary test connection is closed (`redis.disconnect()`) in all code paths, eliminating connection leaks.
+* **Fix**: Upgraded the `/api/health` handler to output database connection status in the exact requested format. Removed all Redis connection tests, eliminating any connection leak potential.
   ```json
   {
     "status": "ok",
     "database": "connected",
-    "redis": "connected",
     "timestamp": "2026-06-07T12:00:00.000Z",
     "environment": "production"
   }
@@ -70,7 +69,6 @@ Ensure these environment variables are fully configured in the Railway dashboard
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role API key. |
 | `FRONTEND_URL` | Yes | Root URL of Vercel frontend app. |
 | `ALLOWED_ORIGINS` | Yes | Comma-separated list of CORS-permitted origins. |
-| `REDIS_URL` | No | Redis connection URL (enables asynchronous event queues). |
 | `GEMINI_API_KEY` | No | Gemini API key for AI features. |
 | `RESEND_API_KEY` | No | Resend API key for emails. |
 
@@ -78,5 +76,5 @@ Ensure these environment variables are fully configured in the Railway dashboard
 
 ## 3. Potential Deployment Blockers
 
-1. **Missing Environment Variables**: The application will intentionally refuse to start if `DATABASE_URL`, `CLERK_SECRET_KEY`, or `SUPABASE_SERVICE_ROLE_KEY` are not set. Ensure they are configured on Railway before deploying.
+1. **Environment Warning Logs**: Although missing environment variables (`DATABASE_URL`, `CLERK_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) do not block startup, services utilizing them (database queries, auth checking) will fail at runtime. Double check settings in Railway.
 2. **Database Migrations**: Railway should run migrations during deployment. Make sure you run `npx prisma migrate deploy` or ensure migrations are updated inside Supabase manually.
