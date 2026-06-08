@@ -53,12 +53,17 @@ export default function SignInPage() {
     setIsLoading(true);
     try {
       console.log('[Clerk] Initiating sign-in for:', email);
-      // Use strategy: 'password' directly in create() — the correct Clerk flow for email+password
-      const result = await (signIn as any).create({
-        strategy: 'password',
-        identifier: email,
-        password,
-      });
+      // Step 1: identify the user
+      let result = await (signIn as any).create({ identifier: email });
+
+      // Step 2: if Clerk needs a first factor, attempt password directly
+      if (result.status === 'needs_first_factor') {
+        console.log('[Clerk] Attempting password verification...');
+        result = await (signIn as any).attemptFirstFactor({
+          strategy: 'password',
+          password,
+        });
+      }
 
       if (result.status === 'complete') {
         console.log('[Clerk] Sign-in complete. Setting active session...');
@@ -101,8 +106,17 @@ export default function SignInPage() {
     if (domainError) { setError(domainError); return; }
     setIsLoading(true);
     try {
-      await (signIn as any).create({ identifier: email });
-      await (signIn as any).prepareFirstFactor({ strategy: 'reset_password_email_code', emailAddressId: '' });
+      // Step 1: identify the user to get supportedFirstFactors with real emailAddressId
+      const attempt = await (signIn as any).create({ identifier: email });
+      const emailFactor = attempt.supportedFirstFactors?.find(
+        (f: any) => f.strategy === 'reset_password_email_code'
+      );
+      const emailAddressId = emailFactor?.emailAddressId ?? '';
+      // Step 2: send the reset code to the user's email
+      await (signIn as any).prepareFirstFactor({
+        strategy: 'reset_password_email_code',
+        emailAddressId,
+      });
       setView('reset_code');
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Failed to send reset email.';
