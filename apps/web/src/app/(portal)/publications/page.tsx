@@ -28,7 +28,7 @@ export default function PublicationsPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [status, setStatus] = useState('PUBLISHED');
 
-  const isSupervisor = currentUser?.role === 'SUPERVISOR';
+  const isSupervisor = currentUser?.role === 'RESEARCH_SUPERVISOR';
   const isAdmin = currentUser?.role === 'INSTITUTE_ADMIN';
 
   useEffect(() => {

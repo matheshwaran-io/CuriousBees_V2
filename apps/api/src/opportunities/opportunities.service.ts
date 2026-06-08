@@ -46,7 +46,7 @@ export class OpportunitiesService {
       where: { id: authorId }
     });
 
-    if (!author || author.role !== 'SUPERVISOR') {
+    if (!author || author.role !== 'RESEARCH_SUPERVISOR') {
       throw new BadRequestException('Only verified faculty members are authorized to post research opportunities.');
     }
 
@@ -81,7 +81,7 @@ export class OpportunitiesService {
     if (!scholar) {
       throw new BadRequestException('Scholar not found.');
     }
-    if (scholar.role !== 'SCHOLAR') {
+    if (scholar.role !== 'RESEARCH_SCHOLAR') {
       throw new BadRequestException('Only scholars can submit collaboration requests.');
     }
     if (!scholar.approved) {

@@ -21,6 +21,10 @@ const isPublicRoute = createRouteMatcher([
   '/approval-pending(.*)',
   '/awaiting-supervisor-approval(.*)',
   '/account-rejected(.*)',
+  '/access-denied(.*)',
+  '/account-suspended(.*)',
+  '/not-provisioned(.*)',
+  '/sso-callback(.*)',
   '/error(.*)',
   // Admin panel uses its own PIN-based auth — bypass Clerk entirely
   '/sys-admin-login(.*)',
@@ -94,7 +98,11 @@ export default async function middleware(request: NextRequest, event: NextFetchE
 // 4. Safe Matcher Configuration
 export const config = {
   matcher: [
-    // Exclude API, _next/static, _next/image, images, static, favicon.ico and other assets
-    "/((?!api|_next/static|_next/image|images|static|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|woff|woff2)$).*)"
-  ]
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.[0-9a-zA-Z]+$).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+    // Always run for Clerk proxy path
+    '/__clerk/:path*',
+  ],
 };

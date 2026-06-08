@@ -47,7 +47,7 @@ export class ReportsService {
         },
         orderBy: { createdAt: 'desc' },
       });
-    } else if (role === 'INSTITUTE_ADMIN') {
+    } else if (role === 'ADMIN' || role === 'INSTITUTE_ADMIN') {
       return this.prisma.report.findMany({
         include: {
           scholar: {
@@ -83,6 +83,7 @@ export class ReportsService {
     if (
       report.scholarId !== userId &&
       report.supervisorId !== userId &&
+      role !== 'ADMIN' &&
       role !== 'INSTITUTE_ADMIN'
     ) {
       throw new ForbiddenException('Access denied. You cannot view this report.');

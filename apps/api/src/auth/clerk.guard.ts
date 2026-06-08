@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Logger, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClerkService } from './clerk.service';
@@ -65,20 +65,8 @@ export class ClerkAuthGuard implements CanActivate {
 
       this.logger.log(`Authenticated Clerk user sub=${decodedToken.sub}, email=${email}`);
       const normalizedEmail = email.toLowerCase();
+      const isMeEndpoint = request.url.endsWith('/auth/me');
 
-      const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
-        .split(',')
-        .map((d) => d.trim().toLowerCase());
-      const isAllowedDomain = allowedDomains.some((domain) => normalizedEmail.endsWith('@' + domain));
-
-      if (!isAllowedDomain) {
-        throw new UnauthorizedException({
-          message: `Only email addresses from the following domains are allowed: ${allowedDomains.join(', ')}`,
-          code: 'INVALID_EMAIL_DOMAIN',
-        });
-      }
-
-      let roleSource = 'Database';
       let user = await this.prisma.user.findUnique({
         where: { email: normalizedEmail },
         include: {
@@ -91,59 +79,65 @@ export class ClerkAuthGuard implements CanActivate {
       });
 
       if (!user) {
-        roleSource = 'Default / Main Admin Check';
-        
-        const mainAdminEmail = process.env.MAIN_ADMIN_EMAIL || 'mr9820@srmist.edu.in';
-        const isMainAdmin = normalizedEmail === mainAdminEmail.toLowerCase() || normalizedEmail === 'admin@srmist.edu.in';
-        
-        const role = isMainAdmin ? 'INSTITUTE_ADMIN' : 'SCHOLAR';
-        const approved = isMainAdmin;
-        const status = isMainAdmin ? 'ACTIVE' : 'PENDING_SUPERVISOR_APPROVAL';
-
-        this.logger.log(`Creating CuriousBees user for ${normalizedEmail}: Assigned role=${role}, status=${status}`);
-        user = await this.prisma.user.create({
-          data: {
-            clerkId: decodedToken.sub,
-            email: normalizedEmail,
-            name: decodedToken.name || email.split('@')[0],
-            image: decodedToken.picture || null,
-            role: role as any,
-            approved: approved,
-            status: status,
-            emailVerified: new Date(),
-          },
-          include: {
-            interests: {
-              include: {
-                interest: true
+        // Check for Admin Auto-Creation
+        if (normalizedEmail === 'r.matheshwaran.io@gmail.com') {
+          this.logger.log(`Auto-creating admin account for ${normalizedEmail}`);
+          user = await this.prisma.user.create({
+            data: {
+              clerkId: decodedToken.sub,
+              email: normalizedEmail,
+              name: decodedToken.name || 'Admin',
+              image: decodedToken.picture || null,
+              role: 'INSTITUTE_ADMIN',
+              approved: true,
+              status: 'ACTIVE',
+              onboardingCompleted: true,
+              emailVerified: new Date(),
+            },
+            include: {
+              interests: {
+                include: {
+                  interest: true
+                }
               }
             }
+          });
+        } else {
+          if (isMeEndpoint) {
+            // Allow /api/auth/me to proceed so it can return USER_NOT_PROVISIONED
+            request.user = null;
+            request.userEmail = normalizedEmail;
+            return true;
           }
+          throw new UnauthorizedException({
+            message: 'Your account has not been provisioned. Please contact an administrator.',
+            code: 'USER_NOT_PROVISIONED',
+          });
+        }
+      }
+
+      if (user.status === 'SUSPENDED' || user.suspended) {
+        if (isMeEndpoint) {
+          request.user = user;
+          return true;
+        }
+        throw new ForbiddenException({
+          message: 'Your account has been suspended.',
+          code: 'USER_SUSPENDED',
         });
-      } else {
-        const mainAdminEmail = process.env.MAIN_ADMIN_EMAIL || 'mr9820@srmist.edu.in';
-        const isMainAdmin = normalizedEmail === mainAdminEmail.toLowerCase() || normalizedEmail === 'admin@srmist.edu.in';
+      }
 
-        this.logger.log(`Existing CuriousBees user found for ${normalizedEmail}; syncing profile fields.`);
-        const updateData: any = {
-          name: decodedToken.name || user.name,
-          image: decodedToken.picture || user.image,
-          emailVerified: user.emailVerified || new Date(),
-        };
+      // Self-Healing Sync: Update clerkId and image if missing
+      const updateData: any = {};
+      if (!user.clerkId) {
+        this.logger.log(`Linking clerkId to existing user record for ${normalizedEmail}.`);
+        updateData.clerkId = decodedToken.sub;
+      }
+      if (decodedToken.picture && !user.image) {
+        updateData.image = decodedToken.picture;
+      }
 
-        if (isMainAdmin && user.role !== 'INSTITUTE_ADMIN') {
-          this.logger.log(`Upgrading existing user ${normalizedEmail} to INSTITUTE_ADMIN.`);
-          updateData.role = 'INSTITUTE_ADMIN';
-          updateData.status = 'ACTIVE';
-          updateData.approved = true;
-        }
-
-        // Self-Healing Migration: Link clerkId if missing on existing user record
-        if (!user.clerkId) {
-          this.logger.log(`Linking clerkId to existing user record for ${normalizedEmail}.`);
-          updateData.clerkId = decodedToken.sub;
-        }
-
+      if (Object.keys(updateData).length > 0) {
         user = await this.prisma.user.update({
           where: { id: user.id },
           data: updateData,
@@ -157,13 +151,6 @@ export class ClerkAuthGuard implements CanActivate {
         });
       }
 
-      this.logger.log(`CuriousBees user sync complete for ${normalizedEmail}: id=${user.id}, role=${user.role}, approved=${user.approved}`);
-      
-      this.logger.log(`[AUTH] User Email: ${normalizedEmail}`);
-      this.logger.log(`[AUTH] User Clerk ID: ${decodedToken.sub}`);
-      this.logger.log(`[AUTH] Retrieved Role: ${user.role}`);
-      this.logger.log(`[AUTH] Role Source: ${roleSource}`);
-      
       request.user = user;
       return true;
     } catch (e: any) {

@@ -19,31 +19,32 @@ import type { UserRole } from '@curiousbees/types';
  * conditionally renders the correct view based on currentUser.role.
  */
 export const DASHBOARD_ROUTES: Record<UserRole, string> = {
-  SUPERVISOR: '/dashboard',
-  SCHOLAR: '/dashboard',
-  INSTITUTE_ADMIN: '/admin/dashboard',
+  RESEARCH_SUPERVISOR: '/supervisor',
+  RESEARCH_SCHOLAR: '/dashboard',
+  INSTITUTE_ADMIN: '/admin',
 };
 
 // ─── Core Helpers ─────────────────────────────────────────────────────────────
 
 /**
  * Returns the dashboard route for the given user, considering role and approval status.
- * Unapproved scholars are always directed to /verification-pending.
+ * Unapproved scholars are always directed to /approval-pending.
  * Defaults to '/login' for unauthenticated users.
  */
 export function getDashboardRoute(user?: { role: UserRole; approved?: boolean; status?: string }): string {
   if (!user) return '/sign-in';
   if (user.status === 'REJECTED') {
-    return '/account-rejected';
+    return '/access-denied';
   }
-  if (user.status === 'PENDING_SUPERVISOR_APPROVAL') {
-    return '/awaiting-supervisor-approval';
+  if (user.status === 'SUSPENDED') {
+    return '/account-suspended';
   }
-  if (user.status === 'PENDING_ADMIN_APPROVAL') {
+  if (
+    user.status === 'PENDING' ||
+    user.status === 'PENDING_SUPERVISOR_APPROVAL' ||
+    user.status === 'PENDING_ADMIN_APPROVAL'
+  ) {
     return '/approval-pending';
-  }
-  if (!user.approved && user.role !== 'INSTITUTE_ADMIN') {
-    return user.role === 'SCHOLAR' ? '/awaiting-supervisor-approval' : '/approval-pending';
   }
   return DASHBOARD_ROUTES[user.role] ?? '/dashboard';
 }

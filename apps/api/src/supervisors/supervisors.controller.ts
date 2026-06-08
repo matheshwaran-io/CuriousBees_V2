@@ -9,8 +9,12 @@ export class SupervisorsController {
 
   @UseGuards(ClerkAuthGuard)
   @Get('supervisors')
-  async getSupervisors(@Query('search') search?: string) {
-    return this.supervisorsService.getSupervisors(search);
+  async getSupervisors(
+    @Query('departmentId') departmentId?: string,
+    @Query('facultyId') facultyId?: string,
+    @Query('search') search?: string
+  ) {
+    return this.supervisorsService.getSupervisors(departmentId, facultyId, search);
   }
 
   @UseGuards(ClerkAuthGuard, SupervisorGuard)

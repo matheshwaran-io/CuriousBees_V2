@@ -4,31 +4,8 @@ import { UpdateProfileInput } from '@curiousbees/types';
 import { UpdateProfileSchema } from '@curiousbees/shared-utils';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from './mail.service';
+import { Role, UserStatus } from '@prisma/client';
 
-const FACULTY_DEPARTMENTS: Record<string, string[]> = {
-  "Faculty of Engineering & Technology": [
-    "Computing Technologies (CSE / IT / Swe)",
-    "Electronics & Communication Engineering (ECE)",
-    "Electrical & Electronics Engineering (EEE)",
-    "Biotechnology & Bioengineering",
-    "Mechanical Engineering",
-    "Civil Engineering",
-    "Chemical Engineering"
-  ],
-  "Faculty of Science & Humanities": [
-    "Physics & Nanotechnology",
-    "Chemistry & Materials Science",
-    "Mathematics & Actuarial Science"
-  ],
-  "Faculty of Management": [
-    "School of Management (SOM)"
-  ],
-  "Faculty of Law": [],
-  "Faculty of Medicine & Health Sciences": [
-    "Health Sciences & Research"
-  ],
-  "Faculty of Research Centers": []
-};
 
 @Injectable()
 export class UsersService {
@@ -150,7 +127,7 @@ export class UsersService {
     const supervisor = await this.prisma.user.findUnique({
       where: { id: supervisorId }
     });
-    if (!supervisor || supervisor.role !== 'SUPERVISOR') {
+    if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
       throw new BadRequestException('Selected supervisor must be a registered faculty member.');
     }
 
@@ -165,7 +142,7 @@ export class UsersService {
       where: {
         supervisorId,
         approved: false,
-        role: 'SCHOLAR'
+        role: Role.RESEARCH_SCHOLAR
       },
       include: {
         interests: {
@@ -194,7 +171,7 @@ export class UsersService {
       where: { id: scholarId },
       data: { 
         approved: true,
-        status: 'ACTIVE',
+        status: UserStatus.ACTIVE,
         approvedBy: supervisorId,
         approvedAt: new Date()
       }
@@ -230,7 +207,7 @@ export class UsersService {
     // Reject the scholar
     const declined = await this.prisma.user.update({
       where: { id: scholarId },
-      data: { approved: false, status: 'REJECTED' }
+      data: { approved: false, status: UserStatus.REJECTED }
     });
 
     // Write an audit log entry
@@ -250,7 +227,7 @@ export class UsersService {
 
   async getAllUsers(adminId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can access this system management API.');
     }
 
@@ -259,17 +236,22 @@ export class UsersService {
     });
   }
 
-  async updateUserRole(adminId: string, targetUserId: string, role: 'SUPERVISOR' | 'SCHOLAR' | 'INSTITUTE_ADMIN') {
+  async updateUserRole(adminId: string, targetUserId: string, role: 'SUPERVISOR' | 'SCHOLAR' | 'INSTITUTE_ADMIN' | 'ADMIN') {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can change user roles.');
     }
+
+    let prismaRole: Role;
+    if (role === 'SUPERVISOR' || (role as any) === 'RESEARCH_SUPERVISOR') prismaRole = Role.RESEARCH_SUPERVISOR;
+    else if (role === 'SCHOLAR' || (role as any) === 'RESEARCH_SCHOLAR') prismaRole = Role.RESEARCH_SCHOLAR;
+    else prismaRole = Role.INSTITUTE_ADMIN;
 
     const updated = await this.prisma.user.update({
       where: { id: targetUserId },
       data: { 
-        role,
-        approved: role === 'SUPERVISOR' || role === 'INSTITUTE_ADMIN' ? true : undefined
+        role: prismaRole,
+        approved: prismaRole === Role.RESEARCH_SUPERVISOR || prismaRole === Role.INSTITUTE_ADMIN ? true : undefined
       }
     });
 
@@ -278,7 +260,7 @@ export class UsersService {
       data: {
         userId: adminId,
         action: 'UPDATE_USER_ROLE',
-        details: `Admin changed role of user ${updated.email} to ${role}`
+        details: `Admin changed role of user ${updated.email} to ${prismaRole}`
       }
     });
 
@@ -287,7 +269,7 @@ export class UsersService {
 
   async getAuditLogs(adminId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can view audit logs.');
     }
 
@@ -300,9 +282,9 @@ export class UsersService {
   async getSupervisors() {
     return this.prisma.user.findMany({
       where: {
-        role: 'SUPERVISOR',
+        role: Role.RESEARCH_SUPERVISOR,
         approved: true,
-        status: 'ACTIVE',
+        status: UserStatus.ACTIVE,
       },
       select: {
         id: true,
@@ -319,7 +301,7 @@ export class UsersService {
     return this.prisma.user.findMany({
       where: {
         supervisorId,
-        role: 'SCHOLAR',
+        role: Role.RESEARCH_SCHOLAR,
         approved: true,
       },
       include: {
@@ -335,7 +317,7 @@ export class UsersService {
 
   async suspendUser(adminId: string, targetUserId: string, suspended: boolean) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can suspend or unsuspend users.');
     }
 
@@ -364,11 +346,11 @@ export class UsersService {
     if (!user) {
       throw new BadRequestException('User not found.');
     }
-    if (user.status === 'ACTIVE') {
+    if (user.status === UserStatus.ACTIVE) {
       throw new BadRequestException('User has already completed onboarding.');
     }
 
-    let status: import('@prisma/client').UserStatus = 'PENDING_SUPERVISOR_APPROVAL';
+    let status: UserStatus = UserStatus.PENDING_SUPERVISOR_APPROVAL;
     let supervisorEmail = null;
 
     if (payload.role === 'SCHOLAR') {
@@ -376,19 +358,19 @@ export class UsersService {
         throw new BadRequestException('Research Scholars must select a supervisor.');
       }
       const supervisor = await this.prisma.user.findUnique({ where: { id: payload.supervisorId } });
-      if (!supervisor || supervisor.role !== 'SUPERVISOR') {
+      if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
         throw new BadRequestException('Invalid supervisor selected.');
       }
-      status = 'PENDING_SUPERVISOR_APPROVAL';
+      status = UserStatus.PENDING_SUPERVISOR_APPROVAL;
       supervisorEmail = supervisor.email;
     } else if (payload.role === 'SUPERVISOR') {
-      status = 'PENDING_ADMIN_APPROVAL';
+      status = UserStatus.ACTIVE; // Supervisors go active immediately after onboarding
     }
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        role: payload.role,
+        role: payload.role === 'SCHOLAR' ? Role.RESEARCH_SCHOLAR : Role.RESEARCH_SUPERVISOR,
         status,
         supervisorId: payload.role === 'SCHOLAR' ? payload.supervisorId : null,
         supervisorEmail
@@ -400,12 +382,12 @@ export class UsersService {
 
   async approveSupervisor(adminId: string, supervisorId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can approve supervisors.');
     }
 
     const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
-    if (!supervisor || supervisor.role !== 'SUPERVISOR') {
+    if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
       throw new BadRequestException('User is not a Research Supervisor.');
     }
 
@@ -413,7 +395,7 @@ export class UsersService {
       where: { id: supervisorId },
       data: { 
         approved: true,
-        status: 'ACTIVE',
+        status: UserStatus.ACTIVE,
         approvedBy: adminId,
         approvedAt: new Date()
       }
@@ -435,12 +417,12 @@ export class UsersService {
 
   async declineSupervisor(adminId: string, supervisorId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can decline supervisors.');
     }
 
     const supervisor = await this.prisma.user.findUnique({ where: { id: supervisorId } });
-    if (!supervisor || supervisor.role !== 'SUPERVISOR') {
+    if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
       throw new BadRequestException('User is not a Research Supervisor.');
     }
 
@@ -448,7 +430,7 @@ export class UsersService {
       where: { id: supervisorId },
       data: { 
         approved: false,
-        status: 'REJECTED',
+        status: UserStatus.REJECTED,
       }
     });
 
@@ -477,14 +459,6 @@ export class UsersService {
     }
 
     const email = user.email.toLowerCase();
-    const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
-      .split(',')
-      .map((d) => d.trim().toLowerCase());
-    const isAllowedDomain = allowedDomains.some((domain) => email.endsWith('@' + domain));
-    if (!isAllowedDomain) {
-      throw new BadRequestException(`Only email addresses from the following domains are allowed: ${allowedDomains.join(', ')}`);
-    }
-
     const { name, role, departmentId, supervisorId, employeeId, faculty } = input;
 
     // Verify department exists
@@ -495,18 +469,7 @@ export class UsersService {
       throw new BadRequestException('Selected department does not exist.');
     }
 
-    // Verify Faculty-to-Department relationship
-    if (role === 'SUPERVISOR' || role === 'SCHOLAR') {
-      if (!faculty) {
-        throw new BadRequestException('Faculty selection is required.');
-      }
-      const allowedDepts = FACULTY_DEPARTMENTS[faculty];
-      if (!allowedDepts || !allowedDepts.includes(department.name)) {
-        throw new BadRequestException('Selected department does not belong to the selected faculty.');
-      }
-    }
-
-    let status: import('@prisma/client').UserStatus = 'PENDING_SUPERVISOR_APPROVAL';
+    let status: UserStatus = UserStatus.PENDING_SUPERVISOR_APPROVAL;
     let supervisorEmail = null;
 
     if (role === 'SCHOLAR') {
@@ -519,22 +482,19 @@ export class UsersService {
       const supervisor = await this.prisma.user.findUnique({
         where: { id: supervisorId },
       });
-      if (!supervisor || supervisor.role !== 'SUPERVISOR') {
+      if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
         throw new BadRequestException('Selected research supervisor is invalid.');
       }
-      if (!supervisor.approved || supervisor.status !== 'ACTIVE') {
+      if (supervisor.status !== UserStatus.ACTIVE) {
         throw new BadRequestException('Selected research supervisor is not active.');
       }
-      if (supervisor.departmentId !== departmentId) {
-        throw new BadRequestException('Selected research supervisor does not belong to the selected department.');
-      }
       supervisorEmail = supervisor.email;
-      status = 'PENDING_SUPERVISOR_APPROVAL';
+      status = UserStatus.PENDING_SUPERVISOR_APPROVAL;
     } else if (role === 'SUPERVISOR') {
       if (!employeeId) {
         throw new BadRequestException('Research Supervisors must provide an Employee ID.');
       }
-      status = 'PENDING_ADMIN_APPROVAL';
+      status = UserStatus.PENDING_SUPERVISOR_APPROVAL;
     } else {
       throw new BadRequestException('Invalid registration role.');
     }
@@ -543,7 +503,7 @@ export class UsersService {
       where: { id: userId },
       data: {
         name,
-        role,
+        role: role === 'SCHOLAR' ? Role.RESEARCH_SCHOLAR : Role.RESEARCH_SUPERVISOR,
         departmentId,
         department: department.name,
         faculty: faculty || null,
@@ -585,13 +545,13 @@ export class UsersService {
 
   async getPendingSupervisors(adminId: string) {
     const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'INSTITUTE_ADMIN') {
+    if (!admin || admin.role !== Role.INSTITUTE_ADMIN) {
       throw new ForbiddenException('Only administrators can access pending supervisor requests.');
     }
     return this.prisma.user.findMany({
       where: {
-        role: 'SUPERVISOR',
-        status: 'PENDING_ADMIN_APPROVAL',
+        role: Role.RESEARCH_SUPERVISOR,
+        status: UserStatus.PENDING_SUPERVISOR_APPROVAL,
         approved: false,
       },
       orderBy: { createdAt: 'desc' },

@@ -18,6 +18,7 @@ import {
   Calendar as CalendarIcon,
   Users,
   FolderOpen,
+  Building,
   Shield,
   UserCog,
   X,
@@ -55,6 +56,8 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
           { name: 'User Management', href: '/admin/users', icon: UserCog },
           { name: 'Supervisors', href: '/admin/supervisors', icon: Shield },
           { name: 'Supervisor Requests', href: '/admin/approval-requests', icon: Clock },
+          { name: 'Scholar Requests', href: '/admin/scholar-requests', icon: Users },
+          { name: 'Faculties', href: '/admin/faculties', icon: Building },
           { name: 'Departments', href: '/admin/departments', icon: FolderOpen },
           { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
           { name: 'System Settings', href: '/admin/settings', icon: Shield },
@@ -77,7 +80,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
     ],
   };
 
-  if (role === 'SUPERVISOR') {
+  if (role === 'RESEARCH_SUPERVISOR') {
     return [
       researchPortalSection,
       {
@@ -221,7 +224,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     setSectionsOpen((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const role = currentUser?.role || 'SCHOLAR';
+  const role = currentUser?.role || 'RESEARCH_SCHOLAR';
   const sections = getSidebarSections(role);
 
   const isActive = (href: string) => {

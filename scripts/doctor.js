@@ -91,11 +91,12 @@ console.log(`\n   --- Auth Mode & Bypass Checks ---`);
 reportSuccess(`Backend AUTH_MODE is configured as "${authMode}".`);
 reportSuccess(`Frontend NEXT_PUBLIC_AUTH_MODE is configured as "${pubAuthMode}".`);
 
-if (authMode !== 'clerk' || pubAuthMode !== 'clerk') {
-  reportError(`Authentication mode is configured incorrectly. Enforced mode is "clerk". Current settings: AUTH_MODE=${authMode}, NEXT_PUBLIC_AUTH_MODE=${pubAuthMode}`);
-  console.log(`     -> Solution: Update your root .env file and set both variables to "clerk".`);
+const allowedModes = ['clerk', 'GOOGLE_ADMIN_MANAGED'];
+if (!allowedModes.includes(authMode) || !allowedModes.includes(pubAuthMode)) {
+  reportError(`Authentication mode is configured incorrectly. Allowed modes are: ${allowedModes.join(', ')}. Current settings: AUTH_MODE=${authMode}, NEXT_PUBLIC_AUTH_MODE=${pubAuthMode}`);
+  console.log(`     -> Solution: Update your root .env file and set both variables to one of: ${allowedModes.join(', ')}.`);
 } else {
-  reportSuccess('Backend and Frontend Auth Mode settings are set to "clerk".');
+  reportSuccess(`Backend and Frontend Auth Mode settings are set to "${authMode}".`);
 }
 
 if (process.env.DEVELOPMENT_MODE === 'true' || process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === 'true') {

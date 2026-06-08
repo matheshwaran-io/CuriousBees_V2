@@ -53,11 +53,11 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData(); // Fetch Threads & Opportunities
     fetchWorkspaces();
-    fetchPublications(currentUser?.role === 'SUPERVISOR' ? undefined : currentUser?.id);
+    fetchPublications(currentUser?.role === 'RESEARCH_SUPERVISOR' ? undefined : currentUser?.id);
     fetchReports();
     fetchEvents();
     fetchNotifications();
-    if (currentUser?.role === 'SUPERVISOR') {
+    if (currentUser?.role === 'RESEARCH_SUPERVISOR') {
       fetchMyScholars();
     }
   }, [
@@ -71,7 +71,7 @@ export default function DashboardPage() {
     fetchMyScholars
   ]);
 
-  const isSupervisor = currentUser?.role === 'SUPERVISOR';
+  const isSupervisor = currentUser?.role === 'RESEARCH_SUPERVISOR';
   const roleName = isSupervisor ? 'Faculty Supervisor' : 'Research Scholar';
 
   // Redirect to new dashboards
@@ -79,9 +79,9 @@ export default function DashboardPage() {
     if (currentUser) {
       if (currentUser.role === 'INSTITUTE_ADMIN') {
         router.push('/institute-admin/dashboard');
-      } else if (currentUser.role === 'SUPERVISOR') {
+      } else if (currentUser.role === 'RESEARCH_SUPERVISOR') {
         router.push('/supervisor/dashboard');
-      } else if (currentUser.role === 'SCHOLAR') {
+      } else if (currentUser.role === 'RESEARCH_SCHOLAR') {
         router.push('/scholar/dashboard');
       }
     }

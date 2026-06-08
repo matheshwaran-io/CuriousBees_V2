@@ -69,45 +69,62 @@ export default function PortalLayout({
       if (!active) return;
 
       if (!activeUser) {
+        if (useStore.getState().notProvisioned) {
+          console.warn('[PortalLayout] Account not provisioned. Redirecting to /not-provisioned.');
+          router.push('/not-provisioned');
+          return;
+        }
+        if (useStore.getState().isSuspended) {
+          console.warn('[PortalLayout] Account suspended. Redirecting to /account-suspended.');
+          router.push('/account-suspended');
+          return;
+        }
         console.warn('[PortalLayout] Unauthenticated access detected. Redirecting to /sign-in.');
         router.push('/sign-in');
         return;
       }
 
-      if (activeUser.status === 'ONBOARDING') {
+      if (!activeUser.onboardingCompleted) {
         console.warn('[PortalLayout] User has not completed onboarding. Redirecting to /onboarding.');
         router.push('/onboarding');
         return;
       }
 
       if (activeUser.status === 'REJECTED') {
-        console.warn('[PortalLayout] User account was rejected. Redirecting to /account-rejected.');
-        router.push('/account-rejected');
+        console.warn('[PortalLayout] User account was rejected. Redirecting to /access-denied.');
+        router.push('/access-denied');
         return;
       }
 
-      if (activeUser.status === 'PENDING_SUPERVISOR_APPROVAL') {
-        console.warn('[PortalLayout] Scholar is awaiting supervisor approval. Redirecting to /awaiting-supervisor-approval.');
-        router.push('/awaiting-supervisor-approval');
+      if (activeUser.status === 'SUSPENDED') {
+        console.warn('[PortalLayout] User account was suspended. Redirecting to /account-suspended.');
+        router.push('/account-suspended');
         return;
       }
 
-      if (activeUser.status === 'PENDING_ADMIN_APPROVAL') {
-        console.warn('[PortalLayout] User is pending admin approval. Redirecting to /approval-pending.');
+      if (
+        activeUser.status === 'PENDING' ||
+        activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
+        activeUser.status === 'PENDING_ADMIN_APPROVAL'
+      ) {
+        console.warn('[PortalLayout] User is pending approval. Redirecting to /approval-pending.');
         router.push('/approval-pending');
         return;
       }
 
-      // Enforce path-based role protection
+      if (pathname.startsWith('/admin') && activeUser.role !== 'INSTITUTE_ADMIN') {
+        router.push('/unauthorized');
+        return;
+      }
       if (pathname.startsWith('/institute-admin') && activeUser.role !== 'INSTITUTE_ADMIN') {
         router.push('/unauthorized');
         return;
       }
-      if (pathname.startsWith('/supervisor') && activeUser.role !== 'SUPERVISOR') {
+      if (pathname.startsWith('/supervisor') && activeUser.role !== 'RESEARCH_SUPERVISOR') {
         router.push('/unauthorized');
         return;
       }
-      if (pathname.startsWith('/scholar') && activeUser.role !== 'SCHOLAR') {
+      if (pathname.startsWith('/scholar') && activeUser.role !== 'RESEARCH_SCHOLAR') {
         router.push('/unauthorized');
         return;
       }

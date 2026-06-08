@@ -11,15 +11,15 @@ generator client {
 
 enum Role {
   INSTITUTE_ADMIN
-  SUPERVISOR
-  SCHOLAR
+  RESEARCH_SUPERVISOR
+  RESEARCH_SCHOLAR
 }
 
 enum UserStatus {
-  PENDING_ADMIN_APPROVAL
-  PENDING_SUPERVISOR_APPROVAL
   ACTIVE
+  PENDING_SUPERVISOR_APPROVAL
   REJECTED
+  SUSPENDED
 }
 
 model User {
@@ -29,20 +29,21 @@ model User {
   email         String          @unique
   emailVerified DateTime?
   image         String?
-  role          Role            @default(SCHOLAR)
+  role          Role            @default(RESEARCH_SCHOLAR)
   department    String?
   departmentId  String?
   departmentRef Department?     @relation(fields: [departmentId], references: [id])
   faculty       String?
   bio           String?
   approved      Boolean         @default(false)
-  status        UserStatus      @default(PENDING_SUPERVISOR_APPROVAL)
+  status        UserStatus      @default(ACTIVE)
   approvedBy    String?
   approvedAt    DateTime?
   suspended     Boolean         @default(false)
   supervisorId  String?
   supervisorEmail String?
   employeeId    String?         @unique
+  onboardingCompleted Boolean   @default(false)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -53,11 +54,16 @@ model User {
   notificationTokens NotificationToken[]
   notifications Notification[]
   preferences   UserPreference?
-
   
-  // Supervisor/Scholar mappings
-  supervisor    User?           @relation("SupervisorToScholar", fields: [supervisorId], references: [id])
-  scholars      User[]          @relation("SupervisorToScholar")
+  // New profile relations
+  supervisorProfile SupervisorProfile?
+  scholarProfile   ScholarProfile?
+  scholarRequests  ScholarSupervisorRequest[] @relation("ScholarSupervisorRequests")
+  supervisorRequests ScholarSupervisorRequest[] @relation("SupervisorScholarRequests")
+
+  // Supervisor/Scholar mappings (kept for legacy query compatibility)
+  supervisor    User?           @relation("SupervisorScholars", fields: [supervisorId], references: [id])
+  scholars      User[]          @relation("SupervisorScholars")
   
   // Collaboration and Workspace relations
   collaborationRequests CollaborationRequest[]
@@ -330,16 +336,86 @@ model NotificationToken {
   updatedAt DateTime @updatedAt
 }
 
-model Department {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  code        String   @unique
-  description String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users       User[]
+model Faculty {
+  id                String              @id @default(cuid())
+  name              String              @unique
+  departments       Department[]
+  supervisorProfiles SupervisorProfile[]
+  scholarProfiles   ScholarProfile[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
+
+model Department {
+  id                String              @id @default(cuid())
+  facultyId         String
+  faculty           Faculty             @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  name              String
+  code              String              @unique
+  description       String?             @db.Text
+  users             User[]              // backward compatibility
+  supervisorProfiles SupervisorProfile[]
+  scholarProfiles   ScholarProfile[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([facultyId])
+}
+
+model SupervisorProfile {
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facultyId     String
+  faculty       Faculty     @relation(fields: [facultyId], references: [id])
+  departmentId  String
+  department    Department  @relation(fields: [departmentId], references: [id])
+  designation   String
+  employeeId    String      @unique
+  maxScholars   Int         @default(5)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([facultyId])
+  @@index([departmentId])
+}
+
+model ScholarProfile {
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  facultyId     String
+  faculty       Faculty     @relation(fields: [facultyId], references: [id])
+  departmentId  String
+  department    Department  @relation(fields: [departmentId], references: [id])
+  researchArea  String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([facultyId])
+  @@index([departmentId])
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ScholarSupervisorRequest {
+  id            String        @id @default(cuid())
+  scholarId     String
+  scholar       User          @relation("ScholarSupervisorRequests", fields: [scholarId], references: [id], onDelete: Cascade)
+  supervisorId  String
+  supervisor    User          @relation("SupervisorScholarRequests", fields: [supervisorId], references: [id], onDelete: Cascade)
+  status        RequestStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([scholarId])
+  @@index([supervisorId])
+}
+
 
 model Publication {
   id          String   @id @default(cuid())

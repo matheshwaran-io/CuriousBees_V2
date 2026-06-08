@@ -34,7 +34,7 @@ export default function VerificationPendingPage() {
     return () => clearInterval(interval);
   }, [syncUserSession, router]);
 
-  const isSupervisorPending = currentUser?.role === 'SUPERVISOR';
+  const isSupervisorPending = currentUser?.role === 'RESEARCH_SUPERVISOR';
 
   return (
     <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6 relative overflow-hidden font-sans w-full">

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRouter } from 'next/navigation';
-import { Building2, Plus, Search, Edit3, Trash2, X, Check, ShieldAlert } from 'lucide-react';
+import { Building2, Plus, Search, Edit3, Trash2, X, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminDepartmentsPage() {
@@ -18,6 +18,9 @@ export default function AdminDepartmentsPage() {
     isLoading
   } = useStore();
 
+  const [faculties, setFaculties] = useState<any[]>([]);
+  const [loadingFaculties, setLoadingFaculties] = useState(false);
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +28,7 @@ export default function AdminDepartmentsPage() {
   // Form states
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [selectedFacultyId, setSelectedFacultyId] = useState('');
   const [description, setDescription] = useState('');
 
   // Guard against non-admin access
@@ -34,11 +38,32 @@ export default function AdminDepartmentsPage() {
     }
   }, [currentUser, router]);
 
+  // Load departments
   useEffect(() => {
     if (currentUser?.role === 'INSTITUTE_ADMIN') {
       fetchDepartments();
     }
   }, [currentUser, fetchDepartments]);
+
+  // Load faculties on mount for the dropdown
+  useEffect(() => {
+    const fetchFaculties = async () => {
+      setLoadingFaculties(true);
+      try {
+        const { apiFetch } = await import('@/lib/api-client');
+        const res = await apiFetch('/api/faculties');
+        if (res.ok) {
+          const data = await res.json();
+          setFaculties(data);
+        }
+      } catch (e) {
+        console.error('Failed to load faculties:', e);
+      } finally {
+        setLoadingFaculties(false);
+      }
+    };
+    fetchFaculties();
+  }, []);
 
   if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return null;
@@ -48,6 +73,7 @@ export default function AdminDepartmentsPage() {
     setEditingDept(null);
     setName('');
     setCode('');
+    setSelectedFacultyId('');
     setDescription('');
     setIsDrawerOpen(true);
   };
@@ -56,14 +82,15 @@ export default function AdminDepartmentsPage() {
     setEditingDept(dept);
     setName(dept.name);
     setCode(dept.code);
+    setSelectedFacultyId(dept.facultyId || '');
     setDescription(dept.description || '');
     setIsDrawerOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !code) {
-      alert('Name and Code are required.');
+    if (!name || !code || !selectedFacultyId) {
+      alert('Name, Code, and Faculty are required.');
       return;
     }
 
@@ -72,12 +99,14 @@ export default function AdminDepartmentsPage() {
         await updateDepartment(editingDept.id, {
           name,
           code,
+          facultyId: selectedFacultyId,
           description: description || undefined
         });
       } else {
         await createDepartment({
           name,
           code,
+          facultyId: selectedFacultyId,
           description: description || undefined
         });
       }
@@ -100,7 +129,8 @@ export default function AdminDepartmentsPage() {
   const filteredDepts = departments.filter(
     (d) =>
       d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.code.toLowerCase().includes(searchTerm.toLowerCase())
+      d.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.faculty?.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -133,7 +163,7 @@ export default function AdminDepartmentsPage() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search name, code..."
+            placeholder="Search name, code, faculty..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="cb-input pl-9"
@@ -168,6 +198,13 @@ export default function AdminDepartmentsPage() {
                 <h3 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-primary transition-colors">
                   {dept.name}
                 </h3>
+                
+                {dept.faculty && (
+                  <p className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full inline-block">
+                    🏫 {dept.faculty.name}
+                  </p>
+                )}
+
                 {dept.description && (
                   <p className="text-xs text-slate-500 font-semibold line-clamp-2">
                     {dept.description}
@@ -185,7 +222,7 @@ export default function AdminDepartmentsPage() {
                 </button>
                 <button
                   onClick={() => handleDelete(dept.id)}
-                  className="p-2 border border-slate-200 hover:border-red-200 text-slate-650 hover:text-red-655 rounded-lg transition-colors cursor-pointer"
+                  className="p-2 border border-slate-200 hover:border-red-200 text-slate-655 hover:text-red-655 rounded-lg transition-colors cursor-pointer"
                   title="Delete Department"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -236,7 +273,31 @@ export default function AdminDepartmentsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4 flex-1">
                 <div className="space-y-1">
-                  <label className="block text-[9px] font-bold text-slate-450 uppercase tracking-widest">
+                  <label className="block text-[9px] font-bold text-slate-455 uppercase tracking-widest">
+                    Faculty *
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedFacultyId}
+                      onChange={(e) => setSelectedFacultyId(e.target.value)}
+                      required
+                      className="w-full cb-input appearance-none bg-white pr-8 text-xs font-semibold"
+                    >
+                      <option value="">Select Faculty...</option>
+                      {faculties.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                    {loadingFaculties && (
+                      <span className="absolute right-2.5 top-3">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[9px] font-bold text-slate-455 uppercase tracking-widest">
                     Department Name *
                   </label>
                   <input
@@ -250,7 +311,7 @@ export default function AdminDepartmentsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-[9px] font-bold text-slate-450 uppercase tracking-widest">
+                  <label className="block text-[9px] font-bold text-slate-455 uppercase tracking-widest">
                     Department Code *
                   </label>
                   <input
@@ -264,7 +325,7 @@ export default function AdminDepartmentsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-[9px] font-bold text-slate-450 uppercase tracking-widest">
+                  <label className="block text-[9px] font-bold text-slate-455 uppercase tracking-widest">
                     Description
                   </label>
                   <textarea

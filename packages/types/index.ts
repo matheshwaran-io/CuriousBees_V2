@@ -1,4 +1,4 @@
-export type UserRole = 'SCHOLAR' | 'SUPERVISOR' | 'INSTITUTE_ADMIN';
+export type UserRole = 'RESEARCH_SCHOLAR' | 'RESEARCH_SUPERVISOR' | 'INSTITUTE_ADMIN';
 
 export interface User {
   id: string;
@@ -11,6 +11,7 @@ export interface User {
   departmentId: string | null;
   departmentRef?: Department | null;
   bio: string | null;
+  onboardingCompleted: boolean;
   approved: boolean;
   status: string;
   approvedBy?: string | null;
@@ -201,11 +202,23 @@ export interface AuditLog {
   createdAt: Date | string;
 }
 
+export interface Faculty {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  departments?: Department[];
+}
+
 export interface Department {
   id: string;
   name: string;
   code: string;
   description: string | null;
+  facultyId: string | null;
+  faculty?: Faculty | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   users?: User[];

@@ -62,7 +62,7 @@ export default function OpportunitiesFeedPage() {
   });
 
   const handleOpenDrawer = () => {
-    if (roleOverride !== 'SUPERVISOR') {
+    if (roleOverride !== 'RESEARCH_SUPERVISOR') {
       alert('🔒 Access Restricted! Only verified Faculty Principal Investigators (PIs) are authorized to publish funded research opportunities. Toggle role in sandbox at sidebar bottom to test!');
       return;
     }

@@ -31,7 +31,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/workspace',
     '/notifications',
   ],
-  SUPERVISOR: [
+  RESEARCH_SUPERVISOR: [
     '/dashboard',
     '/events',
     '/threads',
@@ -44,8 +44,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/my-scholars',
     '/notifications',
     '/approval-requests',
+    '/supervisor',
   ],
-  SCHOLAR: [
+  RESEARCH_SCHOLAR: [
     '/dashboard',
     '/events',
     '/threads',
@@ -72,6 +73,9 @@ export const PUBLIC_ROUTES: string[] = [
   '/approval-pending',
   '/awaiting-supervisor-approval',
   '/account-rejected',
+  '/access-denied',
+  '/account-suspended',
+  '/not-provisioned',
 ];
 
 // ─── Core Permission Check ────────────────────────────────────────────────────

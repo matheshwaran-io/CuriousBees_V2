@@ -11,11 +11,11 @@ export class ApprovedGuard implements CanActivate {
     }
     // Admin is automatically approved.
     // Scholar and Supervisor must have approved === true and status === 'APPROVED'.
-    if (user.role === 'INSTITUTE_ADMIN') {
+    if (user.role === 'ADMIN' || user.role === 'INSTITUTE_ADMIN') {
       return true;
     }
     
-    if (user.approved && user.status === 'APPROVED') {
+    if (user.approved && (user.status === 'APPROVED' || user.status === 'ACTIVE')) {
       return true;
     }
 

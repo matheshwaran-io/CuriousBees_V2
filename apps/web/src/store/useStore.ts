@@ -22,6 +22,8 @@ interface AppState {
   roleOverride: UserRole; // Syncs to current user role
   dashboardRoute: string; // Role-based landing route
   interestsList: string[];
+  notProvisioned: boolean;
+  isSuspended: boolean;
 
   // UI states
   isLoading: boolean;
@@ -105,6 +107,17 @@ interface AppState {
   fetchAdminAuditLogs: () => Promise<AuditLog[]>;
   changeUserRole: (userId: string, role: UserRole) => Promise<User>;
 
+  // Admin User CRUD & Import Actions
+  createAdminUser: (data: { name: string; email: string; role: UserRole; departmentId?: string; supervisorId?: string }) => Promise<User>;
+  updateAdminUser: (id: string, data: { name?: string; email?: string; role?: UserRole; status?: string; departmentId?: string; supervisorId?: string }) => Promise<User>;
+  deleteAdminUser: (id: string) => Promise<void>;
+  importAdminUsers: (formData: FormData) => Promise<any>;
+
+  // Supervisor Actions (New flow)
+  fetchPendingScholars: () => Promise<User[]>;
+  supervisorApproveScholar: (scholarId: string) => Promise<User>;
+  supervisorRejectScholar: (scholarId: string) => Promise<User>;
+
   // Publications
   fetchPublications: (userId?: string) => Promise<Publication[]>;
   createPublication: (data: { title: string; authors: string; doi?: string; publisher?: string; year: number; status: string }) => Promise<Publication>;
@@ -121,8 +134,8 @@ interface AppState {
 
   // Departments
   fetchDepartments: () => Promise<Department[]>;
-  createDepartment: (data: { name: string; code: string; description?: string }) => Promise<Department>;
-  updateDepartment: (id: string, data: { name?: string; code?: string; description?: string }) => Promise<Department>;
+  createDepartment: (data: { name: string; code: string; facultyId: string; description?: string }) => Promise<Department>;
+  updateDepartment: (id: string, data: { name?: string; code?: string; facultyId?: string; description?: string }) => Promise<Department>;
   deleteDepartment: (id: string) => Promise<void>;
 
   // Role details / Supervisors / Scholars
@@ -154,9 +167,11 @@ let activeSyncPromise: Promise<User | null> | null = null;
 
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null, // Default to null for strict live login checking
-  roleOverride: 'SCHOLAR',
+  roleOverride: 'RESEARCH_SCHOLAR',
   dashboardRoute: '/dashboard',
   interestsList: MOCK_INTERESTS,
+  notProvisioned: false,
+  isSuspended: false,
 
   isLoading: false,
   showMobileSidebar: false,
@@ -189,10 +204,10 @@ export const useStore = create<AppState>((set, get) => ({
     if (user) {
       const route = getDashboardRoute(user);
       setCookie(ROLE_COOKIE_NAME, user.role);
-      set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
+      set({ currentUser: user, roleOverride: user.role, dashboardRoute: route, notProvisioned: false, isSuspended: false });
     } else {
       deleteCookie(ROLE_COOKIE_NAME);
-      set({ currentUser: null, roleOverride: 'SCHOLAR', dashboardRoute: '/dashboard' });
+      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/dashboard', notProvisioned: false, isSuspended: false });
     }
   },
   setDashboardRoute: (route) => set({ dashboardRoute: route }),
@@ -264,6 +279,20 @@ export const useStore = create<AppState>((set, get) => ({
 
         if (res.ok) {
           const data = await res.json();
+          if (data.success && data.access === false) {
+            if (data.reason === 'USER_NOT_PROVISIONED') {
+              console.warn('[AuthStore] User not provisioned, setting notProvisioned flag.');
+              deleteCookie(ROLE_COOKIE_NAME);
+              set({ currentUser: null, notProvisioned: true });
+              return null;
+            }
+            if (data.reason === 'USER_SUSPENDED') {
+              console.warn('[AuthStore] User suspended, setting isSuspended flag.');
+              deleteCookie(ROLE_COOKIE_NAME);
+              set({ currentUser: null, isSuspended: true });
+              return null;
+            }
+          }
           if (data.success && data.user) {
             const user: User = data.user;
             console.info('[AuthStore] Session sync success:', {
@@ -274,7 +303,7 @@ export const useStore = create<AppState>((set, get) => ({
             });
             const route = getDashboardRoute(user);
             setCookie(ROLE_COOKIE_NAME, user.role);
-            set({ currentUser: user, roleOverride: user.role, dashboardRoute: route });
+            set({ currentUser: user, roleOverride: user.role, dashboardRoute: route, notProvisioned: false, isSuspended: false });
             return user;
           }
           const errorMessage = 'Backend auth sync returned HTTP 200 without a user payload.';
@@ -554,7 +583,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (typeof window !== 'undefined' && window.Clerk) {
       window.Clerk.signOut().catch(() => { });
     }
-    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'SCHOLAR' });
+    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'RESEARCH_SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {
@@ -915,9 +944,15 @@ export const useStore = create<AppState>((set, get) => ({
 
   fetchAdminUsers: async () => {
     try {
-      const res = await apiFetch('/api/users/all');
+      const res = await apiFetch('/api/admin/users');
       if (res.ok) {
         const data = await res.json();
+        set({ adminUsers: data });
+        return data;
+      }
+      const fallbackRes = await apiFetch('/api/users/all');
+      if (fallbackRes.ok) {
+        const data = await fallbackRes.json();
         set({ adminUsers: data });
         return data;
       }
@@ -946,7 +981,7 @@ export const useStore = create<AppState>((set, get) => ({
   changeUserRole: async (userId: string, role: UserRole) => {
     set({ isLoading: true });
     try {
-      const res = await apiFetch(`/api/users/${userId}/role`, {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
@@ -958,7 +993,177 @@ export const useStore = create<AppState>((set, get) => ({
         }));
         return data;
       }
+      const fallbackRes = await apiFetch(`/api/users/${userId}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      if (fallbackRes.ok) {
+        const data = await fallbackRes.json();
+        set(state => ({
+          adminUsers: state.adminUsers.map(u => u.id === userId ? data : u)
+        }));
+        return data;
+      }
       throw new Error('Failed to update user role.');
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  createAdminUser: async (data) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const newUser = await res.json();
+      set((state) => ({ adminUsers: [newUser, ...state.adminUsers] }));
+      get().addToast('User provisioned successfully', 'success');
+      return newUser;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  updateAdminUser: async (id, data) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/admin/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const updatedUser = await res.json();
+      set((state) => ({
+        adminUsers: state.adminUsers.map((u) => (u.id === id ? updatedUser : u)),
+      }));
+      get().addToast('User updated successfully', 'success');
+      return updatedUser;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  deleteAdminUser: async (id) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/admin/users/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      set((state) => ({
+        adminUsers: state.adminUsers.filter((u) => u.id !== id),
+      }));
+      get().addToast('User deleted successfully', 'success');
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  importAdminUsers: async (formData) => {
+    set({ isLoading: true });
+    try {
+      const headers = await getAuthHeaders();
+      const cleanedHeaders = { ...headers };
+      delete (cleanedHeaders as any)['Content-Type'];
+
+      const res = await fetch(`${API_URL}/api/admin/users/import`, {
+        method: 'POST',
+        headers: cleanedHeaders,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        let parsedError = errorText;
+        try {
+          const json = JSON.parse(errorText);
+          parsedError = json.message || json.error || errorText;
+        } catch { }
+        throw new Error(parsedError);
+      }
+
+      const report = await res.json();
+      get().addToast(`Bulk import complete. Success: ${report.successCount}, Failed: ${report.failedCount}`, 'info');
+      return report;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchPendingScholars: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch('/api/supervisor/pending-scholars');
+      if (res.ok) {
+        const data = await res.json();
+        set({ pendingApprovals: data });
+        return data;
+      }
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  supervisorApproveScholar: async (requestId) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/supervisor/approve/${requestId}`, {
+        method: 'PUT',
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const updatedScholar = await res.json();
+      set((state) => ({
+        pendingApprovals: state.pendingApprovals.filter((s: any) => s.requestId !== requestId),
+        myScholars: [...state.myScholars, updatedScholar],
+      }));
+      get().addToast('Scholar approved successfully', 'success');
+      return updatedScholar;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  supervisorRejectScholar: async (requestId) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/supervisor/reject/${requestId}`, {
+        method: 'PUT',
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const rejectedScholar = await res.json();
+      set((state) => ({
+        pendingApprovals: state.pendingApprovals.filter((s: any) => s.requestId !== requestId),
+      }));
+      get().addToast('Scholar rejected successfully', 'info');
+      return rejectedScholar;
+    } catch (err: any) {
+      get().addToast(err.message, 'error');
+      throw err;
     } finally {
       set({ isLoading: false });
     }

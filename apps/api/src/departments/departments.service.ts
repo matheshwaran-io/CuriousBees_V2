@@ -5,12 +5,21 @@ import { PrismaService } from '../prisma/prisma.service';
 export class DepartmentsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { name: string; code: string; description?: string }) {
-    const existingName = await this.prisma.department.findUnique({
-      where: { name: data.name },
+  async create(data: { name: string; code: string; facultyId: string; description?: string }) {
+    // Check if faculty exists
+    const faculty = await this.prisma.faculty.findUnique({
+      where: { id: data.facultyId },
+    });
+    if (!faculty) {
+      throw new NotFoundException(`Faculty with ID "${data.facultyId}" not found.`);
+    }
+
+    // Name is not unique globally, but we check for duplicates in the same Faculty
+    const existingName = await this.prisma.department.findFirst({
+      where: { name: data.name, facultyId: data.facultyId },
     });
     if (existingName) {
-      throw new ConflictException('Department with this name already exists.');
+      throw new ConflictException('Department with this name already exists in this faculty.');
     }
 
     const existingCode = await this.prisma.department.findUnique({
@@ -21,13 +30,20 @@ export class DepartmentsService {
     }
 
     return this.prisma.department.create({
-      data,
+      data: {
+        name: data.name,
+        code: data.code,
+        description: data.description,
+        facultyId: data.facultyId,
+      },
     });
   }
 
-  async findAll() {
+  async findAll(facultyId?: string) {
     return this.prisma.department.findMany({
+      where: facultyId ? { facultyId } : {},
       include: {
+        faculty: true,
         _count: {
           select: { users: true },
         },
@@ -40,6 +56,7 @@ export class DepartmentsService {
     const dept = await this.prisma.department.findUnique({
       where: { id },
       include: {
+        faculty: true,
         users: {
           select: {
             id: true,
@@ -56,15 +73,28 @@ export class DepartmentsService {
     return dept;
   }
 
-  async update(id: string, data: { name?: string; code?: string; description?: string }) {
+  async update(id: string, data: { name?: string; code?: string; facultyId?: string; description?: string }) {
     await this.findOne(id);
 
-    if (data.name) {
-      const existingName = await this.prisma.department.findFirst({
-        where: { name: data.name, id: { not: id } },
+    if (data.facultyId) {
+      const faculty = await this.prisma.faculty.findUnique({
+        where: { id: data.facultyId },
       });
-      if (existingName) {
-        throw new ConflictException('Another department with this name already exists.');
+      if (!faculty) {
+        throw new NotFoundException(`Faculty with ID "${data.facultyId}" not found.`);
+      }
+    }
+
+    if (data.name) {
+      const currentDept = await this.prisma.department.findUnique({ where: { id } });
+      const targetFacultyId = data.facultyId || currentDept?.facultyId;
+      if (targetFacultyId) {
+        const existingName = await this.prisma.department.findFirst({
+          where: { name: data.name, facultyId: targetFacultyId, id: { not: id } },
+        });
+        if (existingName) {
+          throw new ConflictException('Another department with this name already exists in this faculty.');
+        }
       }
     }
 

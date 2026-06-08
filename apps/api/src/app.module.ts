@@ -19,6 +19,10 @@ import { SupervisorsModule } from './supervisors/supervisors.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { PublicationsModule } from './publications/publications.module';
 import { ReportsModule } from './reports/reports.module';
+import { AdminModule } from './admin/admin.module';
+import { FacultiesModule } from './faculties/faculties.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { SupervisorRequestsModule } from './supervisor-requests/requests.module';
 
 @Module({
   imports: [
@@ -46,6 +50,10 @@ import { ReportsModule } from './reports/reports.module';
     DepartmentsModule,
     PublicationsModule,
     ReportsModule,
+    AdminModule,
+    FacultiesModule,
+    OnboardingModule,
+    SupervisorRequestsModule,
   ],
   controllers: [AppController],
   providers: [],

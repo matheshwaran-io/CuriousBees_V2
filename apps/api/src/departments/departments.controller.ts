@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { DepartmentsService } from './departments.service';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
@@ -9,8 +9,8 @@ export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Get()
-  async findAll() {
-    return this.departmentsService.findAll();
+  async findAll(@Query('facultyId') facultyId?: string) {
+    return this.departmentsService.findAll(facultyId);
   }
 
   @Get(':id')
@@ -20,7 +20,7 @@ export class DepartmentsController {
 
   @Post()
   @UseGuards(ClerkAuthGuard, ApprovedGuard, AdminGuard)
-  async create(@Body() body: { name: string; code: string; description?: string }) {
+  async create(@Body() body: { name: string; code: string; facultyId: string; description?: string }) {
     return this.departmentsService.create(body);
   }
 
@@ -28,7 +28,7 @@ export class DepartmentsController {
   @UseGuards(ClerkAuthGuard, ApprovedGuard, AdminGuard)
   async update(
     @Param('id') id: string,
-    @Body() body: { name?: string; code?: string; description?: string }
+    @Body() body: { name?: string; code?: string; facultyId?: string; description?: string }
   ) {
     return this.departmentsService.update(id, body);
   }
