@@ -49,7 +49,7 @@ export default function WorkspacesListPage() {
                   <div className="w-9 h-9 bg-primary/5 text-primary border border-primary/10 rounded-lg flex items-center justify-center shrink-0">
                     <FolderOpen className="w-4 h-4" />
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-[#004495]/5 text-[#004495] border border-[#004495]/15 uppercase tracking-wider">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-[#0c4da2]/5 text-[#0c4da2] border border-[#0c4da2]/15 uppercase tracking-wider">
                     Active Node
                   </span>
                 </div>

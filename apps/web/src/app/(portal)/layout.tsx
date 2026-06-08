@@ -169,7 +169,7 @@ export default function PortalLayout({
                   setAuthTimedOut(false);
                   window.location.reload();
                 }}
-                className="w-full mt-2 py-2 px-4 bg-[#0d3c61] hover:bg-[#004495] text-white rounded-lg text-xs font-bold transition-all shadow cursor-pointer border border-[#0d3c61]"
+                className="w-full mt-2 py-2 px-4 bg-[#0c4da2] hover:bg-[#0c4da2] text-white rounded-lg text-xs font-bold transition-all shadow cursor-pointer border border-[#0c4da2]"
               >
                 Retry Authentication
               </button>

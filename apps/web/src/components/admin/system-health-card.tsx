@@ -32,7 +32,7 @@ export default function SystemHealthCard({
       <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-sans">
         System Health
       </h3>
-      <div className="text-2xl font-extrabold text-[#0d3c61] font-display flex items-baseline gap-1">
+      <div className="text-2xl font-extrabold text-[#0c4da2] font-display flex items-baseline gap-1">
         {health}
         <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">%</span>
       </div>

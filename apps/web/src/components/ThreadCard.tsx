@@ -80,7 +80,7 @@ export default function ThreadCard({ thread }: ThreadCardProps) {
           {/* Thread tags */}
           <div className="flex flex-wrap gap-1.5">
             {thread.tags.map((tag) => (
-              <span key={tag} className="bg-[#004495]/2 border border-[#004495]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded">
+              <span key={tag} className="bg-[#0c4da2]/2 border border-[#0c4da2]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded">
                 #{tag}
               </span>
             ))}

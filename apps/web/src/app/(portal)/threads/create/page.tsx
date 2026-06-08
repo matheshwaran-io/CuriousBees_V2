@@ -164,7 +164,7 @@ export default function CreateThreadPage() {
                 {tags.map((tag) => (
                   <span 
                     key={tag}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#004495]/2 border border-[#004495]/10 text-primary uppercase tracking-wider"
+                    className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#0c4da2]/2 border border-[#0c4da2]/10 text-primary uppercase tracking-wider"
                   >
                     <span>#{tag}</span>
                     <button 
@@ -214,7 +214,7 @@ export default function CreateThreadPage() {
                   </h2>
                   <div className="flex flex-wrap gap-1.5">
                     {tags.map(tag => (
-                      <span key={tag} className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-[#004495]/2 border border-[#004495]/10 text-primary">
+                      <span key={tag} className="px-2 py-0.5 rounded text-[8px] font-bold uppercase bg-[#0c4da2]/2 border border-[#0c4da2]/10 text-primary">
                         #{tag}
                       </span>
                     ))}

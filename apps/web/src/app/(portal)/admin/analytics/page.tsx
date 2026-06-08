@@ -29,7 +29,7 @@ const WORKSPACE_DATA = [
   { name: 'Delayed', value: 5 }
 ];
 
-const COLORS = ['#10b981', '#004495', '#ef4444'];
+const COLORS = ['#10b981', '#0c4da2', '#ef4444'];
 
 export default function AdminAnalyticsPage() {
   const router = useRouter();
@@ -74,7 +74,7 @@ export default function AdminAnalyticsPage() {
         <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Accounts</p>
-            <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">
+            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">
               {adminUsers.length}
             </h4>
           </div>
@@ -87,7 +87,7 @@ export default function AdminAnalyticsPage() {
         <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Supervisors</p>
-            <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">
+            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">
               {adminUsers.filter((u) => u.role === 'RESEARCH_SUPERVISOR').length}
             </h4>
           </div>
@@ -100,7 +100,7 @@ export default function AdminAnalyticsPage() {
         <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
           <div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Projects</p>
-            <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">57</h4>
+            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">57</h4>
           </div>
           <div className="w-10 h-10 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg flex items-center justify-center shrink-0">
             <FolderOpen className="w-5 h-5" />
@@ -134,15 +134,15 @@ export default function AdminAnalyticsPage() {
               <AreaChart data={SIGNUP_DATA} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorScholars" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#004495" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#004495" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0c4da2" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#0c4da2" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                 <Tooltip />
-                <Area type="monotone" dataKey="Scholars" stroke="#004495" strokeWidth={2} fillOpacity={1} fill="url(#colorScholars)" />
+                <Area type="monotone" dataKey="Scholars" stroke="#0c4da2" strokeWidth={2} fillOpacity={1} fill="url(#colorScholars)" />
                 <Area type="monotone" dataKey="Supervisors" stroke="#f59e0b" strokeWidth={2} fill="none" />
               </AreaChart>
             </ResponsiveContainer>
@@ -162,7 +162,7 @@ export default function AdminAnalyticsPage() {
                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                 <Tooltip />
-                <Bar dataKey="Publications" fill="#004495" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Publications" fill="#0c4da2" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Workspaces" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

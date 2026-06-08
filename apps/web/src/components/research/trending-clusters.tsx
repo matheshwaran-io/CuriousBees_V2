@@ -19,7 +19,7 @@ export default function TrendingClusters({
 }: TrendingClustersProps) {
   return (
     <section className="bg-white border border-borderStroke rounded-xl p-5 shadow-sm text-left">
-      <h3 className="text-sm font-bold text-[#0d3c61] mb-2 flex items-center gap-2 font-display select-none">
+      <h3 className="text-sm font-bold text-[#0c4da2] mb-2 flex items-center gap-2 font-display select-none">
         <Network className="w-4.5 h-4.5 text-primary shrink-0" />
         <span>Trending Clusters</span>
       </h3>

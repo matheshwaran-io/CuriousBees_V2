@@ -21,7 +21,7 @@ export default function Logo({
     theme === 'light' 
       ? '#111827' 
       : theme === 'dark' 
-        ? '#fbf8ff' 
+        ? '#e6e6fa' 
         : 'currentColor';
 
   return (
@@ -53,7 +53,7 @@ export default function Logo({
         {/* Bold "C" wrapping the left */}
         <path 
           d="M240 100H180C120 100 80 150 80 200C80 250 120 300 180 300H240" 
-          stroke="#004495" /* Stitch primary blue */
+          stroke="#0c4da2" /* Stitch primary blue */
           strokeWidth="20" 
           strokeLinecap="round"
         />
@@ -61,7 +61,7 @@ export default function Logo({
         {/* Bold "B" integrated on the right */}
         <path 
           d="M200 100H260C300 100 320 125 320 160C320 195 300 220 260 220H200M260 220C310 220 330 245 330 280C330 315 310 340 260 340H200" 
-          stroke="#004495" 
+          stroke="#0c4da2" 
           strokeWidth="20" 
           strokeLinecap="round" 
           strokeLinejoin="round"

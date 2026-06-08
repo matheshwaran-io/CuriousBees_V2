@@ -70,7 +70,7 @@ export default function PipelineStats() {
             </div>
           </div>
           <div className="flex items-baseline mt-2">
-            <span className="text-2xl font-extrabold text-[#0d3c61] font-display">{stat.value}</span>
+            <span className="text-2xl font-extrabold text-[#0c4da2] font-display">{stat.value}</span>
           </div>
           <p className="text-[10px] text-slate-500 font-medium mt-1">{stat.label}</p>
         </div>

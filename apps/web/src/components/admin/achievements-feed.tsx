@@ -43,7 +43,7 @@ export default function AchievementsFeed({
   return (
     <div className="cb-card md:col-span-2 lg:col-span-2 flex flex-col select-none text-left bg-white/90 backdrop-blur-md">
       <div className="p-5 border-b border-slate-100">
-        <h3 className="text-sm font-bold text-[#0d3c61] font-display">Recent Achievements</h3>
+        <h3 className="text-sm font-bold text-[#0c4da2] font-display">Recent Achievements</h3>
       </div>
       
       <div className="flex-1 p-5 space-y-4">

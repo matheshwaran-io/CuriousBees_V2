@@ -195,7 +195,7 @@ export default function SupervisorDashboardPage() {
                       </button>
                       <button
                         onClick={() => handleApprove(scholar.requestId)}
-                        className="flex-1 py-2 bg-primary hover:bg-[#004495] border border-primary hover:border-[#004495] text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-primary/10"
+                        className="flex-1 py-2 bg-primary hover:bg-[#0c4da2] border border-primary hover:border-[#0c4da2] text-white rounded-xl text-[10px] font-bold uppercase cursor-pointer transition-all flex items-center justify-center gap-1 shadow-md shadow-primary/10"
                       >
                         <Check className="w-3.5 h-3.5" />
                         <span>Approve Scholar</span>

@@ -79,7 +79,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
   const getRoleBadge = (role: string) => {
     return role === 'RESEARCH_SUPERVISOR' 
       ? 'bg-[#ba1a1a]/5 text-[#ba1a1a] border-[#ba1a1a]/15'
-      : 'bg-[#004495]/5 text-[#004495] border-[#004495]/15';
+      : 'bg-[#0c4da2]/5 text-[#0c4da2] border-[#0c4da2]/15';
   };
 
   return (
@@ -185,7 +185,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
           {thread.tags.map((tag) => (
             <span 
               key={tag}
-              className="bg-[#004495]/2 border border-[#004495]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded"
+              className="bg-[#0c4da2]/2 border border-[#0c4da2]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded"
             >
               #{tag}
             </span>
@@ -195,7 +195,7 @@ export default function ThreadDetailPage({ params }: ThreadDetailPageProps) {
 
       {/* 3. Comments conversation tree Section */}
       <section className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-[#0d3c61] flex items-center space-x-2 border-b border-slate-100 pb-2 font-display">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-[#0c4da2] flex items-center space-x-2 border-b border-slate-100 pb-2 font-display">
           <MessageSquare className="w-4 h-4 text-primary" />
           <span>Discussion Thread ({thread.comments?.length || 0})</span>
         </h3>

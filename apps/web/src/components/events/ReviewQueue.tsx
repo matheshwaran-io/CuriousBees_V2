@@ -61,7 +61,7 @@ export default function ReviewQueue({ onEventClick }: { onEventClick: (event: Pr
     <div className="cb-card p-6 overflow-hidden bg-white/90 backdrop-blur-md">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h3 className="text-sm font-bold text-[#0d3c61] flex items-center gap-2 font-display">
+          <h3 className="text-sm font-bold text-[#0c4da2] flex items-center gap-2 font-display">
             <AlertCircle className="w-4 h-4 text-secondary shrink-0" />
             <span>AI Moderation Queue</span>
           </h3>

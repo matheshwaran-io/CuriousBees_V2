@@ -74,7 +74,7 @@ export default function MyScholarsPage() {
                     <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
                     <div>
                       <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wide">Publications</span>
-                      <span className="text-xs font-extrabold text-[#0d3c61]">
+                      <span className="text-xs font-extrabold text-[#0c4da2]">
                         {scholar.publications?.length || 0}
                       </span>
                     </div>
@@ -83,7 +83,7 @@ export default function MyScholarsPage() {
                     <FileText className="w-4 h-4 text-slate-400 shrink-0" />
                     <div>
                       <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-wide">Reports</span>
-                      <span className="text-xs font-extrabold text-[#0d3c61]">
+                      <span className="text-xs font-extrabold text-[#0c4da2]">
                         {scholar.submittedReports?.length || 0}
                       </span>
                     </div>

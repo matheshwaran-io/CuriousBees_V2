@@ -244,7 +244,7 @@ export default function PublicationsPage() {
                 <div className="flex items-center space-x-2.5">
                   <BookOpen className="w-5 h-5 text-primary" />
                   <div>
-                    <h3 className="font-display font-bold text-sm text-[#0d3c61]">
+                    <h3 className="font-display font-bold text-sm text-[#0c4da2]">
                       {editingPub ? 'Edit Publication' : 'Add New Publication'}
                     </h3>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">

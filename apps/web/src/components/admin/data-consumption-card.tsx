@@ -27,7 +27,7 @@ export default function DataConsumptionCard({
       <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-sans">
         Data Consumption
       </h3>
-      <div className="text-2xl font-extrabold text-[#0d3c61] font-display flex items-baseline gap-1">
+      <div className="text-2xl font-extrabold text-[#0c4da2] font-display flex items-baseline gap-1">
         {used}{' '}
         <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider ml-1">{unit}</span>
       </div>

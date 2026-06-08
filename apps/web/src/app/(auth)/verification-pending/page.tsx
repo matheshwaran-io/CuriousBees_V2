@@ -93,7 +93,7 @@ export default function VerificationPendingPage() {
 
             {!isSupervisorPending && currentUser?.supervisorEmail && (
               <div className="p-3.5 rounded-lg bg-slate-50 border border-borderStroke/50 flex items-center space-x-3 text-left w-full">
-                <div className="w-9 h-9 rounded-full bg-[#0d3c61]/10 text-[#0d3c61] flex items-center justify-center font-bold text-sm shrink-0 border border-[#0d3c61]/25">
+                <div className="w-9 h-9 rounded-full bg-[#0c4da2]/10 text-[#0c4da2] flex items-center justify-center font-bold text-sm shrink-0 border border-[#0c4da2]/25">
                   {currentUser.supervisorEmail.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">

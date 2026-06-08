@@ -494,7 +494,7 @@ export default function OnboardingPage() {
                 (role === 'SUPERVISOR' && (!designation || !employeeId)) ||
                 (role === 'SCHOLAR' && (!researchArea || !selectedSupervisorId))
               }
-              className="w-full py-3 flex items-center justify-center bg-primary hover:bg-[#004495]/95 text-white font-bold text-xs rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99] shadow"
+              className="w-full py-3 flex items-center justify-center bg-primary hover:bg-[#0c4da2]/95 text-white font-bold text-xs rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99] shadow"
             >
               {isSubmitting ? (
                 <>

@@ -48,7 +48,7 @@ export default function CollaborationMatching({
   return (
     <section className="bg-white border border-borderStroke rounded-xl p-5 shadow-sm text-left w-full select-none">
       <div className="flex justify-between items-center mb-5">
-        <h3 className="text-sm font-bold text-[#0d3c61] flex items-center gap-2 font-display">
+        <h3 className="text-sm font-bold text-[#0c4da2] flex items-center gap-2 font-display">
           <Network className="w-4.5 h-4.5 text-primary shrink-0" />
           <span>Collaboration Matching</span>
         </h3>

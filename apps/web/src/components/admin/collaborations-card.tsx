@@ -24,7 +24,7 @@ export default function CollaborationsCard({
       <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 relative z-10 font-sans">
         Active Collaborations
       </h3>
-      <div className="text-2xl font-extrabold text-[#0d3c61] relative z-10 font-display">
+      <div className="text-2xl font-extrabold text-[#0c4da2] relative z-10 font-display">
         {count}
       </div>
       
@@ -33,10 +33,10 @@ export default function CollaborationsCard({
         <div className="relative w-full h-full">
           {/* SVG connecting lines */}
           <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-            <line stroke="#004495" strokeOpacity="0.2" strokeWidth="1.5" x1="10%" x2="50%" y1="50%" y2="20%"></line>
-            <line stroke="#004495" strokeOpacity="0.2" strokeWidth="1.5" x1="10%" x2="50%" y1="50%" y2="80%"></line>
-            <line stroke="#004495" strokeOpacity="0.2" strokeWidth="1.5" x1="50%" x2="90%" y1="20%" y2="50%"></line>
-            <line stroke="#004495" strokeOpacity="0.2" strokeWidth="1.5" x1="50%" x2="90%" y1="80%" y2="50%"></line>
+            <line stroke="#0c4da2" strokeOpacity="0.2" strokeWidth="1.5" x1="10%" x2="50%" y1="50%" y2="20%"></line>
+            <line stroke="#0c4da2" strokeOpacity="0.2" strokeWidth="1.5" x1="10%" x2="50%" y1="50%" y2="80%"></line>
+            <line stroke="#0c4da2" strokeOpacity="0.2" strokeWidth="1.5" x1="50%" x2="90%" y1="20%" y2="50%"></line>
+            <line stroke="#0c4da2" strokeOpacity="0.2" strokeWidth="1.5" x1="50%" x2="90%" y1="80%" y2="50%"></line>
           </svg>
           {/* Node Circles */}
           <div className="absolute top-[50%] left-[10%] w-1.5 h-1.5 bg-primary rounded-full -translate-x-1/2 -translate-y-1/2 shadow-sm" />

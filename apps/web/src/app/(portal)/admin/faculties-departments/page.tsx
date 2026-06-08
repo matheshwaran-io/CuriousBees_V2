@@ -262,7 +262,7 @@ export default function AdminFacultiesDepartmentsPage() {
                 <div className="flex items-center space-x-2.5">
                   {drawerType === 'FACULTY' ? <Building className="w-5 h-5 text-primary" /> : <Building2 className="w-5 h-5 text-primary" />}
                   <div>
-                    <h3 className="font-display font-bold text-sm text-[#0d3c61]">
+                    <h3 className="font-display font-bold text-sm text-[#0c4da2]">
                       {editingItem ? `Edit ${drawerType === 'FACULTY' ? 'Faculty' : 'Department'}` : `Create ${drawerType === 'FACULTY' ? 'Faculty' : 'Department'}`}
                     </h3>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">Academic Intranet Registry</p>

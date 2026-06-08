@@ -39,7 +39,7 @@ export default function UpcomingDeadlines({
 }: UpcomingDeadlinesProps) {
   return (
     <section className="bg-white border border-borderStroke rounded-xl p-5 shadow-sm text-left">
-      <h3 className="text-sm font-bold text-[#0d3c61] mb-5 flex items-center gap-2 font-display select-none">
+      <h3 className="text-sm font-bold text-[#0c4da2] mb-5 flex items-center gap-2 font-display select-none">
         <CalendarDays className="w-4.5 h-4.5 text-primary shrink-0" />
         <span>Upcoming Deadlines</span>
       </h3>

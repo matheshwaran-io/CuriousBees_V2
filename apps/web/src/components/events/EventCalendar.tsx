@@ -37,7 +37,7 @@ export default function EventCalendar({ onEventClick }: { onEventClick: (event: 
     if (e.status === 'PUBLISHED') {
       backgroundColor = 'rgba(0, 68, 149, 0.05)';
       borderColor = 'rgba(0, 68, 149, 0.15)';
-      textColor = '#004495';
+      textColor = '#0c4da2';
     } else if (e.status === 'REVIEW_REQUIRED') {
       backgroundColor = 'rgba(138, 89, 0, 0.05)';
       borderColor = 'rgba(138, 89, 0, 0.15)';

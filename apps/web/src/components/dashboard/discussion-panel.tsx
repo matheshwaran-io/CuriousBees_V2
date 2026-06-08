@@ -22,8 +22,8 @@ export default function DiscussionPanel({ threads }: DiscussionPanelProps) {
       tag: 'Cross-Department',
       replies: 4,
       activity: 'Active 2h ago',
-      borderClass: 'border-l-[#004495]',
-      tagBgClass: 'bg-[#004495]/5 text-[#004495] border-[#004495]/15'
+      borderClass: 'border-l-[#0c4da2]',
+      tagBgClass: 'bg-[#0c4da2]/5 text-[#0c4da2] border-[#0c4da2]/15'
     },
     {
       id: 'stitch-thread-2',
@@ -53,8 +53,8 @@ export default function DiscussionPanel({ threads }: DiscussionPanelProps) {
         let borderClass = 'border-l-slate-300';
         let tagBgClass = 'bg-slate-100 text-slate-600 border-slate-200';
         if (idx === 0) {
-          borderClass = 'border-l-[#004495]';
-          tagBgClass = 'bg-[#004495]/5 text-[#004495] border-[#004495]/15';
+          borderClass = 'border-l-[#0c4da2]';
+          tagBgClass = 'bg-[#0c4da2]/5 text-[#0c4da2] border-[#0c4da2]/15';
         } else if (idx === 1) {
           borderClass = 'border-l-[#775a00]';
           tagBgClass = 'bg-[#775a00]/5 text-[#775a00] border-[#775a00]/15';
@@ -98,7 +98,7 @@ export default function DiscussionPanel({ threads }: DiscussionPanelProps) {
   return (
     <section className="cb-card p-5 h-full flex flex-col select-none text-left bg-white/90 backdrop-blur-md">
       <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-        <h3 className="text-sm font-bold text-[#0d3c61] flex items-center gap-2 font-display">
+        <h3 className="text-sm font-bold text-[#0c4da2] flex items-center gap-2 font-display">
           <MessageSquare className="w-4 h-4 text-primary shrink-0" />
           <span>Ecosystem Discussions</span>
         </h3>
@@ -155,7 +155,7 @@ export default function DiscussionPanel({ threads }: DiscussionPanelProps) {
       </motion.div>
 
       <Link href="/threads" className="mt-4 block">
-        <button className="group w-full py-2.5 border border-slate-200 hover:border-primary/30 rounded-lg text-[11px] font-bold uppercase tracking-wider text-slate-700 hover:text-primary hover:bg-[#004495]/2 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]">
+        <button className="group w-full py-2.5 border border-slate-200 hover:border-primary/30 rounded-lg text-[11px] font-bold uppercase tracking-wider text-slate-700 hover:text-primary hover:bg-[#0c4da2]/2 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]">
           <span>Explore All Discussions</span>
           <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
         </button>

@@ -38,7 +38,7 @@
 
 @layer base {
   :root {
-    --background: 255 100% 99%; /* #fbf8ff */
+    --background: 240 67% 94%; /* #E6E6FA */
     --foreground: 231 24% 13%; /* #191b29 */
 
     --card: 0 0% 100%; /* #ffffff */
@@ -47,24 +47,24 @@
     --popover: 0 0% 100%;
     --popover-foreground: 231 24% 13%;
 
-    --primary: 213 100% 29%; /* #004495 */
+    --primary: 214 86% 34%; /* #0C4DA2 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 100% 23%; /* #775a00 */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 45 100% 58%; /* #FFC828 */
+    --secondary-foreground: 0 0% 0%;
 
-    --muted: 250 100% 98%; /* #f4f2ff */
+    --muted: 240 67% 96%; /* Lighter E6E6FA */
     --muted-foreground: 230 12% 29%; /* #424654 */
 
-    --accent: 49 98% 57%; /* #fec727 */
-    --accent-foreground: 45 100% 23%;
+    --accent: 43 92% 38%; /* #B88608 */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 75% 42%; /* #ba1a1a */
     --destructive-foreground: 0 0% 100%;
 
     --border: 230 18% 80%; /* #c3c6d6 */
     --input: 230 18% 80%;
-    --ring: 213 100% 29%;
+    --ring: 214 86% 34%;
 
     --radius: 8px;
 
@@ -74,7 +74,7 @@
   }
 
   .dark {
-    --background: 255 100% 99%;
+    --background: 240 67% 94%;
     --foreground: 231 24% 13%;
 
     --card: 0 0% 100%;
@@ -83,29 +83,29 @@
     --popover: 0 0% 100%;
     --popover-foreground: 231 24% 13%;
 
-    --primary: 213 100% 29%;
+    --primary: 214 86% 34%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 100% 23%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 45 100% 58%;
+    --secondary-foreground: 0 0% 0%;
 
-    --muted: 250 100% 98%;
+    --muted: 240 67% 96%;
     --muted-foreground: 230 12% 29%;
 
-    --accent: 49 98% 57%;
-    --accent-foreground: 45 100% 23%;
+    --accent: 43 92% 38%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 75% 42%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 230 18% 80%;
     --input: 230 18% 80%;
-    --ring: 213 100% 29%;
+    --ring: 214 86% 34%;
   }
 }
 
 body {
-  background-color: #fbf8ff;
+  background-color: #e6e6fa;
   color: #191b29;
   font-family: var(--font-sans);
   font-size: 16px;
@@ -140,15 +140,15 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Honeycomb and Hexagon backgrounds from Stitch */
 .honeycomb-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 10v20L20 40 0 30V10z' fill='none' stroke='%23004495' stroke-width='1' stroke-opacity='0.05'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0l20 10v20L20 40 0 30V10z' fill='none' stroke='%230c4da2' stroke-width='1' stroke-opacity='0.05'/%3E%3C/svg%3E");
 }
 
 .bg-honeycomb {
-  background-image: url("data:image/svg+xml,%3Csvg width='24' height='40' viewBox='0 0 24 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40c5.523 0 10-4.477 10-10V10C10 4.477 5.523 0 0 0h24c-5.523 0-10 4.477-10 10v20c0 5.523 5.523 10 10 10H0z' fill='%23004495' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='24' height='40' viewBox='0 0 24 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40c5.523 0 10-4.477 10-10V10C10 4.477 5.523 0 0 0h24c-5.523 0-10 4.477-10 10v20c0 5.523 5.523 10 10 10H0z' fill='%230c4da2' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 .honeycomb-bg {
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 3.3333l16.6667 9.6225v19.245L20 41.8233 3.3333 32.2008V12.9558L20 3.3333zm0 2.3094l-14.6667 8.468v16.936L20 39.5147l14.6667-8.468v-16.936L20 5.6427z' fill='%23004495' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 3.3333l16.6667 9.6225v19.245L20 41.8233 3.3333 32.2008V12.9558L20 3.3333zm0 2.3094l-14.6667 8.468v16.936L20 39.5147l14.6667-8.468v-16.936L20 5.6427z' fill='%230c4da2' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
   background-attachment: fixed;
 }
 
@@ -190,7 +190,7 @@ h1, h2, h3, h4, h5, h6 {
 .academic-input:focus {
   outline: none;
   box-shadow: none;
-  border-bottom: 2px solid #004495;
+  border-bottom: 2px solid #0c4da2;
 }
 
 .input-underline {
@@ -204,7 +204,7 @@ h1, h2, h3, h4, h5, h6 {
 .input-underline:focus {
   outline: none !important;
   box-shadow: none !important;
-  border-bottom: 2px solid var(--primary, #004495) !important;
+  border-bottom: 2px solid var(--primary, #0c4da2) !important;
 }
 .input-underline:disabled {
   color: var(--outline, #737785) !important;
@@ -221,7 +221,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .glass-premium-hover:hover {
-  border-color: #004495 !important;
+  border-color: #0c4da2 !important;
   background: #ffffff !important;
   box-shadow: none !important;
 }
@@ -459,7 +459,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Dynamic Honeycomb stroke background matching Stitch specs */
 .bg-honeycomb-stroke {
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 3.33333L36.6667 13.3333V33.3333L20 43.3333L3.33333 33.3333V13.3333L20 3.33333Z' stroke='%23004495' stroke-width='0.5' fill='none' fill-rule='evenodd' opacity='0.05'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 3.33333L36.6667 13.3333V33.3333L20 43.3333L3.33333 33.3333V13.3333L20 3.33333Z' stroke='%230c4da2' stroke-width='0.5' fill='none' fill-rule='evenodd' opacity='0.05'/%3E%3C/svg%3E");
 }
 
 @keyframes indeterminate-progress {
@@ -500,8 +500,8 @@ h1, h2, h3, h4, h5, h6 {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .cb-card-hover:hover {
-    border-color: rgba(0, 68, 149, 0.25);
-    box-shadow: 0 12px 24px -10px rgba(0, 68, 149, 0.06), 0 4px 16px 0 rgba(0, 0, 0, 0.02);
+    border-color: rgba(12, 77, 162, 0.25);
+    box-shadow: 0 12px 24px -10px rgba(12, 77, 162, 0.06), 0 4px 16px 0 rgba(0, 0, 0, 0.02);
     transform: translateY(-1.5px);
   }
 
@@ -521,7 +521,7 @@ h1, h2, h3, h4, h5, h6 {
     font-size: clamp(1.5rem, 3vw, 2.125rem);
     font-weight: 700;
     letter-spacing: -0.03em;
-    color: #0d3c61;
+    color: #0c4da2;
     line-height: 1.15;
   }
   .cb-page-subtitle {
@@ -536,14 +536,14 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: #0d3c61;
+    color: #0c4da2;
   }
   .cb-metric-value {
     font-family: var(--font-display);
     font-size: 2.25rem;
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: #0d3c61;
+    color: #0c4da2;
     line-height: 1;
   }
   .cb-metric-label {
@@ -624,7 +624,7 @@ h1, h2, h3, h4, h5, h6 {
     text-transform: uppercase; 
     letter-spacing: 0.08em; 
     color: #737785; 
-    background: #fbf8ff; 
+    background: #e6e6fa; 
     border-bottom: 1px solid rgba(195, 198, 214, 0.35);
   }
   .cb-table-row { 
@@ -632,7 +632,7 @@ h1, h2, h3, h4, h5, h6 {
     transition: background 0.2s ease; 
   }
   .cb-table-row:hover { 
-    background: rgba(0, 68, 149, 0.02); 
+    background: rgba(12, 77, 162, 0.02); 
   }
   .cb-table-cell { 
     padding: 14px 16px; 
@@ -642,7 +642,7 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Focus ring */
   .cb-focus { outline: none; }
-  .cb-focus:focus-visible { box-shadow: 0 0 0 2px #fbf8ff, 0 0 0 4px rgba(0,68,149,0.4); border-radius: 6px; }
+  .cb-focus:focus-visible { box-shadow: 0 0 0 2px #e6e6fa, 0 0 0 4px rgba(12,77,162,0.4); border-radius: 6px; }
 
   /* Premium Form Input (Stripe inspired) */
   .cb-input {
@@ -659,11 +659,11 @@ h1, h2, h3, h4, h5, h6 {
   }
   .cb-input:focus {
     outline: none;
-    border-color: #004495;
-    box-shadow: 0 0 0 3px rgba(0, 68, 149, 0.12), 0 1px 2px rgba(0, 0, 0, 0.02);
+    border-color: #0c4da2;
+    box-shadow: 0 0 0 3px rgba(12, 77, 162, 0.12), 0 1px 2px rgba(0, 0, 0, 0.02);
   }
   .cb-input:disabled {
-    background: #fbf8ff;
+    background: #e6e6fa;
     color: #737785;
     cursor: not-allowed;
   }

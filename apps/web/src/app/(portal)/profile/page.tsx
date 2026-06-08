@@ -337,7 +337,7 @@ export default function ProfilePage() {
                 
                 {/* Network Graph Simulator Box */}
                 <div className="flex-grow min-h-[200px] bg-slate-50/50 rounded-xl border border-slate-200/60 relative overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#004495 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }}></div>
+                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#0c4da2 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }}></div>
                   
                   {/* Center Node (Self) */}
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12.5 h-12.5 bg-primary text-white rounded-full flex flex-col items-center justify-center shadow-md z-10 border border-primary/20">

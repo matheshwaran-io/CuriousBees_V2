@@ -182,7 +182,7 @@ export default function OpportunitiesFeedPage() {
                       <GraduationCap className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-display font-bold text-sm text-[#0d3c61] leading-none">Publish Research Slot</h3>
+                      <h3 className="font-display font-bold text-sm text-[#0c4da2] leading-none">Publish Research Slot</h3>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Exclusive Faculty Intranet Hub</p>
                     </div>
                   </div>

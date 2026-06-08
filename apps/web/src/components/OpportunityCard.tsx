@@ -46,7 +46,7 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
           
           {/* Domain and type tags */}
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="bg-[#004495]/2 border border-[#004495]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+            <span className="bg-[#0c4da2]/2 border border-[#0c4da2]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
               {opportunity.researchDomain || 'Research'}
             </span>
             <span className="bg-[#775a00]/5 border border-[#775a00]/10 text-secondary text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">

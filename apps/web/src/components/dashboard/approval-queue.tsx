@@ -79,7 +79,7 @@ export default function ApprovalQueue({
     <>
       <section className="bg-white border border-borderStroke rounded-xl overflow-hidden shadow-sm select-none text-left w-full">
         <div className="border-b border-borderStroke p-4 bg-slate-50/50 flex justify-between items-center">
-          <h3 className="text-sm font-bold text-[#0d3c61] flex items-center gap-2 font-display">
+          <h3 className="text-sm font-bold text-[#0c4da2] flex items-center gap-2 font-display">
             <Clock className="w-4.5 h-4.5 text-[#ba1a1a] shrink-0" />
             <span>Pending Approvals Queue</span>
           </h3>
@@ -125,7 +125,7 @@ export default function ApprovalQueue({
                 </button>
                 <button
                   onClick={() => onApproveScholar(scholar.id)}
-                  className="bg-primary text-white font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg hover:bg-[#004495]/95 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                  className="bg-primary text-white font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg hover:bg-[#0c4da2]/95 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Approve</span>
@@ -183,7 +183,7 @@ export default function ApprovalQueue({
                 </button>
                 <button
                   onClick={() => onAcceptCollaboration(req.id)}
-                  className="bg-primary text-white font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg hover:bg-[#004495]/95 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                  className="bg-primary text-white font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg hover:bg-[#0c4da2]/95 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Accept</span>
@@ -215,7 +215,7 @@ export default function ApprovalQueue({
               {/* Header */}
               <div className="p-5 border-b border-borderStroke bg-slate-50/50 flex justify-between items-start">
                 <div className="text-left">
-                  <h3 className="text-sm font-bold text-[#0d3c61] font-display">
+                  <h3 className="text-sm font-bold text-[#0c4da2] font-display">
                     {selectedItem.type === 'SCHOLAR'
                       ? 'Review Scholar Request'
                       : 'Review Synergy Proposal'}
@@ -313,7 +313,7 @@ export default function ApprovalQueue({
                         onApproveScholar(selectedItem.scholar.id);
                         setSelectedItem(null);
                       }}
-                      className="bg-primary text-white font-bold text-xs py-2 px-4 rounded-lg hover:bg-[#004495]/95 transition-colors cursor-pointer shadow-sm"
+                      className="bg-primary text-white font-bold text-xs py-2 px-4 rounded-lg hover:bg-[#0c4da2]/95 transition-colors cursor-pointer shadow-sm"
                     >
                       Approve Scholar
                     </button>
@@ -344,7 +344,7 @@ export default function ApprovalQueue({
                         }
                         setSelectedItem(null);
                       }}
-                      className="bg-primary text-white font-bold text-xs py-2 px-4 rounded-lg hover:bg-[#004495]/95 transition-colors cursor-pointer shadow-sm"
+                      className="bg-primary text-white font-bold text-xs py-2 px-4 rounded-lg hover:bg-[#0c4da2]/95 transition-colors cursor-pointer shadow-sm"
                     >
                       Accept Proposal
                     </button>

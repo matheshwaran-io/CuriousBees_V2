@@ -104,9 +104,9 @@ export function LineChartCard({
             type="monotone"
             dataKey={line.key}
             name={line.label}
-            stroke={line.color ?? '#004495'}
+            stroke={line.color ?? '#0c4da2'}
             strokeWidth={2}
-            dot={{ r: 3, fill: line.color ?? '#004495' }}
+            dot={{ r: 3, fill: line.color ?? '#0c4da2' }}
             activeDot={{ r: 5 }}
           />
         ))}
@@ -142,8 +142,8 @@ export function AreaChartCard({
         <defs>
           {areas.map((area) => (
             <linearGradient key={area.key} id={`grad-${area.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={area.color ?? '#004495'} stopOpacity={0.15} />
-              <stop offset="95%" stopColor={area.color ?? '#004495'} stopOpacity={0.01} />
+              <stop offset="5%" stopColor={area.color ?? '#0c4da2'} stopOpacity={0.15} />
+              <stop offset="95%" stopColor={area.color ?? '#0c4da2'} stopOpacity={0.01} />
             </linearGradient>
           ))}
         </defs>
@@ -158,7 +158,7 @@ export function AreaChartCard({
             type="monotone"
             dataKey={area.key}
             name={area.label}
-            stroke={area.color ?? '#004495'}
+            stroke={area.color ?? '#0c4da2'}
             strokeWidth={2}
             fill={`url(#grad-${area.key})`}
           />
@@ -202,7 +202,7 @@ export function BarChartCard({
             key={bar.key}
             dataKey={bar.key}
             name={bar.label}
-            fill={bar.color ?? '#004495'}
+            fill={bar.color ?? '#0c4da2'}
             radius={[4, 4, 0, 0]}
           />
         ))}

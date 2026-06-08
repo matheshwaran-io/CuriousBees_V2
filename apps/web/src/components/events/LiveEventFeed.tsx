@@ -48,7 +48,7 @@ export default function LiveEventFeed({ onEventClick }: { onEventClick: (event: 
   return (
     <div className="cb-card p-4 flex flex-col h-[650px] bg-white/90 backdrop-blur-md">
       <div className="flex items-center justify-between mb-4 px-2">
-        <h3 className="text-sm font-bold text-[#0d3c61] flex items-center gap-2 font-display">
+        <h3 className="text-sm font-bold text-[#0c4da2] flex items-center gap-2 font-display">
           <Zap className="w-4 h-4 text-secondary shrink-0" />
           <span>Live Ingestion</span>
         </h3>

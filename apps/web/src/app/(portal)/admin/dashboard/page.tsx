@@ -150,7 +150,7 @@ export default function AdminPage() {
         <div className="cb-card p-5 flex items-center justify-between bg-white/90 backdrop-blur-md">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Members</p>
-            <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">{adminUsers.length}</h4>
+            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">{adminUsers.length}</h4>
           </div>
           <div className="w-9 h-9 bg-primary/5 text-primary border border-primary/10 rounded-lg flex items-center justify-center shrink-0">
             <Users className="w-4.5 h-4.5" />
@@ -160,7 +160,7 @@ export default function AdminPage() {
         <div className="cb-card p-5 flex items-center justify-between bg-white/90 backdrop-blur-md">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Faculty Supervisors</p>
-            <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">
+            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">
               {adminUsers.filter(u => u.role === 'RESEARCH_SUPERVISOR').length}
             </h4>
           </div>
@@ -172,7 +172,7 @@ export default function AdminPage() {
         <div className="cb-card p-5 flex items-center justify-between bg-white/90 backdrop-blur-md">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Audit Operations Logged</p>
-            <h4 className="text-2xl font-extrabold text-[#0d3c61] mt-1 font-display leading-none">{adminAuditLogs.length}</h4>
+            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">{adminAuditLogs.length}</h4>
           </div>
           <div className="w-9 h-9 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg flex items-center justify-center shrink-0">
             <History className="w-4.5 h-4.5" />
@@ -373,7 +373,7 @@ export default function AdminPage() {
         {/* ─── SUPERVISOR APPROVALS TAB ─── */}
         {activeTab === 'supervisors' && (
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-[#0d3c61] uppercase tracking-wider font-display">Pending Faculty Guides</h3>
+            <h3 className="text-xs font-bold text-[#0c4da2] uppercase tracking-wider font-display">Pending Faculty Guides</h3>
             
             {isLoading && adminUsers.length === 0 ? (
               <div className="py-12 flex justify-center">
@@ -440,7 +440,7 @@ export default function AdminPage() {
         {/* ─── AUDIT LOGS TAB ─── */}
         {activeTab === 'audit' && (
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-[#0d3c61] uppercase tracking-wider font-display">Intranet Security Audit Trail</h3>
+            <h3 className="text-xs font-bold text-[#0c4da2] uppercase tracking-wider font-display">Intranet Security Audit Trail</h3>
 
             {isLoading && adminAuditLogs.length === 0 ? (
               <div className="py-12 flex justify-center">

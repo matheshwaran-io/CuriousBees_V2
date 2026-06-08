@@ -27,7 +27,7 @@ export default function CampusDistributionChart({
     <div className="cb-card flex flex-col md:col-span-2 lg:col-span-2 overflow-hidden relative select-none text-left bg-white/90 backdrop-blur-md">
       <div className="p-5 border-b border-slate-100 flex justify-between items-center relative z-10">
         <div>
-          <h3 className="text-sm font-bold text-[#0d3c61] font-display">Campus Distribution</h3>
+          <h3 className="text-sm font-bold text-[#0c4da2] font-display">Campus Distribution</h3>
           <p className="text-[11px] text-slate-500 font-medium mt-0.5">Compute load across global research nodes</p>
         </div>
         <button className="p-1 hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded-full">

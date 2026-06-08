@@ -11,18 +11,18 @@ module.exports = {
     extend: {
       colors: {
         curiousbees: {
-          blue: "#0d3c61",
-          gold: "#d4af37",
+          blue: "#0C4DA2",
+          gold: "#FFC828",
           crimson: "#800020",
           navy: "#0a192f",
-          accent: "#1e3a8a",
+          accent: "#B88608",
         },
         srm: {
-          blue: "#0d3c61",
-          gold: "#d4af37",
+          blue: "#0C4DA2",
+          gold: "#FFC828",
           crimson: "#800020",
           navy: "#0a192f",
-          accent: "#1e3a8a",
+          accent: "#B88608",
         },
         // Premium ElevenLabs Design System Colors
         darkBg: "#f5f3f1",

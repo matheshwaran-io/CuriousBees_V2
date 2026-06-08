@@ -53,7 +53,7 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
                 <div className="pr-8 text-left">
                   <div className="flex items-center gap-2 flex-wrap mb-2.5">
                     <span className={`text-[9px] uppercase tracking-wider font-bold px-2.5 py-0.5 rounded border ${
-                      event.status === 'PUBLISHED' ? 'bg-[#004495]/5 border-[#004495]/15 text-[#004495]' : 
+                      event.status === 'PUBLISHED' ? 'bg-[#0c4da2]/5 border-[#0c4da2]/15 text-[#0c4da2]' : 
                       event.status === 'REVIEW_REQUIRED' ? 'bg-[#775a00]/5 border-[#775a00]/15 text-[#775a00]' : 
                       'bg-rose-50 border-rose-100 text-rose-700'
                     }`}>

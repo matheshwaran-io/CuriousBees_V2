@@ -32,7 +32,7 @@ export default function ResearchVelocityCard({
       <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 relative z-10 font-sans">
         Research Velocity
       </h3>
-      <div className="text-2xl font-extrabold text-[#0d3c61] relative z-10 font-display flex items-baseline gap-1">
+      <div className="text-2xl font-extrabold text-[#0c4da2] relative z-10 font-display flex items-baseline gap-1">
         {velocity}
         <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider ml-1">pts/mo</span>
       </div>
