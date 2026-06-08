@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs';
+import { SignInButton, Show, UserButton } from '@clerk/nextjs';
 import Logo from '../Logo';
 
 export default function MarketingNavbar() {
@@ -31,15 +31,10 @@ export default function MarketingNavbar() {
         <div className="flex items-center gap-4">
           <Show when="signed-out">
             <SignInButton>
-              <button className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer">
+              <button className="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer">
                 Sign In
               </button>
             </SignInButton>
-            <SignUpButton>
-              <button className="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer">
-                Get Started
-              </button>
-            </SignUpButton>
           </Show>
           <Show when="signed-in">
             <div className="flex items-center gap-4">
