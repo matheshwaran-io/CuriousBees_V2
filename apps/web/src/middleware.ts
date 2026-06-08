@@ -13,6 +13,9 @@ const isPublicRoute = createRouteMatcher([
   '/awaiting-supervisor-approval(.*)',
   '/account-rejected(.*)',
   '/error(.*)', // Added /error to public routes to prevent redirect loops
+  // Admin panel uses its own PIN-based auth — bypass Clerk entirely
+  '/admin-login(.*)',
+  '/admin(.*)',
 ]);
 
 // 2. Define the core Clerk Middleware logic
