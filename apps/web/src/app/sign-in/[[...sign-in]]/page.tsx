@@ -10,7 +10,7 @@ import {
   RotateCcw, KeyRound, Loader2
 } from 'lucide-react';
 
-type AuthView = 'login' | 'forgot_password' | 'reset_code' | 'new_password' | 'success';f
+type AuthView = 'login' | 'forgot_password' | 'reset_code' | 'new_password' | 'success';
 
 export default function SignInPage() {
   const { signIn } = useSignIn();
