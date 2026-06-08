@@ -41,9 +41,14 @@ const coreMiddleware = clerkMiddleware(async (auth, request) => {
                   (sessionClaims as any).primary_email || 
                   '';
     
-    if (email && !email.toLowerCase().endsWith('@srmist.edu.in')) {
+    const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
+      .split(',')
+      .map((d) => d.trim().toLowerCase());
+    const isAllowedDomain = email && allowedDomains.some((domain) => email.toLowerCase().endsWith('@' + domain));
+
+    if (email && !isAllowedDomain) {
       if (!request.nextUrl.pathname.startsWith('/auth/denied')) {
-        console.warn(`[MIDDLEWARE SECURITY] Blocking non-srmist email: ${email}`);
+        console.warn(`[MIDDLEWARE SECURITY] Blocking non-allowed email: ${email}`);
         return NextResponse.redirect(new URL('/auth/denied', request.url));
       }
     }

@@ -66,9 +66,14 @@ export class ClerkAuthGuard implements CanActivate {
       this.logger.log(`Authenticated Clerk user sub=${decodedToken.sub}, email=${email}`);
       const normalizedEmail = email.toLowerCase();
 
-      if (!normalizedEmail.endsWith('@srmist.edu.in')) {
+      const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
+        .split(',')
+        .map((d) => d.trim().toLowerCase());
+      const isAllowedDomain = allowedDomains.some((domain) => normalizedEmail.endsWith('@' + domain));
+
+      if (!isAllowedDomain) {
         throw new UnauthorizedException({
-          message: 'Only SRM Institute email addresses are allowed.',
+          message: `Only email addresses from the following domains are allowed: ${allowedDomains.join(', ')}`,
           code: 'INVALID_EMAIL_DOMAIN',
         });
       }

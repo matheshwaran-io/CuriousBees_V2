@@ -477,8 +477,12 @@ export class UsersService {
     }
 
     const email = user.email.toLowerCase();
-    if (!email.endsWith('@srmist.edu.in')) {
-      throw new BadRequestException('Only SRM Institute email addresses are allowed.');
+    const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
+      .split(',')
+      .map((d) => d.trim().toLowerCase());
+    const isAllowedDomain = allowedDomains.some((domain) => email.endsWith('@' + domain));
+    if (!isAllowedDomain) {
+      throw new BadRequestException(`Only email addresses from the following domains are allowed: ${allowedDomains.join(', ')}`);
     }
 
     const { name, role, departmentId, supervisorId, employeeId, faculty } = input;

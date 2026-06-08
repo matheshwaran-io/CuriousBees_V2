@@ -121,8 +121,14 @@ export default function SignUpPage() {
 
   const validateSrmEmail = (e: string) => {
     if (e === 'mr9820' || e === 'mr9820@srmist.edu.in') return '';
-    if (e && !e.toLowerCase().endsWith('@srmist.edu.in')) {
-      return 'Only SRM Institute email addresses are allowed (@srmist.edu.in).';
+    if (e) {
+      const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
+        .split(',')
+        .map((d) => d.trim().toLowerCase());
+      const isAllowedDomain = allowedDomains.some((domain) => e.toLowerCase().endsWith('@' + domain));
+      if (!isAllowedDomain) {
+        return `Only emails from the following domains are allowed: ${allowedDomains.join(', ')}`;
+      }
     }
     return '';
   };
@@ -376,7 +382,7 @@ export default function SignUpPage() {
 
                 <div className="mt-6 p-3.5 rounded-xl bg-amber-500/8 border border-amber-400/15 flex items-start gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-300/70">Only <strong className="text-amber-300">@srmist.edu.in</strong> email addresses are accepted.</p>
+                  <p className="text-xs text-amber-300/70">Only <strong className="text-amber-300">@{process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in'}</strong> email addresses are accepted.</p>
                 </div>
               </motion.div>
             )}

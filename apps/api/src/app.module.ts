@@ -1,8 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
 import * as path from 'path';
 import * as fs from 'fs';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
@@ -35,11 +33,6 @@ import { ReportsModule } from './reports/reports.module';
       validate: validateEnv,
     }),
 
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
-
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -55,12 +48,7 @@ import { ReportsModule } from './reports/reports.module';
     ReportsModule,
   ],
   controllers: [AppController],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
+  providers: [],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -38,8 +38,14 @@ export default function SignInPage() {
 
   const validateSrmEmail = (e: string) => {
     if (e === 'mr9820' || e === 'mr9820@srmist.edu.in') return '';
-    if (e && !e.toLowerCase().endsWith('@srmist.edu.in')) {
-      return 'Only SRM Institute email addresses are allowed.';
+    if (e) {
+      const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
+        .split(',')
+        .map((d) => d.trim().toLowerCase());
+      const isAllowedDomain = allowedDomains.some((domain) => e.toLowerCase().endsWith('@' + domain));
+      if (!isAllowedDomain) {
+        return `Only emails from the following domains are allowed: ${allowedDomains.join(', ')}`;
+      }
     }
     return '';
   };
