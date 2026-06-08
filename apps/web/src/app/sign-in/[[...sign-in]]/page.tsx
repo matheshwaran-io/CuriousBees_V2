@@ -1,6 +1,7 @@
 'use client';
 
-import { useSignIn, useAuth, useClerk } from '@clerk/nextjs';
+import { useSignIn } from '@clerk/nextjs/legacy';
+import { useAuth, useClerk } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -40,7 +41,7 @@ export default function SignInPage() {
     setIsLoading(true);
     setError('');
     try {
-      await (signIn as any).authenticateWithRedirect({
+      await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
         redirectUrlComplete: '/dashboard',
@@ -187,12 +188,12 @@ export default function SignInPage() {
     try {
       console.log('[Clerk] Initiating sign-in for:', email);
       // Step 1: identify the user
-      let result = await (signIn as any).create({ identifier: email });
+      let result = await signIn.create({ identifier: email });
 
       // Step 2: if Clerk needs a first factor, attempt password directly
       if (result.status === 'needs_first_factor') {
         console.log('[Clerk] Attempting password verification...');
-        result = await (signIn as any).attemptFirstFactor({
+        result = await signIn.attemptFirstFactor({
           strategy: 'password',
           password,
         });
@@ -240,13 +241,13 @@ export default function SignInPage() {
     setIsLoading(true);
     try {
       // Step 1: identify the user to get supportedFirstFactors with real emailAddressId
-      const attempt = await (signIn as any).create({ identifier: email });
+      const attempt = await signIn.create({ identifier: email });
       const emailFactor = attempt.supportedFirstFactors?.find(
         (f: any) => f.strategy === 'reset_password_email_code'
-      );
-      const emailAddressId = emailFactor?.emailAddressId ?? '';
+      ) as any;
+      const emailAddressId: string = emailFactor?.emailAddressId ?? '';
       // Step 2: send the reset code to the user's email
-      await (signIn as any).prepareFirstFactor({
+      await signIn.prepareFirstFactor({
         strategy: 'reset_password_email_code',
         emailAddressId,
       });
@@ -265,7 +266,7 @@ export default function SignInPage() {
     setError('');
     setIsLoading(true);
     try {
-      const result = await (signIn as any).attemptFirstFactor({
+      const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
         code: resetCode,
       });
@@ -296,7 +297,7 @@ export default function SignInPage() {
     if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setIsLoading(true);
     try {
-      const result = await (signIn as any).resetPassword({ password: newPassword });
+      const result = await signIn.resetPassword({ password: newPassword });
       let finalStatus = result?.status;
       let finalSessionId = result?.createdSessionId;
       if (!finalStatus && typeof window !== 'undefined') {

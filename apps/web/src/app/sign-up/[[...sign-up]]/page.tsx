@@ -1,6 +1,7 @@
 'use client';
 
-import { useSignUp, useSignIn, useClerk, useAuth } from '@clerk/nextjs';
+import { useSignIn } from '@clerk/nextjs/legacy';
+import { useSignUp, useClerk, useAuth } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -105,7 +106,7 @@ export default function SignUpPage() {
     setIsLoading(true);
     setError('');
     try {
-      await (signIn as any).authenticateWithRedirect({
+      await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
         redirectUrlComplete: '/dashboard',
