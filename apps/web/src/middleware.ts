@@ -6,13 +6,22 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  // Marketing / public pages — no login required
   '/about(.*)',
+  '/research(.*)',
+  '/education(.*)',
+  '/institution(.*)',
+  '/contact(.*)',
   '/features(.*)',
+  '/privacy-policy(.*)',
+  '/terms-of-service(.*)',
+  '/ethics-framework(.*)',
+  // Auth flow
   '/auth/denied(.*)',
   '/approval-pending(.*)',
   '/awaiting-supervisor-approval(.*)',
   '/account-rejected(.*)',
-  '/error(.*)', // Added /error to public routes to prevent redirect loops
+  '/error(.*)',
   // Admin panel uses its own PIN-based auth — bypass Clerk entirely
   '/sys-admin-login(.*)',
   '/sys-admin(.*)',
