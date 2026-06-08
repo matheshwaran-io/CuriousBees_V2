@@ -53,25 +53,19 @@ export default function SignInPage() {
     setIsLoading(true);
     try {
       console.log('[Clerk] Initiating sign-in for:', email);
-      let result = await (signIn as any).create({ identifier: email });
-
-      if (result.status === 'needs_first_factor') {
-        const hasPasswordStrategy = result.supportedFirstFactors?.some(
-          (f: any) => f.strategy === 'password'
-        );
-        if (hasPasswordStrategy) {
-          console.log('[Clerk] Attempting password verification...');
-          result = await (signIn as any).attemptFirstFactor({
-            strategy: 'password',
-            password,
-          });
-        }
-      }
+      // Use strategy: 'password' directly in create() — the correct Clerk flow for email+password
+      const result = await (signIn as any).create({
+        strategy: 'password',
+        identifier: email,
+        password,
+      });
 
       if (result.status === 'complete') {
         console.log('[Clerk] Sign-in complete. Setting active session...');
         await setActive({ session: result.createdSessionId });
         router.push('/dashboard');
+      } else if (result.status === 'needs_second_factor') {
+        setError('Two-factor authentication is required. Please contact your administrator.');
       } else {
         const w = window as any;
         const activeSession = w.Clerk?.client?.activeSessions?.[0]
@@ -83,8 +77,7 @@ export default function SignInPage() {
           await setActive({ session: activeSession.id });
           router.push('/dashboard');
         } else {
-          const strategies = result.supportedFirstFactors?.map((f: any) => f.strategy).join(', ') || 'none';
-          setError(`Sign in incomplete. Status: ${result.status}. Supported strategies: ${strategies}`);
+          setError('Sign in failed. Please check your credentials and try again.');
         }
       }
     } catch (err: any) {
