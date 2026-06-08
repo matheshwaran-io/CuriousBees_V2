@@ -213,6 +213,9 @@ export default function SignUpPage() {
                 </Link>
               </div>
             </div>
+
+            {/* Clerk Smart CAPTCHA anchor — must be in DOM before auth flow starts */}
+            <div id="clerk-captcha" />
           </motion.div>
 
           {/* Footer */}
@@ -1002,6 +1005,9 @@ export default function SignUpPage() {
             )}
 
           </AnimatePresence>
+
+          {/* Clerk Smart CAPTCHA anchor — must be in DOM before auth flow starts */}
+          <div id="clerk-captcha" />
         </motion.div>
 
         {/* Sign in link */}
