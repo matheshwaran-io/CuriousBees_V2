@@ -147,8 +147,6 @@ export default function SignInPage() {
               </div>
             </div>
 
-            {/* Clerk Smart CAPTCHA anchor — must be in DOM before auth flow starts */}
-            <div id="clerk-captcha" />
           </motion.div>
 
           {/* Footer */}
@@ -358,6 +356,9 @@ export default function SignInPage() {
           transition={{ delay: 0.1 }}
           className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-8 shadow-2xl"
         >
+          {/* Clerk Smart CAPTCHA anchor — must be mounted before useSignIn triggers */}
+          <div id="clerk-captcha" />
+
           {/* Shimmer border top */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent rounded-full" />
 
@@ -545,9 +546,7 @@ export default function SignInPage() {
 
           </AnimatePresence>
 
-          {/* Clerk Smart CAPTCHA anchor — must be in DOM before auth flow starts */}
-          <div id="clerk-captcha" />
-        </motion.div>
+          </motion.div>
 
         {/* Register link */}
         {view === 'login' && (

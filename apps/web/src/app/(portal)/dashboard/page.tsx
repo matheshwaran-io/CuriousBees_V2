@@ -50,26 +50,23 @@ export default function DashboardPage() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  const hasFetched = React.useRef(false);
+
   useEffect(() => {
-    fetchData(); // Fetch Threads & Opportunities
+    if (!currentUser || hasFetched.current) return;
+    hasFetched.current = true;
+
+    // fetchData() is omitted because PortalLayout handles Threads & Opportunities globally.
     fetchWorkspaces();
-    fetchPublications(currentUser?.role === 'RESEARCH_SUPERVISOR' ? undefined : currentUser?.id);
+    fetchPublications(currentUser.role === 'RESEARCH_SUPERVISOR' ? undefined : currentUser.id);
     fetchReports();
     fetchEvents();
     fetchNotifications();
-    if (currentUser?.role === 'RESEARCH_SUPERVISOR') {
+    if (currentUser.role === 'RESEARCH_SUPERVISOR') {
       fetchMyScholars();
     }
-  }, [
-    currentUser,
-    fetchData,
-    fetchWorkspaces,
-    fetchPublications,
-    fetchReports,
-    fetchEvents,
-    fetchNotifications,
-    fetchMyScholars
-  ]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const isSupervisor = currentUser?.role === 'RESEARCH_SUPERVISOR';
   const roleName = isSupervisor ? 'Faculty Supervisor' : 'Research Scholar';

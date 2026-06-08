@@ -23,6 +23,7 @@ import { AdminModule } from './admin/admin.module';
 import { FacultiesModule } from './faculties/faculties.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { SupervisorRequestsModule } from './supervisor-requests/requests.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { SupervisorRequestsModule } from './supervisor-requests/requests.module'
     FacultiesModule,
     OnboardingModule,
     SupervisorRequestsModule,
+    AnnouncementsModule,
   ],
   controllers: [AppController],
   providers: [],

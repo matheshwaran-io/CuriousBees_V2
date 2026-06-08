@@ -6,6 +6,11 @@ export class ClerkService implements OnModuleInit {
   private readonly logger = new Logger(ClerkService.name);
   private clerkClient: any = null;
 
+  get client() {
+    if (!this.clerkClient) throw new Error('Clerk Backend Client is not initialized.');
+    return this.clerkClient;
+  }
+
   onModuleInit() {
     const secretKey = process.env.CLERK_SECRET_KEY;
     const publishableKey = process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;

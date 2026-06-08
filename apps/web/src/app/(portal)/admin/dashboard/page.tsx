@@ -48,13 +48,17 @@ export default function AdminPage() {
     }
   }, [currentUser, router]);
 
+  const hasFetched = React.useRef(false);
+
   // 2. Fetch admin data
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTE_ADMIN') {
+    if (currentUser?.role === 'INSTITUTE_ADMIN' && !hasFetched.current) {
+      hasFetched.current = true;
       fetchAdminUsers();
       fetchAdminAuditLogs();
     }
-  }, [currentUser, fetchAdminUsers, fetchAdminAuditLogs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return (

@@ -45,6 +45,8 @@ export default function RootLayout({
         <ClerkProvider>
           {/* Global 3% noise texture overlay */}
           <div className="noise-overlay" />
+          {/* Clerk Smart CAPTCHA anchor for Custom Flows */}
+          <div id="clerk-captcha" />
           {children}
         </ClerkProvider>
       </body>

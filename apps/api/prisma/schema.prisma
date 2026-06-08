@@ -73,6 +73,7 @@ model User {
   publications          Publication[]
   submittedReports      Report[]                @relation("ScholarReports")
   reviewedReports       Report[]                @relation("SupervisorReports")
+  systemAnnouncements   SystemAnnouncement[]
 
   @@index([departmentId])
   @@index([supervisorId])
@@ -143,6 +144,26 @@ enum ApprovalStatus {
   PUBLISHED
   REJECTED
   NEEDS_INFO
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model SystemAnnouncement {
+  id          String             @id @default(cuid())
+  title       String
+  content     String             @db.Text
+  status      AnnouncementStatus @default(DRAFT)
+  authorId    String
+  author      User               @relation(fields: [authorId], references: [id])
+  pushToEmail Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([authorId])
 }
 
 

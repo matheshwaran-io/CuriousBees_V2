@@ -29,6 +29,7 @@ import {
   Clock,
   GraduationCap,
   Crown,
+  Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../Logo';
@@ -55,24 +56,11 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
         label: 'Admin Console',
         items: [
           { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-          { name: 'User Management', href: '/admin/users', icon: UserCog },
-          { name: 'Supervisors', href: '/admin/supervisors', icon: Shield },
-          { name: 'Supervisor Requests', href: '/admin/approval-requests', icon: Clock },
-          { name: 'Scholar Requests', href: '/admin/scholar-requests', icon: Users },
-          { name: 'Faculties', href: '/admin/faculties', icon: Building },
-          { name: 'Departments', href: '/admin/departments', icon: FolderOpen },
+          { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
+          { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
           { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
+          { name: 'Notification Logs', href: '/notifications', icon: MessageSquare },
           { name: 'System Settings', href: '/admin/settings', icon: Shield },
-          { name: 'Researchers Directory', href: '/researchers', icon: Users },
-          { name: 'Notifications Log', href: '/notifications', icon: MessageSquare },
-        ],
-      },
-      {
-        label: 'Institute Management',
-        items: [
-          { name: 'Scholars', href: '/institute-admin/scholars', icon: GraduationCap },
-          { name: 'Supervisors', href: '/institute-admin/supervisors', icon: UserCog },
-          { name: 'Administrators', href: '/institute-admin/admins', icon: Crown },
         ],
       },
     ];

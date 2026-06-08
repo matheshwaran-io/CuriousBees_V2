@@ -45,11 +45,26 @@ export class ClerkAuthGuard implements CanActivate {
       this.logger.debug(`Received Clerk bearer token for verification. tokenLength=${token.length}`);
       const decodedToken = await this.clerkService.verifyToken(token);
 
-      // Extract email from Clerk token claim, or fallback to Clerk API user query
       let email = decodedToken.email;
+      let user = null;
+
+      // 1. Primary fast lookup: Try finding the user in the database by clerkId (sub)
+      if (decodedToken.sub) {
+        user = await this.prisma.user.findUnique({
+          where: { clerkId: decodedToken.sub },
+          include: { interests: { include: { interest: true } } }
+        });
+        
+        // Use the database email if the token didn't provide one
+        if (user && !email) {
+          email = user.email;
+        }
+      }
+
+      // 2. Fallback: If no email in token and no mapped user, query Clerk API (only happens on first sign-in)
       if (!email && decodedToken.sub && this.clerkClient) {
         try {
-          this.logger.log(`Email not found in token payload. Querying Clerk API for user details. sub=${decodedToken.sub}`);
+          this.logger.log(`Email not found in DB or token. Querying Clerk API for user details. sub=${decodedToken.sub}`);
           const clerkUser = await this.clerkClient.users.getUser(decodedToken.sub);
           email = clerkUser.emailAddresses.find(
             (e: any) => e.id === clerkUser.primaryEmailAddressId
@@ -67,16 +82,19 @@ export class ClerkAuthGuard implements CanActivate {
       const normalizedEmail = email.toLowerCase();
       const isMeEndpoint = request.url.endsWith('/auth/me');
 
-      let user = await this.prisma.user.findUnique({
-        where: { email: normalizedEmail },
-        include: {
-          interests: {
-            include: {
-              interest: true
+      // 3. Secondary lookup: If user wasn't found by clerkId, try finding by email
+      if (!user) {
+        user = await this.prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          include: {
+            interests: {
+              include: {
+                interest: true
+              }
             }
           }
-        }
-      });
+        });
+      }
 
       if (!user) {
         // Check for Admin Auto-Creation

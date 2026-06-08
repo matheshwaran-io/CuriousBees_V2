@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { NotificationDropdown } from '../shared/notification-dropdown';
 import { ProfileDropdown } from '../shared/profile-dropdown';
 
-const IS_DEV = process.env.NODE_ENV === 'development';
+
 
 const PATH_MAP: Record<string, string> = {
   'dashboard': 'Dashboard',
@@ -37,7 +37,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const { currentUser, showMobileSidebar, setMobileSidebar } = useStore();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [devBannerVisible, setDevBannerVisible] = useState(IS_DEV);
 
   // Listen for global keyboard shortcut (CMD+K or CTRL+K)
   useEffect(() => {
@@ -84,27 +83,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ─── DEV-ONLY WARNING BANNER ─────────────────────────────────── */}
-      {IS_DEV && devBannerVisible && currentUser && (
-        <div className="relative z-45 w-full bg-amber-50 border-b border-amber-200 px-4 py-1.5 flex items-center justify-between gap-3 font-sans">
-          <div className="flex items-center gap-2 text-amber-700 text-[11px] font-semibold min-w-0">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0 animate-pulse" />
-            <span className="truncate">
-              <span className="font-black uppercase tracking-wider">DEV MODE</span>
-              {' '}— Signed in as <span className="font-black">{currentUser.email}</span>
-              {' '}→ <span className="font-black">{currentUser.role}</span>
-            </span>
-          </div>
-          <button
-            onClick={() => setDevBannerVisible(false)}
-            className="text-amber-500 hover:text-amber-700 transition-colors shrink-0 cursor-pointer"
-            aria-label="Dismiss"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* ─── MAIN NAVBAR ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 h-16 w-full bg-white/80 backdrop-blur-md border-b border-borderStroke flex items-center justify-between px-4 md:px-8 gap-3 font-sans">
         

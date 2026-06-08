@@ -191,6 +191,7 @@ export async function apiFetch(
 
   try {
     const res = await fetch(url, {
+      cache: 'no-store',
       ...rest,
       headers: mergedHeaders,
       signal: controller.signal,

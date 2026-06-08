@@ -17,8 +17,9 @@ export default function PortalLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, setCurrentUser, fetchData, setTheme, syncUserSession, isLoading } = useStore();
+  const { currentUser, setCurrentUser, fetchData, setTheme, syncUserSession } = useStore();
   const [authTimedOut, setAuthTimedOut] = useState(false);
+  const [isAuthVerifying, setIsAuthVerifying] = useState(true);
   const hasInitialized = useRef(false);
 
   const [queryClient] = useState(() => new QueryClient({
@@ -39,9 +40,9 @@ export default function PortalLayout({
     }
   }, [setTheme]);
 
-  // Set timeout safety for loading screen
+  // Set timeout safety for auth loading screen
   useEffect(() => {
-    if (!currentUser || isLoading) {
+    if (isAuthVerifying) {
       const timer = setTimeout(() => {
         console.warn('[PortalLayout] Auth initialization is taking longer than 15 seconds.');
         setAuthTimedOut(true);
@@ -50,7 +51,7 @@ export default function PortalLayout({
     } else {
       setAuthTimedOut(false);
     }
-  }, [currentUser, isLoading]);
+  }, [isAuthVerifying]);
 
   useEffect(() => {
     // Only run once per mount — prevents re-triggering on every currentUser state change
@@ -136,6 +137,7 @@ export default function PortalLayout({
       }
 
       console.info('[PortalLayout] Authentication checks passed. Initializing data fetch...');
+      setIsAuthVerifying(false);
       fetchData();
     };
 
@@ -146,7 +148,7 @@ export default function PortalLayout({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (isLoading || !currentUser) {
+  if (isAuthVerifying || !currentUser) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500 font-sans">
         <div className="flex flex-col items-center space-y-4 p-6 text-center max-w-sm">
