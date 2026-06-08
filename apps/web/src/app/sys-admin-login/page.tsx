@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
     if (typeof window !== 'undefined') {
       const session = localStorage.getItem(SESSION_KEY);
       if (session === 'authenticated') {
-        router.replace('/admin');
+        router.replace('/sys-admin');
       }
     }
   }, [router]);
@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
 
     if (pin === ADMIN_PIN) {
       localStorage.setItem(SESSION_KEY, 'authenticated');
-      router.push('/admin');
+      router.push('/sys-admin');
     } else {
       setIsLoading(false);
       setError('Incorrect PIN. Please try again.');

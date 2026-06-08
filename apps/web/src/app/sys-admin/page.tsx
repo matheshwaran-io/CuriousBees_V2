@@ -73,16 +73,16 @@ export default function AdminDashboard() {
   }, []);
 
   const statCards = [
-    { label: 'Total Users', value: loading ? '—' : stats.totalUsers, icon: Users, color: 'bg-blue-50 text-blue-600', href: '/admin/users', delay: 0 },
-    { label: 'Pending Approvals', value: loading ? '—' : stats.pendingApprovals, icon: Clock, color: 'bg-amber-50 text-amber-600', href: '/admin/approvals', delay: 0.05 },
-    { label: 'Supervisors', value: loading ? '—' : stats.totalSupervisors, icon: UserCheck, color: 'bg-emerald-50 text-emerald-600', href: '/admin/users', delay: 0.1 },
-    { label: 'Scholars', value: loading ? '—' : stats.totalScholars, icon: Activity, color: 'bg-purple-50 text-purple-600', href: '/admin/users', delay: 0.15 },
+    { label: 'Total Users', value: loading ? '—' : stats.totalUsers, icon: Users, color: 'bg-blue-50 text-blue-600', href: '/sys-admin/users', delay: 0 },
+    { label: 'Pending Approvals', value: loading ? '—' : stats.pendingApprovals, icon: Clock, color: 'bg-amber-50 text-amber-600', href: '/sys-admin/approvals', delay: 0.05 },
+    { label: 'Supervisors', value: loading ? '—' : stats.totalSupervisors, icon: UserCheck, color: 'bg-emerald-50 text-emerald-600', href: '/sys-admin/users', delay: 0.1 },
+    { label: 'Scholars', value: loading ? '—' : stats.totalScholars, icon: Activity, color: 'bg-purple-50 text-purple-600', href: '/sys-admin/users', delay: 0.15 },
   ];
 
   const quickActions = [
-    { label: 'Review Approvals', desc: 'Approve or decline pending registrations', href: '/admin/approvals', icon: CheckSquare, color: 'text-amber-600 bg-amber-50 border-amber-100' },
-    { label: 'Manage Users', desc: 'View, suspend or change user roles', href: '/admin/users', icon: Users, color: 'text-blue-600 bg-blue-50 border-blue-100' },
-    { label: 'Send Notification', desc: 'Broadcast announcements to users', href: '/admin/notifications', icon: Bell, color: 'text-purple-600 bg-purple-50 border-purple-100' },
+    { label: 'Review Approvals', desc: 'Approve or decline pending registrations', href: '/sys-admin/approvals', icon: CheckSquare, color: 'text-amber-600 bg-amber-50 border-amber-100' },
+    { label: 'Manage Users', desc: 'View, suspend or change user roles', href: '/sys-admin/users', icon: Users, color: 'text-blue-600 bg-blue-50 border-blue-100' },
+    { label: 'Send Notification', desc: 'Broadcast announcements to users', href: '/sys-admin/notifications', icon: Bell, color: 'text-purple-600 bg-purple-50 border-purple-100' },
   ];
 
   return (

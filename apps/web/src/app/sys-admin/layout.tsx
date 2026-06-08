@@ -12,10 +12,10 @@ import {
 const SESSION_KEY = 'cb_admin_session';
 
 const NAV_ITEMS = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/users', label: 'User Management', icon: Users },
-  { href: '/admin/approvals', label: 'Approval Requests', icon: CheckSquare },
-  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { href: '/sys-admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/sys-admin/users', label: 'User Management', icon: Users },
+  { href: '/sys-admin/approvals', label: 'Approval Requests', icon: CheckSquare },
+  { href: '/sys-admin/notifications', label: 'Notifications', icon: Bell },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const session = localStorage.getItem(SESSION_KEY);
     if (session !== 'authenticated') {
-      router.replace('/admin-login');
+      router.replace('/sys-admin-login');
     } else {
       setAuthenticated(true);
     }
@@ -35,7 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = () => {
     localStorage.removeItem(SESSION_KEY);
-    router.push('/admin-login');
+    router.push('/sys-admin-login');
   };
 
   if (!authenticated) {
@@ -143,7 +143,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span>Admin</span>
             <ChevronRight className="w-3 h-3" />
             <span className="text-slate-700 capitalize">
-              {pathname === '/admin' ? 'Dashboard' : pathname.replace('/admin/', '').replace(/-/g, ' ')}
+              {pathname === '/sys-admin' ? 'Dashboard' : pathname.replace('/sys-admin/', '').replace(/-/g, ' ')}
             </span>
           </div>
           <div className="ml-auto flex items-center gap-2">
