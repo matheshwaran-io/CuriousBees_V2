@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role, UserStatus } from '@prisma/client';
 import * as xlsx from 'xlsx';
@@ -8,6 +8,9 @@ export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  /** Superadmin is permanently protected — no role change, suspension, or deletion */
+  private readonly SUPERADMIN_EMAIL = 'r.matheshwaran.io@gmail.com';
 
   async getUsers() {
     return this.prisma.user.findMany({
@@ -90,6 +93,9 @@ export class AdminService {
     if (!user) {
       throw new BadRequestException('User not found.');
     }
+    if (user.email.toLowerCase() === this.SUPERADMIN_EMAIL) {
+      throw new ForbiddenException('The superadmin account cannot be modified.');
+    }
 
     const updateData: any = {};
     if (data.name) updateData.name = data.name;
@@ -140,6 +146,9 @@ export class AdminService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new BadRequestException('User not found.');
+    }
+    if (user.email.toLowerCase() === this.SUPERADMIN_EMAIL) {
+      throw new ForbiddenException('The superadmin account cannot be deleted.');
     }
     return this.prisma.user.delete({ where: { id } });
   }

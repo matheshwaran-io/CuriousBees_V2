@@ -3,7 +3,7 @@
 import Sidebar from '@/components/dashboard/Sidebar';
 import Navbar from '@/components/dashboard/Navbar';
 import { useStore } from '@/store/useStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from '@/components/Toast';
@@ -19,6 +19,7 @@ export default function PortalLayout({
   const pathname = usePathname();
   const { currentUser, setCurrentUser, fetchData, setTheme, syncUserSession, isLoading } = useStore();
   const [authTimedOut, setAuthTimedOut] = useState(false);
+  const hasInitialized = useRef(false);
 
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
@@ -52,13 +53,18 @@ export default function PortalLayout({
   }, [currentUser, isLoading]);
 
   useEffect(() => {
+    // Only run once per mount — prevents re-triggering on every currentUser state change
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     let active = true;
 
     const initAuth = async () => {
       console.info('[PortalLayout] Running initAuth...');
 
-      let activeUser = currentUser;
-      
+      // Always read fresh from store, not from closure
+      let activeUser = useStore.getState().currentUser;
+
       if (!activeUser) {
         console.info('[PortalLayout] No active currentUser cached. Invoking syncUserSession()...');
         activeUser = await syncUserSession();
@@ -130,16 +136,15 @@ export default function PortalLayout({
       }
 
       console.info('[PortalLayout] Authentication checks passed. Initializing data fetch...');
-      fetchData(); // Trigger initial live API fetch
-
-
+      fetchData();
     };
 
     initAuth();
     return () => {
       active = false;
     };
-  }, [currentUser, router, fetchData, syncUserSession]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isLoading || !currentUser) {
     return (

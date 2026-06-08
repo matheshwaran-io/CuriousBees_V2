@@ -27,6 +27,8 @@ import {
   BookOpen,
   BarChart3,
   Clock,
+  GraduationCap,
+  Crown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../Logo';
@@ -63,6 +65,14 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
           { name: 'System Settings', href: '/admin/settings', icon: Shield },
           { name: 'Researchers Directory', href: '/researchers', icon: Users },
           { name: 'Notifications Log', href: '/notifications', icon: MessageSquare },
+        ],
+      },
+      {
+        label: 'Institute Management',
+        items: [
+          { name: 'Scholars', href: '/institute-admin/scholars', icon: GraduationCap },
+          { name: 'Supervisors', href: '/institute-admin/supervisors', icon: UserCog },
+          { name: 'Administrators', href: '/institute-admin/admins', icon: Crown },
         ],
       },
     ];
@@ -218,6 +228,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     'Scholar Portfolio': true,
     'Faculty Advisory': true,
     'Admin Console': true,
+    'Institute Management': true,
   });
 
   const toggleSection = (label: string) => {
