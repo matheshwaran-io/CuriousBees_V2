@@ -23,7 +23,7 @@ export default function VerificationPendingPage() {
   useEffect(() => {
     const checkStatus = async () => {
       const user = await syncUserSession({ force: true });
-      if (user && user.status === 'APPROVED') {
+      if (user && (user.status === 'ACTIVE' || user.approved)) {
         const route = user.role === 'INSTITUTE_ADMIN' ? '/admin/dashboard' : '/dashboard';
         router.replace(route);
       }

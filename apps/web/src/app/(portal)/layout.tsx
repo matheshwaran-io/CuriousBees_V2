@@ -83,7 +83,7 @@ export default function PortalLayout({
   useEffect(() => {
     if (isAuthVerifying) return;
 
-    const activeUser = currentUser;
+    const activeUser = useStore.getState().currentUser;
 
     if (!activeUser) {
       if (useStore.getState().notProvisioned) {
