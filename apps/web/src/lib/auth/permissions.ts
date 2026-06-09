@@ -30,6 +30,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/profile',
     '/workspace',
     '/notifications',
+    '/institute-admin',
   ],
   RESEARCH_SUPERVISOR: [
     '/dashboard',
@@ -57,6 +58,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/publications',
     '/reports',
     '/notifications',
+    '/scholar',
   ],
 };
 

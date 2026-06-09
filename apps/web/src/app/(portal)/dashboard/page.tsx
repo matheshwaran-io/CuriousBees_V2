@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import {
   GraduationCap,
@@ -29,6 +29,7 @@ import AvatarRing from '@/components/AvatarRing';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const {
     currentUser,
     threads,
@@ -73,16 +74,16 @@ export default function DashboardPage() {
 
   // Redirect to new dashboards
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && pathname === '/dashboard') {
       if (currentUser.role === 'INSTITUTE_ADMIN') {
-        router.push('/institute-admin/dashboard');
+        router.push('/admin/dashboard');
       } else if (currentUser.role === 'RESEARCH_SUPERVISOR') {
-        router.push('/supervisor/dashboard');
+        router.push('/supervisor');
       } else if (currentUser.role === 'RESEARCH_SCHOLAR') {
         router.push('/scholar/dashboard');
       }
     }
-  }, [currentUser, router]);
+  }, [currentUser, pathname, router]);
 
   // ─── Metrics Calculation ──────────────────────────────────────────────────
   const activeScholarsCount = myScholars.length;

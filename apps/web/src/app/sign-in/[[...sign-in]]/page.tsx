@@ -1,17 +1,13 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs/legacy';
-import { useAuth, useClerk } from '@clerk/nextjs';
+import { useAuth, useClerk, SignIn } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle, CheckCircle2,
-  RotateCcw, KeyRound, Loader2
+  ShieldCheck, AlertCircle, Info, Loader2, Award, Zap, Network
 } from 'lucide-react';
-
-type AuthView = 'login' | 'forgot_password' | 'reset_code' | 'new_password' | 'success';
 
 export default function SignInPage() {
   const { signIn } = useSignIn();
@@ -20,6 +16,8 @@ export default function SignInPage() {
   const router = useRouter();
 
   const isGoogleAdminManaged = process.env.NEXT_PUBLIC_AUTH_MODE === 'GOOGLE_ADMIN_MANAGED';
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (authLoaded && isSignedIn) {
@@ -27,15 +25,6 @@ export default function SignInPage() {
     }
   }, [authLoaded, isSignedIn, router]);
 
-  const [view, setView] = useState<AuthView>('login');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [resetCode, setResetCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const handleGoogleSignIn = async () => {
     if (!signIn) return;
     setIsLoading(true);
@@ -52,516 +41,281 @@ export default function SignInPage() {
     }
   };
 
-  if (isGoogleAdminManaged) {
-    return (
-      <div className="min-h-screen bg-[#070b14] flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Background gradients */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-600/8 rounded-full blur-[100px]" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
-        </div>
-
-        <div className="w-full max-w-md relative z-10">
-          {/* Logo / Brand */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <div className="inline-flex items-center gap-2.5 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                <ShieldCheck className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-white font-bold text-lg tracking-tight">CuriousBees</span>
-            </div>
-            <p className="text-white/40 text-xs font-medium tracking-wider uppercase">SRMIST Research Portal</p>
-          </motion.div>
-
-          {/* Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-8 shadow-2xl"
-          >
-            {/* Shimmer border top */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent rounded-full" />
-
-            <div className="text-center space-y-6">
-              <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Welcome back</h1>
-                <p className="text-white/40 text-xs mt-2 leading-relaxed font-sans">
-                  Sign in with your pre-provisioned institutional email address using Google Sign-In.
-                </p>
-              </div>
-
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -4 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5 text-left font-sans font-semibold text-red-300"
-                >
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                  <p className="text-xs">{error}</p>
-                </motion.div>
-              )}
-
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={isLoading}
-                className="w-full py-3.5 px-4 rounded-xl bg-white text-slate-900 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-bold flex items-center justify-center gap-3 transition-all duration-200 shadow-xl cursor-pointer hover:shadow-white/5 active:scale-[0.98]"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-900" />
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                    <span>Sign In with Google</span>
-                  </>
-                )}
-              </button>
-
-              <div className="pt-2 flex items-start gap-2.5 bg-white/[0.02] border border-white/5 rounded-xl p-3.5 text-left text-[11px] text-white/40 leading-relaxed font-semibold">
-                <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <p>
-                  Access is only permitted for pre-provisioned university accounts. If your account is not provisioned, please contact your administrator. Allowed domains: <span className="text-white/60 font-bold">@{process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in'}</span>
-                </p>
-              </div>
-            </div>
-
-          </motion.div>
-
-          {/* Footer */}
-          <motion.p 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            transition={{ delay: 0.4 }} 
-            className="text-center mt-8 text-[10px] text-white/15 font-medium tracking-wider uppercase"
-          >
-            SRMIST • Institutional Research Portal • Secured by Clerk
-          </motion.p>
-        </div>
-      </div>
-    );
-  }
-
-
-
-  const validateSrmEmail = (e: string) => {
-    if (e === 'mr9820' || e === 'mr9820@srmist.edu.in') return '';
-    if (e) {
-      const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
-        .split(',')
-        .map((d) => d.trim().toLowerCase());
-      const isAllowedDomain = allowedDomains.some((domain) => e.toLowerCase().endsWith('@' + domain));
-      if (!isAllowedDomain) {
-        return `Only emails from the following domains are allowed: ${allowedDomains.join(', ')}`;
-      }
-    }
-    return '';
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signIn) return;
-    setError('');
-    const domainError = validateSrmEmail(email);
-    if (domainError) { setError(domainError); return; }
-    setIsLoading(true);
-    try {
-      console.log('[Clerk] Initiating sign-in for:', email);
-      // Step 1: identify the user
-      let result = await signIn.create({ identifier: email });
-
-      // Step 2: if Clerk needs a first factor, attempt password directly
-      if (result.status === 'needs_first_factor') {
-        console.log('[Clerk] Attempting password verification...');
-        result = await signIn.attemptFirstFactor({
-          strategy: 'password',
-          password,
-        });
-      }
-
-      if (result.status === 'complete') {
-        console.log('[Clerk] Sign-in complete. Setting active session...');
-        await setActive({ session: result.createdSessionId });
-        router.push('/dashboard');
-      } else if (result.status === 'needs_second_factor') {
-        setError('Two-factor authentication is required. Please contact your administrator.');
-      } else {
-        const w = window as any;
-        const activeSession = w.Clerk?.client?.activeSessions?.[0]
-          || w.Clerk?.client?.sessions?.[0]
-          || w.Clerk?.session;
-
-        if (activeSession) {
-          console.log('[Clerk] Active session fallback found. Logging in...');
-          await setActive({ session: activeSession.id });
-          router.push('/dashboard');
-        } else {
-          setError('Sign in failed. Please check your credentials and try again.');
-        }
-      }
-    } catch (err: any) {
-      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Sign in failed.';
-      if (msg.toLowerCase().includes('already signed in')) {
-        router.push('/dashboard');
-        return;
-      }
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signIn) return;
-    setError('');
-    const domainError = validateSrmEmail(email);
-    if (domainError) { setError(domainError); return; }
-    setIsLoading(true);
-    try {
-      // Step 1: identify the user to get supportedFirstFactors with real emailAddressId
-      const attempt = await signIn.create({ identifier: email });
-      const emailFactor = attempt.supportedFirstFactors?.find(
-        (f: any) => f.strategy === 'reset_password_email_code'
-      ) as any;
-      const emailAddressId: string = emailFactor?.emailAddressId ?? '';
-      // Step 2: send the reset code to the user's email
-      await signIn.prepareFirstFactor({
-        strategy: 'reset_password_email_code',
-        emailAddressId,
-      });
-      setView('reset_code');
-    } catch (err: any) {
-      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Failed to send reset email.';
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signIn) return;
-    setError('');
-    setIsLoading(true);
-    try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: 'reset_password_email_code',
-        code: resetCode,
-      });
-      let finalStatus = result?.status;
-      if (!finalStatus && typeof window !== 'undefined') {
-         const clientSignIn = (window as any).Clerk?.client?.signIn;
-         if (clientSignIn) finalStatus = clientSignIn.status;
-      }
-
-      if (finalStatus === 'needs_new_password') {
-        setView('new_password');
-      } else {
-        setError('Unexpected response. Please try again.');
-      }
-    } catch (err: any) {
-      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Invalid code.';
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSetNewPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signIn) return;
-    setError('');
-    if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
-    if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    setIsLoading(true);
-    try {
-      const result = await signIn.resetPassword({ password: newPassword });
-      let finalStatus = result?.status;
-      let finalSessionId = result?.createdSessionId;
-      if (!finalStatus && typeof window !== 'undefined') {
-         const clientSignIn = (window as any).Clerk?.client?.signIn;
-         if (clientSignIn) {
-            finalStatus = clientSignIn.status;
-            finalSessionId = clientSignIn.createdSessionId;
-         }
-      }
-
-      if (finalStatus === 'complete') {
-        await setActive({ session: finalSessionId });
-        setView('success');
-        setTimeout(() => router.push('/dashboard'), 1500);
-      }
-    } catch (err: any) {
-      const msg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || 'Failed to update password.';
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const inputClass = `w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-transparent transition-all duration-200`;
-
   return (
-    <div className="min-h-screen bg-[#070b14] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-purple-600/8 rounded-full blur-[100px]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px]" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#e6e6fa]">
+      {/* Background gradients and mesh blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Honeycomb overlay */}
+        <div className="absolute inset-0 honeycomb-bg opacity-[0.25] mix-blend-multiply" />
+
+        {/* Floating gradient blobs */}
+        <motion.div
+          animate={{
+            x: [0, 80, -40, 0],
+            y: [0, -60, 50, 0],
+            scale: [1, 1.15, 0.9, 1],
+          }}
+          transition={{
+            duration: 15,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -top-20 -left-20 w-[450px] h-[450px] bg-[#0C4DA2]/8 rounded-full blur-[100px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -60, 80, 0],
+            y: [0, 80, -40, 0],
+            scale: [1, 0.9, 1.2, 1],
+          }}
+          transition={{
+            duration: 18,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -bottom-20 -right-20 w-[500px] h-[500px] bg-[#FFC828]/6 rounded-full blur-[120px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, 40, -40, 0],
+            y: [0, 50, -60, 0],
+            scale: [1, 1.1, 0.95, 1],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-[#B88608]/5 rounded-full blur-[90px]"
+        />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo / Brand */}
+      <div className="w-full max-w-4xl relative z-10 px-4">
+        {/* Double-column premium card */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="inline-flex items-center gap-2.5 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-white font-bold text-lg tracking-tight">CuriousBees</span>
-          </div>
-          <p className="text-white/40 text-xs font-medium tracking-wider uppercase">SRMIST Research Portal</p>
-        </motion.div>
-
-        {/* Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-8 shadow-2xl"
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full rounded-3xl overflow-hidden bg-white/75 backdrop-blur-xl border border-white/40 shadow-2xl flex flex-col md:flex-row min-h-[600px]"
         >
           {/* Clerk Smart CAPTCHA anchor — must be mounted before useSignIn triggers */}
           <div id="clerk-captcha" />
 
-          {/* Shimmer border top */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/40 to-transparent rounded-full" />
+          {/* Left branding panel */}
+          <div className="w-full md:w-1/2 bg-gradient-to-br from-[#0C4DA2] to-[#042654] p-10 flex flex-col justify-between relative overflow-hidden text-white">
+            {/* Mesh overlay inside the panel */}
+            <div className="absolute inset-0 bg-honeycomb-stroke opacity-15" />
+            
+            {/* Glow spots inside left panel */}
+            <div className="absolute -top-1/4 -right-1/4 w-80 h-80 bg-[#FFC828]/15 rounded-full blur-[60px] pointer-events-none" />
+            <div className="absolute -bottom-1/4 -left-1/4 w-80 h-80 bg-[#B88608]/15 rounded-full blur-[60px] pointer-events-none" />
 
-          <AnimatePresence mode="wait">
-
-            {/* ── LOGIN VIEW ── */}
-            {view === 'login' && (
-              <motion.div key="login" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}>
-                <div className="mb-6">
-                  <h1 className="text-xl font-bold text-white tracking-tight">Welcome back</h1>
-                  <p className="text-white/40 text-sm mt-1">Sign in with your SRMIST email</p>
+            {/* Top header */}
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
+                  <ShieldCheck className="w-5 h-5 text-[#FFC828]" />
                 </div>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Email Address</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input
-                        id="signin-email"
-                        type="text"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        placeholder="you@srmist.edu.in"
-                        required
-                        className={`${inputClass} pl-10`}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input
-                        id="signin-password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        className={`${inputClass} pl-10 pr-10`}
-                      />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-white/30 hover:text-white/60 transition-colors">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                      <p className="text-xs text-red-300">{error}</p>
-                    </motion.div>
-                  )}
-
-                  <button
-                    id="signin-submit-btn"
-                    type="submit"
-                    disabled={isLoading}
-                    onClick={() => console.log("SIGNIN_BUTTON_CLICKED")}
-                    className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-lg shadow-blue-600/25 cursor-pointer"
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>}
-                  </button>
-
-                  <div className="text-center">
-                    <button
-                      id="signin-forgot-btn"
-                      type="button"
-                      onClick={() => { setView('forgot_password'); setError(''); }}
-                      className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer underline underline-offset-2"
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
-
-            {/* ── FORGOT PASSWORD VIEW ── */}
-            {view === 'forgot_password' && (
-              <motion.div key="forgot" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
-                <div className="mb-6">
-                  <h1 className="text-xl font-bold text-white tracking-tight">Reset Password</h1>
-                  <p className="text-white/40 text-sm mt-1">Enter your SRMIST email to receive a reset code</p>
+                <div>
+                  <span className="font-display font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-white to-white/80 bg-clip-text text-transparent">CuriousBees</span>
+                  <p className="text-[10px] text-white/50 tracking-wider uppercase font-semibold">SRMIST Research Portal</p>
                 </div>
-                <form onSubmit={handleForgotPassword} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">SRMIST Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="reset-email" type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@srmist.edu.in" required className={`${inputClass} pl-10`} />
-                    </div>
-                  </div>
-                  {error && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                      <p className="text-xs text-red-300">{error}</p>
-                    </motion.div>
-                  )}
-                  <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-blue-600/25">
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Send Reset Code</span><ArrowRight className="w-4 h-4" /></>}
-                  </button>
-                  <div className="text-center">
-                    <button type="button" onClick={() => { setView('login'); setError(''); }} className="text-xs text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1 mx-auto">
-                      <RotateCcw className="w-3 h-3" /> Back to Sign In
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
+              </div>
+            </div>
 
-            {/* ── VERIFY CODE VIEW ── */}
-            {view === 'reset_code' && (
-              <motion.div key="code" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
-                <div className="mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center mb-4">
-                    <KeyRound className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Enter Reset Code</h1>
-                  <p className="text-white/40 text-sm mt-1">We sent a 6-digit code to <span className="text-white/60 font-medium">{email}</span></p>
-                </div>
-                <form onSubmit={handleVerifyCode} className="space-y-4">
-                  <input id="reset-code-input" type="text" inputMode="numeric" value={resetCode} onChange={e => setResetCode(e.target.value)} placeholder="000000" maxLength={6} required className={`${inputClass} text-center text-2xl tracking-[0.5em] font-bold`} />
-                  {error && (
-                    <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                      <p className="text-xs text-red-300">{error}</p>
-                    </div>
-                  )}
-                  <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-blue-600/25">
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Verify Code</span><ArrowRight className="w-4 h-4" /></>}
-                  </button>
-                </form>
-              </motion.div>
-            )}
-
-            {/* ── NEW PASSWORD VIEW ── */}
-            {view === 'new_password' && (
-              <motion.div key="new_pass" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
-                <div className="mb-6">
-                  <h1 className="text-xl font-bold text-white tracking-tight">Set New Password</h1>
-                  <p className="text-white/40 text-sm mt-1">Choose a strong password for your account</p>
-                </div>
-                <form onSubmit={handleSetNewPassword} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">New Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="new-password-input" type={showPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 characters" required className={`${inputClass} pl-10 pr-10`} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-white/30 hover:text-white/60 transition-colors">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Confirm Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-white/25" />
-                      <input id="confirm-password-input" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repeat password" required className={`${inputClass} pl-10`} />
-                    </div>
-                  </div>
-                  {error && (
-                    <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                      <p className="text-xs text-red-300">{error}</p>
-                    </div>
-                  )}
-                  <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-blue-600/25">
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Update Password</span><ArrowRight className="w-4 h-4" /></>}
-                  </button>
-                </form>
-              </motion.div>
-            )}
-
-            {/* ── SUCCESS VIEW ── */}
-            {view === 'success' && (
-              <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-4">
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.5 }} className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+            {/* Middle visual showcase (floating premium nodes) */}
+            <div className="relative z-10 my-8 flex items-center justify-center h-48">
+              <div className="relative w-40 h-40">
+                {/* Center Node (CuriousBees Brand Icon) */}
+                <motion.div
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 m-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FFC828] to-[#B88608] flex items-center justify-center shadow-lg shadow-[#B88608]/30 z-20 border border-white/20"
+                >
+                  <span className="text-2xl font-black text-[#042654]">C</span>
                 </motion.div>
-                <h2 className="text-lg font-bold text-white">Password Updated!</h2>
-                <p className="text-white/40 text-sm mt-1">Redirecting to your dashboard...</p>
-              </motion.div>
-            )}
 
-          </AnimatePresence>
+                {/* Node 1: Collaboration */}
+                <motion.div
+                  animate={{
+                    y: [0, -8, 0],
+                  }}
+                  transition={{
+                    duration: 5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md">
+                    <Network className="w-5 h-5 text-[#FFC828]" />
+                  </div>
+                  <span className="text-[9px] font-bold text-white/60 tracking-wider uppercase">Collab</span>
+                </motion.div>
 
-          </motion.div>
+                {/* Node 2: Tracking */}
+                <motion.div
+                  animate={{
+                    y: [0, 8, 0],
+                    x: [0, -4, 0],
+                  }}
+                  transition={{
+                    duration: 6,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.5
+                  }}
+                  className="absolute bottom-0 left-0 flex flex-col items-center gap-1 z-10"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md">
+                    <Award className="w-5 h-5 text-[#FFC828]" />
+                  </div>
+                  <span className="text-[9px] font-bold text-white/60 tracking-wider uppercase">Tracking</span>
+                </motion.div>
 
-        {/* Register link */}
-        {view === 'login' && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="text-center mt-6 text-xs text-white/30">
-            New to CuriousBees?{' '}
-            <Link href="/sign-up" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-              Request Access
-            </Link>
-          </motion.p>
-        )}
+                {/* Node 3: Innovation */}
+                <motion.div
+                  animate={{
+                    y: [0, 6, 0],
+                    x: [0, 4, 0],
+                  }}
+                  transition={{
+                    duration: 5.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 1
+                  }}
+                  className="absolute bottom-0 right-0 flex flex-col items-center gap-1 z-10"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-md">
+                    <Zap className="w-5 h-5 text-[#FFC828]" />
+                  </div>
+                  <span className="text-[9px] font-bold text-white/60 tracking-wider uppercase font-semibold">Innovate</span>
+                </motion.div>
+              </div>
+            </div>
 
-        {/* Footer */}
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="text-center mt-4 text-[10px] text-white/15 font-medium tracking-wider uppercase">
-          SRMIST • Institutional Research Portal • Secured by Clerk
-        </motion.p>
+            {/* Bottom info / quote */}
+            <div className="relative z-10">
+              <h3 className="font-display font-medium text-lg text-white leading-snug">
+                Elevating academic excellence through collaborative innovation.
+              </h3>
+              <p className="text-xs text-white/40 mt-2">
+                A unified environment for research scholars, supervisors, and institutional administrators.
+              </p>
+            </div>
+          </div>
+
+          {/* Right authentication panel */}
+          <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-between bg-white/40 backdrop-blur-xl relative border-l border-white/20">
+            <div className="my-auto flex flex-col justify-center w-full max-w-sm mx-auto">
+              
+              {/* GOOGLE ADMIN MANAGED MODE */}
+              {isGoogleAdminManaged ? (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-display font-extrabold text-[#0C4DA2] tracking-tight">Welcome back</h2>
+                    <p className="text-slate-500 text-sm mt-1.5 leading-relaxed font-sans">
+                      Sign in with your pre-provisioned institutional email address using Google Sign-In.
+                    </p>
+                  </div>
+
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3.5 text-left text-xs font-semibold text-red-800"
+                    >
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <p>{error}</p>
+                    </motion.div>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                    className="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50/50 hover:border-slate-300 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-sm cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-[#0C4DA2]" />
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                          <path
+                            fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                          />
+                        </svg>
+                        <span>Sign In with Google</span>
+                      </>
+                    )}
+                  </motion.button>
+
+                  <div className="flex items-start gap-2.5 bg-[#FFC828]/5 border border-[#FFC828]/20 rounded-xl p-4 text-left text-[11px] text-slate-600 leading-relaxed font-medium">
+                    <Info className="w-4.5 h-4.5 text-[#B88608] shrink-0 mt-0.5" />
+                    <p>
+                      Access is permitted only for pre-provisioned university accounts. If your account is not provisioned, please contact your administrator. Allowed domains: <span className="text-[#0C4DA2] font-semibold">@{process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in'}</span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* STANDARD CLERK SIGN IN COMPONENT */
+                <SignIn
+                  routing="path"
+                  path="/sign-in"
+                  signUpUrl="/sign-up"
+                  appearance={{
+                    layout: {
+                      socialButtonsPlacement: 'top',
+                      showOptionalFields: false,
+                    },
+                    variables: {
+                      colorPrimary: '#0C4DA2',
+                      colorBackground: '#ffffff',
+                      colorText: '#191b29',
+                      colorTextSecondary: '#6e6e6e',
+                      borderRadius: '12px',
+                      fontFamily: 'var(--font-sans)',
+                    },
+                    elements: {
+                      rootBox: 'w-full',
+                      card: 'shadow-none border-0 bg-transparent p-0 w-full max-w-none',
+                      headerTitle: 'text-2xl font-display font-extrabold text-[#0C4DA2] tracking-tight',
+                      headerSubtitle: 'text-sm text-slate-500 font-sans mt-1.5 leading-relaxed',
+                      socialButtonsBlockButton: 'border border-slate-200 hover:bg-slate-50/50 text-slate-700 font-semibold h-11 transition-all rounded-xl shadow-none',
+                      socialButtonsBlockButtonText: 'font-semibold text-slate-600',
+                      formButtonPrimary: 'bg-[#0C4DA2] hover:bg-[#0C4DA2]/90 active:scale-[0.98] text-white font-semibold h-11 transition-all rounded-xl shadow-md shadow-[#0C4DA2]/10',
+                      formFieldLabel: 'text-xs font-semibold text-slate-500 uppercase tracking-wider',
+                      formFieldInput: 'h-11 rounded-xl border border-slate-200 focus:border-[#0C4DA2] focus:ring-2 focus:ring-[#0C4DA2]/10 bg-white transition-all text-sm',
+                      footerActionLink: 'text-[#0C4DA2] hover:text-[#0c4da2]/80 font-semibold',
+                      dividerLine: 'bg-slate-100',
+                      dividerText: 'text-slate-400 text-xs font-medium uppercase tracking-wider',
+                    }
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="text-center pt-8 text-[10px] text-slate-400 font-medium tracking-wider uppercase">
+              SRMIST • Secured by Clerk
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

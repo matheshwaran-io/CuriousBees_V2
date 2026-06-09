@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from '@/components/Toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
+import { isRouteAllowedForRole } from '@/lib/auth/permissions';
 
 export default function PortalLayout({
   children,
@@ -53,19 +54,14 @@ export default function PortalLayout({
     }
   }, [isAuthVerifying]);
 
+  // 1. Initial auth sync (only runs once on mount)
   useEffect(() => {
-    // Only run once per mount — prevents re-triggering on every currentUser state change
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
-    let active = true;
-
     const initAuth = async () => {
-      console.info('[PortalLayout] Running initAuth...');
-
-      // Always read fresh from store, not from closure
+      console.info('[PortalLayout] Running initAuth (mount)...');
       let activeUser = useStore.getState().currentUser;
-
       if (!activeUser) {
         console.info('[PortalLayout] No active currentUser cached. Invoking syncUserSession()...');
         activeUser = await syncUserSession();
@@ -73,80 +69,73 @@ export default function PortalLayout({
         console.info('[PortalLayout] Using cached currentUser:', activeUser.email);
       }
 
-      if (!active) return;
-
-      if (!activeUser) {
-        if (useStore.getState().notProvisioned) {
-          console.warn('[PortalLayout] Account not provisioned. Redirecting to /not-provisioned.');
-          router.push('/not-provisioned');
-          return;
-        }
-        if (useStore.getState().isSuspended) {
-          console.warn('[PortalLayout] Account suspended. Redirecting to /account-suspended.');
-          router.push('/account-suspended');
-          return;
-        }
-        console.warn('[PortalLayout] Unauthenticated access detected. Redirecting to /sign-in.');
-        router.push('/sign-in');
-        return;
-      }
-
-      if (!activeUser.onboardingCompleted) {
-        console.warn('[PortalLayout] User has not completed onboarding. Redirecting to /onboarding.');
-        router.push('/onboarding');
-        return;
-      }
-
-      if (activeUser.status === 'REJECTED') {
-        console.warn('[PortalLayout] User account was rejected. Redirecting to /access-denied.');
-        router.push('/access-denied');
-        return;
-      }
-
-      if (activeUser.status === 'SUSPENDED') {
-        console.warn('[PortalLayout] User account was suspended. Redirecting to /account-suspended.');
-        router.push('/account-suspended');
-        return;
-      }
-
-      if (
-        activeUser.status === 'PENDING' ||
-        activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
-        activeUser.status === 'PENDING_ADMIN_APPROVAL'
-      ) {
-        console.warn('[PortalLayout] User is pending approval. Redirecting to /approval-pending.');
-        router.push('/approval-pending');
-        return;
-      }
-
-      if (pathname.startsWith('/admin') && activeUser.role !== 'INSTITUTE_ADMIN') {
-        router.push('/unauthorized');
-        return;
-      }
-      if (pathname.startsWith('/institute-admin') && activeUser.role !== 'INSTITUTE_ADMIN') {
-        router.push('/unauthorized');
-        return;
-      }
-      if (pathname.startsWith('/supervisor') && activeUser.role !== 'RESEARCH_SUPERVISOR') {
-        router.push('/unauthorized');
-        return;
-      }
-      if (pathname.startsWith('/scholar') && activeUser.role !== 'RESEARCH_SCHOLAR') {
-        router.push('/unauthorized');
-        return;
-      }
-
-      console.info('[PortalLayout] Authentication checks passed. Initializing data fetch...');
       setIsAuthVerifying(false);
-      fetchData();
+      if (activeUser) {
+        console.info('[PortalLayout] Initial sync complete. Triggering data fetch.');
+        fetchData();
+      }
     };
 
     initAuth();
-    return () => {
-      active = false;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [syncUserSession, fetchData]);
+
+  // 2. Reactive user authorization & route checks
+  useEffect(() => {
+    if (isAuthVerifying) return;
+
+    const activeUser = currentUser;
+
+    if (!activeUser) {
+      if (useStore.getState().notProvisioned) {
+        console.warn('[PortalLayout] Account not provisioned. Redirecting to /not-provisioned.');
+        router.push('/not-provisioned');
+        return;
+      }
+      if (useStore.getState().isSuspended) {
+        console.warn('[PortalLayout] Account suspended. Redirecting to /account-suspended.');
+        router.push('/account-suspended');
+        return;
+      }
+      console.warn('[PortalLayout] Unauthenticated access detected. Redirecting to /sign-in.');
+      router.push('/sign-in');
+      return;
+    }
+
+    if (!activeUser.onboardingCompleted) {
+      console.warn('[PortalLayout] User has not completed onboarding. Redirecting to /onboarding.');
+      router.push('/onboarding');
+      return;
+    }
+
+    if (activeUser.status === 'REJECTED') {
+      console.warn('[PortalLayout] User account was rejected. Redirecting to /access-denied.');
+      router.push('/access-denied');
+      return;
+    }
+
+    if (activeUser.status === 'SUSPENDED' || activeUser.suspended) {
+      console.warn('[PortalLayout] User account was suspended. Redirecting to /account-suspended.');
+      router.push('/account-suspended');
+      return;
+    }
+
+    if (
+      activeUser.status === 'PENDING' ||
+      activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
+      activeUser.status === 'PENDING_ADMIN_APPROVAL'
+    ) {
+      console.warn('[PortalLayout] User is pending approval. Redirecting to /approval-pending.');
+      router.push('/approval-pending');
+      return;
+    }
+
+    // Role-based path authorization check
+    if (!isRouteAllowedForRole(activeUser.role, pathname)) {
+      console.warn(`[PortalLayout] Access unauthorized for role ${activeUser.role} on path ${pathname}`);
+      router.push('/unauthorized');
+      return;
+    }
+  }, [isAuthVerifying, currentUser, pathname, router]);
 
   if (isAuthVerifying || !currentUser) {
     return (

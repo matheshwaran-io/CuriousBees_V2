@@ -5,12 +5,22 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Activity, Users, BookOpen, LineChart, FileText } from 'lucide-react';
 import { Show, SignUpButton } from '@clerk/nextjs';
+import { HeroGeometric } from '@/components/ui/hero-geometric';
 
 export default function HeroSection() {
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Animated Geometric Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <HeroGeometric
+          color1="#0C4DA2"
+          color2="#E6E6FA"
+          speed={0.4}
+          className="opacity-45"
+        />
+        {/* Smooth fade gradients */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#e6e6fa] via-transparent to-[#e6e6fa] pointer-events-none" />
+      </div>
 
       <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center text-center">
         

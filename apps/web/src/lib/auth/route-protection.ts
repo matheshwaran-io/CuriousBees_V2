@@ -20,8 +20,8 @@ import type { UserRole } from '@curiousbees/types';
  */
 export const DASHBOARD_ROUTES: Record<UserRole, string> = {
   RESEARCH_SUPERVISOR: '/supervisor',
-  RESEARCH_SCHOLAR: '/dashboard',
-  INSTITUTE_ADMIN: '/admin',
+  RESEARCH_SCHOLAR: '/scholar/dashboard',
+  INSTITUTE_ADMIN: '/admin/dashboard',
 };
 
 // ─── Core Helpers ─────────────────────────────────────────────────────────────

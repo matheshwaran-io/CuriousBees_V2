@@ -69,7 +69,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
   const researchPortalSection = {
     label: 'Research Portal',
     items: [
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { name: 'Dashboard', href: role === 'RESEARCH_SUPERVISOR' ? '/supervisor' : '/scholar/dashboard', icon: LayoutDashboard },
       { name: 'Researchers', href: '/researchers', icon: Users },
       { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
       { name: 'Workspaces', href: '/workspace', icon: FolderOpen },
