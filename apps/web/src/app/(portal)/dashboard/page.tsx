@@ -78,9 +78,9 @@ export default function DashboardPage() {
       if (currentUser.role === 'INSTITUTE_ADMIN') {
         router.push('/admin/dashboard');
       } else if (currentUser.role === 'RESEARCH_SUPERVISOR') {
-        router.push('/supervisor');
+        router.push('/threads');
       } else if (currentUser.role === 'RESEARCH_SCHOLAR') {
-        router.push('/scholar/dashboard');
+        router.push('/scholar/feed');
       }
     }
   }, [currentUser, pathname, router]);

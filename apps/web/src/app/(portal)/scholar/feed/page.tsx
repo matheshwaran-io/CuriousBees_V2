@@ -119,7 +119,7 @@ const SCREENSHOT_THREADS: Thread[] = [
   }
 ];
 
-export default function ThreadsFeedPage() {
+export default function ScholarFeedPage() {
   const { threads, searchQuery, setSearchQuery, activeTag, setActiveTag, isLoading, fetchData, currentUser, createThread } = useStore();
 
   // State controls for input and local state overrides
@@ -280,7 +280,7 @@ export default function ThreadsFeedPage() {
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-3 text-slate-455 hover:text-slate-700 cursor-pointer"
+              className="absolute right-3.5 top-3 text-slate-450 hover:text-slate-700 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -363,7 +363,7 @@ export default function ThreadsFeedPage() {
             </div>
 
             {selectedAttachment && (
-              <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-655 font-bold self-start mt-1">
+              <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-650 font-bold self-start mt-1">
                 <Paperclip className="w-3.5 h-3.5 text-slate-450" />
                 <span>{selectedAttachment.name} ({selectedAttachment.size})</span>
                 <button onClick={() => setSelectedAttachment(null)} className="text-slate-400 hover:text-red-500 transition-colors ml-1 cursor-pointer">
@@ -377,14 +377,14 @@ export default function ThreadsFeedPage() {
           <div className="flex flex-col gap-6">
             <AnimatePresence mode="wait">
               {isLoading && filteredThreads.length === 0 ? (
-                <div className="py-16 flex justify-center items-center text-slate-505">
+                <div className="py-16 flex justify-center items-center text-slate-500">
                   <span className="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full block" />
                 </div>
               ) : filteredThreads.length === 0 ? (
                 <div className="bg-white border border-slate-200 p-12 text-center rounded-2xl shadow-sm text-left">
                   <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-4" />
                   <h4 className="text-slate-900 font-bold text-sm text-center">No Matching Research Updates</h4>
-                  <p className="text-slate-505 text-xs max-w-xs mx-auto mt-2 leading-relaxed font-semibold text-center">
+                  <p className="text-slate-500 text-xs max-w-xs mx-auto mt-2 leading-relaxed font-semibold text-center">
                     We couldn't find any threads matching your parameters. Be the first to start a collaborative discussion!
                   </p>
                 </div>
@@ -431,7 +431,7 @@ export default function ThreadsFeedPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center text-slate-450 hover:text-slate-650 transition-colors p-1 cursor-pointer">
+                        <div className="flex items-center text-slate-400 hover:text-slate-650 transition-colors p-1 cursor-pointer">
                           <MoreHorizontal className="w-4 h-4" />
                         </div>
                       </div>
@@ -441,7 +441,7 @@ export default function ThreadsFeedPage() {
                         {thread.isPaper ? (
                           // Nested Document Card View matching Marcus Jensen's Post
                           <div className="space-y-3">
-                            <p className="text-slate-505 font-bold">
+                            <p className="text-slate-500 font-bold">
                               {thread.author?.name} published a new paper <span className="font-medium text-slate-400 text-[10px] ml-1.5">{typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
                             </p>
                             
@@ -451,7 +451,7 @@ export default function ThreadsFeedPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-4 mb-1">
-                                  <span className="bg-slate-200/60 border border-slate-250 text-slate-655 text-[8.5px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded leading-none">
+                                  <span className="bg-slate-200/60 border border-slate-250 text-slate-650 text-[8.5px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded leading-none">
                                     {thread.paperInfo?.journal || 'NATURE QUANTUM'}
                                   </span>
                                 </div>
@@ -498,7 +498,7 @@ export default function ThreadsFeedPage() {
                           </button>
 
                           <Link 
-                            href={`/threads/${thread.id}`}
+                            href={`/scholar/feed/${thread.id}`}
                             className="flex items-center gap-1.5 text-xs font-bold text-slate-450 hover:text-slate-700 transition-all cursor-pointer"
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
@@ -552,7 +552,7 @@ export default function ThreadsFeedPage() {
                 SUGGESTED PEERS
               </span>
               <Link
-                href="/researchers"
+                href="/scholar/connections"
                 className="text-[9px] font-extrabold uppercase text-[#004495] hover:text-[#003370] transition-colors"
               >
                 View All
@@ -568,7 +568,7 @@ export default function ThreadsFeedPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-slate-900 truncate leading-tight">{peer.name}</p>
-                      <p className="text-[9px] text-slate-455 font-bold uppercase mt-0.5 truncate">{peer.title}</p>
+                      <p className="text-[9px] text-slate-450 font-bold uppercase mt-0.5 truncate">{peer.title}</p>
                     </div>
                   </div>
 
@@ -589,7 +589,7 @@ export default function ThreadsFeedPage() {
             </div>
           </div>
 
-          {/* Recommended Domains / Trending Research */}
+          {/* Trending Research */}
           <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100/80">
               Trending Research
@@ -603,7 +603,7 @@ export default function ThreadsFeedPage() {
                 >
                   #AIINMEDICINE
                 </button>
-                <p className="text-[10px] text-slate-455 font-semibold mt-1">Diagnostic Transformers</p>
+                <p className="text-[10px] text-slate-450 font-semibold mt-1">Diagnostic Transformers</p>
                 <p className="text-[9px] text-slate-400 font-semibold mt-0.5">2.4k papers this week</p>
               </div>
 
@@ -614,13 +614,13 @@ export default function ThreadsFeedPage() {
                 >
                   #CLIMATETECH
                 </button>
-                <p className="text-[10px] text-slate-455 font-semibold mt-1">Direct Air Capture Models</p>
+                <p className="text-[10px] text-slate-450 font-semibold mt-1">Direct Air Capture Models</p>
               </div>
             </div>
 
             <button 
               onClick={() => setSearchQuery('Research')}
-              className="w-full mt-2 py-2 border border-slate-200/80 hover:border-slate-355 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer active:scale-98"
+              className="w-full mt-2 py-2 border border-slate-200/80 hover:border-slate-350 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer active:scale-98"
             >
               Explore All Topics
             </button>
@@ -628,7 +628,7 @@ export default function ThreadsFeedPage() {
 
           {/* Upcoming Events */}
           <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
-            <span className="text-[10px] font-extrabold text-slate-405 uppercase tracking-wider pb-2 border-b border-slate-100/80">
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100/80">
               Upcoming Events
             </span>
 
@@ -639,7 +639,7 @@ export default function ThreadsFeedPage() {
               </div>
               <div className="min-w-0">
                 <h4 className="text-xs font-bold text-slate-900 leading-snug truncate">Global AI Safety Summit</h4>
-                <p className="text-[10px] text-slate-455 font-semibold mt-0.5 truncate">Virtual · 2.1k attending</p>
+                <p className="text-[10px] text-slate-450 font-semibold mt-0.5 truncate">Virtual · 2.1k attending</p>
               </div>
             </div>
           </div>
@@ -648,7 +648,7 @@ export default function ThreadsFeedPage() {
           <div className="px-2 pt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide space-y-1.5">
             <div className="flex items-center gap-3">
               <Link href="/about" className="hover:text-slate-600 transition-colors">About</Link>
-              <Link href="/help" className="hover:text-slate-600 transition-colors">Help Center</Link>
+              <Link href="/scholar/help" className="hover:text-slate-600 transition-colors">Help Center</Link>
               <Link href="/privacy-policy" className="hover:text-slate-600 transition-colors">Privacy</Link>
             </div>
             <p className="text-[9px] font-semibold text-slate-400 leading-none mt-1 lowercase select-none">
@@ -662,7 +662,7 @@ export default function ThreadsFeedPage() {
 
       {/* Floating Action Button (FAB) at Bottom Right */}
       <Link 
-        href="/threads/create"
+        href="/scholar/feed/create"
         className="fixed bottom-6 right-6 w-12 h-12 bg-[#004495] hover:bg-[#003370] text-white flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 group cursor-pointer z-50 border border-[#004495]/20"
         title="New Proposal"
       >

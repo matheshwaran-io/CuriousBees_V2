@@ -66,21 +66,19 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
     ];
   }
 
-  const researchPortalSection = {
-    label: 'Research Portal',
-    items: [
-      { name: 'Dashboard', href: role === 'RESEARCH_SUPERVISOR' ? '/supervisor' : '/scholar/dashboard', icon: LayoutDashboard },
-      { name: 'Researchers', href: '/researchers', icon: Users },
-      { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
-      { name: 'Workspaces', href: '/workspace', icon: FolderOpen },
-      { name: 'Research Feed', href: '/threads', icon: MessageSquare },
-      { name: 'Events', href: '/events', icon: CalendarIcon },
-    ],
-  };
-
   if (role === 'RESEARCH_SUPERVISOR') {
     return [
-      researchPortalSection,
+      {
+        label: 'Research Portal',
+        items: [
+          { name: 'Research Feed', href: '/threads', icon: MessageSquare },
+          { name: 'Dashboard', href: '/supervisor', icon: LayoutDashboard },
+          { name: 'Researchers', href: '/researchers', icon: Users },
+          { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
+          { name: 'Workspaces', href: '/workspace', icon: FolderOpen },
+          { name: 'Events', href: '/events', icon: CalendarIcon },
+        ],
+      },
       {
         label: 'Faculty Advisory',
         items: [
@@ -95,12 +93,15 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
 
   // Scholar
   return [
-    researchPortalSection,
     {
-      label: 'Scholar Portfolio',
+      label: 'Research Portal',
       items: [
-        { name: 'My Publications', href: '/publications', icon: BookOpen },
-        { name: 'Progress Reports', href: '/reports', icon: BarChart3 },
+        { name: 'Research Feed', href: '/scholar/feed', icon: MessageSquare },
+        { name: 'Dashboard', href: '/scholar/dashboard', icon: LayoutDashboard },
+        { name: 'Connections', href: '/scholar/connections', icon: Users },
+        { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
+        { name: 'Workspaces', href: '/scholar/workspaces', icon: FolderOpen },
+        { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
       ],
     },
   ];
@@ -304,13 +305,13 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         )}
 
         <Link
-          href="/profile"
+          href={role === 'RESEARCH_SCHOLAR' ? '/scholar/profile' : '/profile'}
           onClick={onClose}
           onMouseEnter={() => setHoveredItem('profile')}
           onMouseLeave={() => setHoveredItem(null)}
           className={cn(
             'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-200 mb-1',
-            pathname === '/profile' ? 'text-primary font-bold' : 'text-textSecondary hover:text-black'
+            (pathname === '/profile' || pathname === '/scholar/profile') ? 'text-primary font-bold' : 'text-textSecondary hover:text-black'
           )}
         >
           {hoveredItem === 'profile' && (
@@ -322,7 +323,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               exit={{ opacity: 0 }}
             />
           )}
-          {pathname === '/profile' && (
+          {(pathname === '/profile' || pathname === '/scholar/profile') && (
             <motion.span
               layoutId="sidebar-active-indicator"
               className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-full z-10"

@@ -101,3 +101,12 @@ export function isPublicRoute(pathname: string): boolean {
     (prefix) => pathname === prefix || pathname.startsWith(prefix + '/')
   );
 }
+
+/**
+ * Returns the path prefix for a given user role.
+ */
+export function getRolePrefix(role: UserRole): string {
+  if (role === 'INSTITUTE_ADMIN') return '/admin';
+  if (role === 'RESEARCH_SUPERVISOR') return '/supervisor';
+  return '/scholar';
+}
