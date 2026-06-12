@@ -17,7 +17,7 @@ export class CommentsService {
       throw new BadRequestException(parsed.error.errors[0].message);
     }
 
-    const { content, threadId } = parsed.data;
+    const { content, threadId, parentId } = parsed.data;
 
     // Check if thread exists
     const threadExists = await this.prisma.thread.findUnique({
@@ -27,11 +27,21 @@ export class CommentsService {
       throw new BadRequestException('The thread does not exist.');
     }
 
+    if (parentId) {
+      const parentExists = await this.prisma.comment.findUnique({
+        where: { id: parentId }
+      });
+      if (!parentExists) {
+        throw new BadRequestException('The parent comment does not exist.');
+      }
+    }
+
     const newComment = await this.prisma.comment.create({
       data: {
         content,
         threadId,
-        authorId
+        authorId,
+        parentId
       },
       include: {
         author: {

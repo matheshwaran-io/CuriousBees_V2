@@ -24,6 +24,7 @@ import { FacultiesModule } from './faculties/faculties.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { SupervisorRequestsModule } from './supervisor-requests/requests.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { FeedModule } from './feed/feed.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     OnboardingModule,
     SupervisorRequestsModule,
     AnnouncementsModule,
+    FeedModule,
   ],
   controllers: [AppController],
   providers: [],

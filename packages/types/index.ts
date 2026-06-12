@@ -43,15 +43,75 @@ export interface UserInterest {
   interest?: ResearchInterest;
 }
 
+export interface ThreadAttachment {
+  id: string;
+  threadId: string;
+  name: string;
+  url: string;
+  size: number;
+  type: 'PDF' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  createdAt: Date | string;
+}
+
+export interface ThreadLike {
+  id: string;
+  threadId: string;
+  userId: string;
+  createdAt: Date | string;
+}
+
+export interface ThreadShare {
+  id: string;
+  threadId: string;
+  userId: string;
+  platform?: string | null;
+  createdAt: Date | string;
+}
+
+export interface ThreadReport {
+  id: string;
+  threadId: string;
+  reporterId: string;
+  reason: string;
+  status: string;
+  createdAt: Date | string;
+}
+
+export interface SavedThread {
+  id: string;
+  threadId: string;
+  userId: string;
+  createdAt: Date | string;
+}
+
+export interface ResearchConnection {
+  id: string;
+  requesterId: string;
+  receiverId: string;
+  status: 'PENDING' | 'CONNECTED' | 'REJECTED';
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  requester?: User;
+  receiver?: User;
+}
+
 export interface Thread {
   id: string;
   title: string;
   content: string;
+  type?: 'TEXT' | 'RESEARCH_UPDATE' | 'DISCUSSION' | 'QUESTION' | 'ANNOUNCEMENT';
+  isPaper?: boolean;
+  paperJournal?: string | null;
   authorId: string;
   author?: User;
   tags: string[];
   comments?: Comment[];
-  _count?: { comments: number };
+  attachments?: ThreadAttachment[];
+  likes?: ThreadLike[];
+  shares?: ThreadShare[];
+  reports?: ThreadReport[];
+  saves?: SavedThread[];
+  _count?: { comments?: number, likes?: number, shares?: number, saves?: number };
   createdAt: Date | string;
 }
 
@@ -62,6 +122,9 @@ export interface Comment {
   thread?: Thread;
   authorId: string;
   author?: User;
+  parentId?: string | null;
+  parent?: Comment | null;
+  replies?: Comment[];
   createdAt: Date | string;
 }
 
@@ -81,11 +144,14 @@ export interface CreateThreadInput {
   title: string;
   content: string;
   tags: string[];
+  type?: 'TEXT' | 'RESEARCH_UPDATE' | 'DISCUSSION' | 'QUESTION' | 'ANNOUNCEMENT' | 'PUBLICATION' | 'ACHIEVEMENT' | 'COLLABORATION_REQUEST';
+  attachments?: { name: string; url: string; size: number; type: 'PDF' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' }[];
 }
 
 export interface CreateCommentInput {
   content: string;
   threadId: string;
+  parentId?: string;
 }
 
 export interface CreateOpportunityInput {
@@ -131,13 +197,15 @@ export interface CreateEventInput {
 export interface CollaborationRequest {
   id: string;
   scholarId: string;
-  opportunityId: string;
+  opportunityId?: string | null;
+  threadId?: string | null;
   status: 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'NEEDS_INFO';
   message: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   scholar?: User;
   opportunity?: Opportunity;
+  thread?: Thread;
 }
 
 export interface Workspace {

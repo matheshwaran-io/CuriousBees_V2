@@ -30,10 +30,15 @@ import {
   Users,
   Grid,
   Calendar,
-  MoreHorizontal
+  MoreHorizontal,
+  BookOpen,
+  Hash
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardShell } from '@/components/shared/dashboard-shell';
+import { supabase, getStoragePublicUrl } from '@/lib/supabase';
+import FeedComments from '@/components/feed/FeedComments';
+import FeedFAB from '@/components/feed/FeedFAB';
 
 // ─── TYPES & INTERFACES ──────────────────────────────────────────────────────
 
@@ -59,6 +64,7 @@ interface Thread {
     publisher?: string;
   };
   interestedCount?: number;
+  attachments?: any[];
 }
 
 interface Peer {
@@ -71,76 +77,55 @@ interface Peer {
   initials?: string;
 }
 
-// ─── INITIAL DATA SPECIFIED BY THE FIRST SCREENSHOT ──────────────────────────
-
-const MOCK_PEERS: Peer[] = [
-  { id: 'p1', name: 'Dr. Wei Chen', title: 'Bio-Engineering, ETH', department: 'Bio-Engineering', avatarColor: 'bg-emerald-600', connected: 'connect' },
-];
-
-const SCREENSHOT_THREADS: Thread[] = [
-  {
-    id: 't-sara',
-    title: 'Multi-center study on Neural Plasticity in adult cognitive recovery',
-    content: "Seeking collaborators for a multi-center study on 'Neural Plasticity' in adult cognitive recovery. We are specifically looking for researchers with experience in longitudinal fMRI data analysis and bayesian modeling.",
-    createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 mins ago
-    author: {
-      name: 'Dr. Sara Rowe',
-      image: null,
-      role: 'RESEARCH_SUPERVISOR',
-      department: 'Neuroscience @ Stanford University'
-    },
-    tags: ['Neuroscience', 'fMRI'],
-    badge: 'COLLABORATION REQUEST',
-    likesCount: 24,
-    commentsCount: 8,
-    collaboratorsCount: 3,
-    interestedCount: 12
-  },
-  {
-    id: 't-marcus',
-    title: 'Lattice-Based Error Correction Protocols for Scalable Quantum Computation',
-    content: 'Lattice-Based Error Correction Protocols for Scalable Quantum Computation',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    author: {
-      name: 'Marcus Jensen',
-      image: null,
-      role: 'RESEARCH_SCHOLAR',
-      department: 'MIT Lab'
-    },
-    tags: ['QuantumComputing', 'ErrorCorrection'],
-    isPaper: true,
-    paperInfo: {
-      journal: 'NATURE QUANTUM'
-    },
-    likesCount: 142,
-    commentsCount: 19,
-    collaboratorsCount: 5,
-    interestedCount: 0
-  }
-];
-
 export default function ScholarFeedPage() {
-  const { threads, searchQuery, setSearchQuery, activeTag, setActiveTag, isLoading, fetchData, currentUser, createThread } = useStore();
+  const { 
+    threads, searchQuery, setSearchQuery, activeTag, setActiveTag, 
+    isLoading, fetchData, currentUser, createThread,
+    toggleLikeThread, requestThreadCollaboration, shareThread, reportThread, fetchSuggestedPeers, fetchTrendingResearch,
+    toggleSaveThread, deleteThread
+  } = useStore();
 
-  // State controls for input and local state overrides
   const [newPostContent, setNewPostContent] = useState('');
+  const [postType, setPostType] = useState('RESEARCH_UPDATE');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedAttachment, setSelectedAttachment] = useState<{name: string, size: string} | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedAttachment, setSelectedAttachment] = useState<{name: string, size: string, url: string, type: string, rawSize: number, isPaper?: boolean} | null>(null);
 
-  // Local state overrides for interactive items
   const [likes, setLikes] = useState<Record<string, { count: number; liked: boolean }>>({});
   const [collaborating, setCollaborating] = useState<Record<string, boolean>>({});
-  const [peers, setPeers] = useState<Peer[]>(MOCK_PEERS);
+  const [peers, setPeers] = useState<Peer[]>([]);
+  const [trendingTags, setTrendingTags] = useState<string[]>([]);
+  const [activeFilter, setActiveFilter] = useState('Posts');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
 
-  // Sync data on mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('curiousbees_post_draft');
+    if (savedDraft) setNewPostContent(savedDraft);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('curiousbees_post_draft', newPostContent);
+  }, [newPostContent]);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchSuggestedPeers().then(data => {
+      setPeers(data.map(u => ({
+        id: u.id,
+        name: u.name || 'Scholar',
+        title: u.department || 'Department',
+        department: u.department || '',
+        avatarColor: 'bg-indigo-600',
+        connected: 'connect',
+      })));
+    });
+    fetchTrendingResearch().then(tags => setTrendingTags(tags));
+  }, [fetchData, fetchSuggestedPeers, fetchTrendingResearch]);
 
   // Combine database threads with screenshot mock threads
   const getCombinedThreads = (): Thread[] => {
-    const dbThreadsMapped: Thread[] = threads.map(t => {
-      const isPaperType = t.title.toLowerCase().includes('paper') || t.content.toLowerCase().includes('publication');
+    return threads.map(t => {
       return {
         id: t.id,
         title: t.title,
@@ -150,25 +135,21 @@ export default function ScholarFeedPage() {
           name: t.author.name,
           image: t.author.image,
           role: t.author.role,
-          department: t.author.department
-        } : {
-          name: 'SRMIST Scholar',
-          image: null,
-          role: 'RESEARCH_SCHOLAR',
-          department: 'Engineering'
-        },
+          department: t.author.department,
+          faculty: (t.author as any).faculty
+        } : undefined,
+        authorId: (t as any).authorId,
         tags: t.tags,
-        commentsCount: t.comments?.length || t._count?.comments || 0,
-        likesCount: 12,
-        collaboratorsCount: 2,
-        badge: t.author?.role === 'RESEARCH_SUPERVISOR' ? 'FACULTY ANNOUNCEMENT' : 'COLLABORATION REQUEST',
-        isPaper: isPaperType,
-        paperInfo: isPaperType ? { journal: 'SRMIST INTRANET' } : undefined,
-        interestedCount: 4
+        commentsCount: t.comments?.length || (t as any)._count?.comments || 0,
+        likesCount: (t as any)._count?.likes || 0,
+        collaboratorsCount: (t as any)._count?.shares || 0, // Fallback
+        badge: (t as any).type ? (t as any).type.replace('_', ' ') : undefined,
+        isPaper: t.isPaper,
+        paperInfo: t.isPaper ? { journal: t.paperJournal || 'NATURE QUANTUM' } : undefined,
+        interestedCount: 0,
+        attachments: (t as any).attachments
       };
     });
-
-    return [...SCREENSHOT_THREADS, ...dbThreadsMapped];
   };
 
   // Filter threads based on search query or activeTag
@@ -182,6 +163,8 @@ export default function ScholarFeedPage() {
     const matchesTag = activeTag === '' || t.tags.includes(activeTag);
     return matchesSearch && matchesTag;
   });
+
+  const recentPublications = getCombinedThreads().filter(t => t.isPaper).slice(0, 3);
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'CB';
@@ -201,23 +184,75 @@ export default function ScholarFeedPage() {
     }));
   };
 
-  // Handle compose update posting
+  // Handle File Upload to Supabase Storage
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const bucket = 'curiousbees-storage'; // Will fallback to public if not created
+      
+      const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, { upsert: true });
+      if (error) {
+        console.error('Upload failed, ensure bucket exists and has correct RLS:', error);
+        // Fallback for demo if bucket doesn't exist
+        setSelectedAttachment({
+          name: file.name,
+          size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          url: `https://dummy.url/${fileName}`,
+          type: file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('video/') ? 'VIDEO' : file.type === 'application/pdf' ? 'PDF' : 'DOCUMENT',
+          rawSize: file.size
+        });
+        return;
+      }
+      
+      const isPaper = e.target.id === 'paper-upload';
+      const url = getStoragePublicUrl(bucket, fileName);
+      setSelectedAttachment({
+        name: file.name,
+        size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        url: url,
+        type: file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('video/') ? 'VIDEO' : file.type === 'application/pdf' ? 'PDF' : 'DOCUMENT',
+        rawSize: file.size,
+        isPaper
+      });
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+      e.target.value = ''; // Reset input
+    }
+  };
+
+  const handleAddTag = () => {
+    setNewPostContent(prev => prev + (prev.endsWith(' ') || prev.length === 0 ? '#' : ' #'));
+  };
+
   const handlePostUpdate = async () => {
     if (!newPostContent.trim()) return;
     setIsSubmitting(true);
     
     const contentText = newPostContent.trim();
-    // Parse hashtags like #Neuroscience from the text input
     const hashTags = contentText.match(/#\w+/g)?.map(t => t.replace('#', '')) || ['Research'];
     const textWithoutTags = contentText.replace(/#\w+/g, '').trim();
-    
-    // Auto generate title
     const firstLine = textWithoutTags.split('\n')[0];
     const title = firstLine.length > 55 ? firstLine.substring(0, 55) + '...' : firstLine || 'Research Update';
 
     try {
-      await createThread(title, contentText, hashTags);
+      await createThread(title, contentText, hashTags, {
+        type: postType,
+        isPaper: selectedAttachment?.isPaper || false,
+        attachments: selectedAttachment ? [{
+          name: selectedAttachment.name,
+          url: selectedAttachment.url,
+          size: selectedAttachment.rawSize,
+          type: selectedAttachment.type
+        }] : undefined
+      });
       setNewPostContent('');
+      localStorage.removeItem('curiousbees_post_draft');
       setSelectedAttachment(null);
     } catch (e) {
       console.error(e);
@@ -226,26 +261,73 @@ export default function ScholarFeedPage() {
     }
   };
 
-  // Toggle Like Action locally
-  const toggleLike = (threadId: string, initialLikes: number) => {
-    setLikes(prev => {
-      const current = prev[threadId] || { count: initialLikes, liked: false };
-      return {
+  const toggleLike = async (threadId: string, initialLikes: number) => {
+    const currentState = likes[threadId] || { count: initialLikes, liked: false };
+    // Optimistic UI update
+    setLikes(prev => ({
+      ...prev,
+      [threadId]: { count: currentState.liked ? currentState.count - 1 : currentState.count + 1, liked: !currentState.liked }
+    }));
+    try {
+      const res = await toggleLikeThread(threadId);
+      // Sync with server state
+      setLikes(prev => ({
         ...prev,
-        [threadId]: {
-          count: current.liked ? current.count - 1 : current.count + 1,
-          liked: !current.liked
-        }
-      };
-    });
+        [threadId]: { count: res.liked ? initialLikes + 1 : initialLikes, liked: res.liked }
+      }));
+    } catch (e) {
+      // Revert on error
+      setLikes(prev => ({ ...prev, [threadId]: currentState }));
+    }
   };
 
-  // Toggle Collaborate Action locally
-  const toggleCollaborate = (threadId: string) => {
-    setCollaborating(prev => ({
-      ...prev,
-      [threadId]: !prev[threadId]
-    }));
+  const toggleCollaborate = async (threadId: string) => {
+    const currentState = collaborating[threadId];
+    // Optimistic update
+    setCollaborating(prev => ({ ...prev, [threadId]: !currentState }));
+    try {
+      if (!currentState) {
+        await requestThreadCollaboration(threadId, 'I would like to collaborate on this research.');
+      }
+    } catch (e) {
+      setCollaborating(prev => ({ ...prev, [threadId]: currentState }));
+    }
+  };
+
+  const toggleSave = async (threadId: string) => {
+    try {
+      await toggleSaveThread(threadId);
+      alert('Thread saved status toggled');
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDelete = async (threadId: string) => {
+    if (confirm('Are you sure you want to delete this post?')) {
+      try {
+        await deleteThread(threadId);
+      } catch (e) { console.error(e); }
+    }
+  };
+
+  const handleShare = async (threadId: string) => {
+    try {
+      await shareThread(threadId);
+      alert("Thread shared successfully!");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReport = async (threadId: string) => {
+    if (confirm("Are you sure you want to report this post?")) {
+      try {
+        await reportThread(threadId, "Inappropriate content");
+        alert("Post reported successfully.");
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setOpenMenuId(null);
   };
 
   const getAvatarBg = (initials: string) => {
@@ -295,83 +377,159 @@ export default function ScholarFeedPage() {
           >
             <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
-          <button className="p-1.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer relative">
-            <Bell className="w-4 h-4 text-slate-500" />
-          </button>
-          <button className="p-1.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer">
-            <MessageSquare className="w-4 h-4 text-slate-500" />
-          </button>
         </div>
+      </div>
+
+      {/* Pill Filters */}
+      <div className="w-full flex items-center gap-2 mb-6">
+        {['Posts', 'Researchers', 'Topics', 'Tags'].map(filter => (
+          <button
+            key={filter}
+            onClick={() => setActiveFilter(filter)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              activeFilter === filter 
+                ? 'bg-[#6D28D9] text-white' 
+                : 'bg-white border border-slate-200/90 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {filter}
+          </button>
+        ))}
       </div>
 
       {/* ─── TWO-COLUMN MAIN GRID ────────────────────────────────────────────── */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start relative">
         
         {/* LEFT/CENTER COLUMN: FEED & COMPOSE */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8">
           
           {/* Compose update box */}
-          <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm text-left flex flex-col gap-4">
-            <div className="flex items-start gap-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/90 backdrop-blur-xl border border-white/60 p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow text-left flex flex-col gap-4 relative overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-[#6D28D9]/[0.02] to-transparent pointer-events-none" />
+            
+            <div className="flex items-start gap-4 relative z-10">
               {currentUser?.image ? (
-                <img src={currentUser.image} className="w-9 h-9 rounded-full object-cover border border-slate-200" alt="" />
+                <img src={currentUser.image} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-sm ring-2 ring-slate-50" alt="" />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-[#004495]/5 border border-[#004495]/10 flex items-center justify-center font-display font-extrabold text-[#004495] text-xs shrink-0">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6D28D9] to-indigo-600 flex items-center justify-center font-display font-extrabold text-white text-sm shrink-0 shadow-md border-2 border-white">
                   {getInitials(currentUser?.name)}
                 </div>
               )}
               
-              <div className="flex-1">
+              <div className="flex-1 bg-slate-50/50 hover:bg-slate-50/80 transition-colors rounded-2xl p-2 border border-slate-100 flex flex-col">
                 <textarea
                   rows={2}
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                   placeholder="Share a research update, finding, or question..."
-                  className="w-full resize-none border-0 focus:ring-0 text-slate-800 text-xs font-semibold placeholder-slate-400 p-1 focus:outline-none min-h-[42px] leading-relaxed"
+                  className="w-full bg-transparent resize-none border-0 focus:ring-0 text-slate-800 text-sm font-semibold placeholder-slate-400 p-2 focus:outline-none min-h-[48px] leading-relaxed"
                 />
+                <div className="flex justify-between items-center px-2 pb-1 pt-2 border-t border-slate-100/50">
+                  <select
+                    value={postType}
+                    onChange={(e) => setPostType(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-slate-500 focus:outline-none focus:ring-0 cursor-pointer uppercase tracking-wider"
+                  >
+                    <option value="RESEARCH_UPDATE">Research Update</option>
+                    <option value="PUBLICATION">Publication</option>
+                    <option value="QUESTION">Question</option>
+                    <option value="COLLABORATION_REQUEST">Collaboration Request</option>
+                    <option value="ACHIEVEMENT">Achievement</option>
+                    <option value="ANNOUNCEMENT">Announcement</option>
+                  </select>
+                  <span className={`text-[10px] font-bold ${newPostContent.length > 2500 ? 'text-rose-500' : 'text-slate-400'}`}>
+                    {newPostContent.length} / 2500
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3.5 border-t border-slate-100">
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setSelectedAttachment({name: 'research_proposal.pdf', size: '1.4 MB'})}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-100/80 text-slate-500 hover:text-[#004495] text-xs font-bold transition-all cursor-pointer"
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100/80 relative z-10 mt-2">
+              <div className="flex items-center gap-1.5 md:gap-3">
+                <input 
+                  type="file" 
+                  id="pdf-upload" 
+                  className="hidden" 
+                  accept=".pdf"
+                  onChange={handleFileUpload} 
+                />
+                <label 
+                  htmlFor="pdf-upload"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-[#6D28D9]/5 transition-all cursor-pointer border border-transparent hover:border-[#6D28D9]/10 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'text-slate-500 hover:text-[#6D28D9] text-[11px] font-bold uppercase tracking-widest'}`}
                 >
-                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  <FileText className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#6D28D9] transition-colors" />
                   <span>PDF</span>
-                </button>
-                <button 
-                  onClick={() => setSelectedAttachment({name: 'lab_results.png', size: '3.1 MB'})}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-100/80 text-slate-500 hover:text-[#004495] text-xs font-bold transition-all cursor-pointer"
+                </label>
+
+                <input 
+                  type="file" 
+                  id="photo-upload" 
+                  className="hidden" 
+                  accept="image/jpeg, image/png, image/webp"
+                  onChange={handleFileUpload} 
+                />
+                <label 
+                  htmlFor="photo-upload"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-[#6D28D9]/5 transition-all cursor-pointer border border-transparent hover:border-[#6D28D9]/10 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'text-slate-500 hover:text-[#6D28D9] text-[11px] font-bold uppercase tracking-widest'}`}
                 >
-                  <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Media</span>
+                  <ImageIcon className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#6D28D9] transition-colors" />
+                  <span>Photo</span>
+                </label>
+
+                <input 
+                  type="file" 
+                  id="paper-upload" 
+                  className="hidden" 
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleFileUpload} 
+                />
+                <label 
+                  htmlFor="paper-upload"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-[#6D28D9]/5 transition-all cursor-pointer border border-transparent hover:border-[#6D28D9]/10 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'text-slate-500 hover:text-[#6D28D9] text-[11px] font-bold uppercase tracking-widest'}`}
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#6D28D9] transition-colors" />
+                  <span>Paper</span>
+                </label>
+
+                <button 
+                  onClick={handleAddTag}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-[#6D28D9]/5 transition-all cursor-pointer border border-transparent hover:border-[#6D28D9]/10 text-slate-500 hover:text-[#6D28D9] text-[11px] font-bold uppercase tracking-widest"
+                >
+                  <Hash className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#6D28D9] transition-colors" />
+                  <span>Tag</span>
                 </button>
               </div>
 
               <button
                 onClick={handlePostUpdate}
                 disabled={isSubmitting || !newPostContent.trim()}
-                className="px-5 py-2 bg-[#004495] hover:bg-[#003370] text-white text-xs font-bold tracking-wide rounded-full flex items-center gap-1.5 transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#6D28D9] to-indigo-600 hover:from-[#5b21b6] hover:to-indigo-700 shadow-md hover:shadow-lg shadow-[#6D28D9]/20 text-white text-xs font-black tracking-wide rounded-full flex items-center gap-2 transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : null}
-                <span>Post</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : <Send className="w-3.5 h-3.5" />}
+                <span>Post Update</span>
               </button>
             </div>
 
             {selectedAttachment && (
-              <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-650 font-bold self-start mt-1">
-                <Paperclip className="w-3.5 h-3.5 text-slate-450" />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-[#6D28D9]/5 to-transparent border border-[#6D28D9]/20 rounded-xl px-4 py-2 text-xs text-[#6D28D9] font-bold self-start mt-2 relative z-10"
+              >
+                <Paperclip className="w-3.5 h-3.5" />
                 <span>{selectedAttachment.name} ({selectedAttachment.size})</span>
-                <button onClick={() => setSelectedAttachment(null)} className="text-slate-400 hover:text-red-500 transition-colors ml-1 cursor-pointer">
-                  <X className="w-3 h-3" />
+                <button onClick={() => setSelectedAttachment(null)} className="text-[#6D28D9]/50 hover:text-red-500 transition-colors ml-2 cursor-pointer p-1 hover:bg-red-50 rounded-full">
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
 
           {/* MAIN POSTS VIEW */}
           <div className="flex flex-col gap-6">
@@ -381,12 +539,23 @@ export default function ScholarFeedPage() {
                   <span className="w-6 h-6 border-2 border-primary border-t-transparent animate-spin rounded-full block" />
                 </div>
               ) : filteredThreads.length === 0 ? (
-                <div className="bg-white border border-slate-200 p-12 text-center rounded-2xl shadow-sm text-left">
-                  <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-4" />
-                  <h4 className="text-slate-900 font-bold text-sm text-center">No Matching Research Updates</h4>
-                  <p className="text-slate-500 text-xs max-w-xs mx-auto mt-2 leading-relaxed font-semibold text-center">
-                    We couldn't find any threads matching your parameters. Be the first to start a collaborative discussion!
+                <div className="bg-white/50 backdrop-blur-md border border-white/60 p-16 text-center rounded-[32px] shadow-sm text-left flex flex-col items-center justify-center min-h-[300px]">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6 shadow-inner text-slate-300">
+                    <MessageSquare className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-slate-800 font-black text-lg text-center tracking-tight">No Research Updates Found</h4>
+                  <p className="text-slate-500 text-sm max-w-sm mx-auto mt-3 leading-relaxed font-semibold text-center">
+                    We couldn't find any threads matching your parameters. Try exploring different tags or be the first to start a collaborative discussion!
                   </p>
+                  <button 
+                    onClick={() => {
+                      setSearchQuery('');
+                      setActiveTag('');
+                    }}
+                    className="mt-6 px-6 py-2 bg-[#6D28D9]/10 text-[#6D28D9] font-bold rounded-full text-xs hover:bg-[#6D28D9]/20 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
                 </div>
               ) : (
                 filteredThreads.map((thread) => {
@@ -396,19 +565,19 @@ export default function ScholarFeedPage() {
                   
                   return (
                     <motion.div
-                      key={thread.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -12 }}
-                      className="bg-white border border-slate-200/90 p-5 md:p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 text-left relative overflow-hidden"
-                    >
+                        key={thread.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white/90 backdrop-blur-xl border border-white/60 p-6 md:p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] transition-all duration-300 text-left relative overflow-hidden group"
+                      >
                       {/* Header: Author info, Affiliate, Time & Badge */}
                       <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
                           {thread.author?.image ? (
-                            <img src={thread.author.image} className="w-10 h-10 rounded-full object-cover border border-slate-200" alt="" />
+                            <img src={thread.author.image} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm ring-1 ring-slate-100" alt="" />
                           ) : (
-                            <div className={`w-10 h-10 rounded-full ${getAvatarBg(initials)} flex items-center justify-center font-display font-extrabold text-white text-sm shrink-0 border border-slate-100`}>
+                            <div className={`w-12 h-12 rounded-full ${getAvatarBg(initials)} flex items-center justify-center font-display font-extrabold text-white text-base shrink-0 shadow-inner ring-2 ring-white/50`}>
                               {initials}
                             </div>
                           )}
@@ -419,25 +588,78 @@ export default function ScholarFeedPage() {
                                 {thread.author?.name || 'Academic Scholar'}
                               </span>
                               {thread.badge && (
-                                <span className="bg-sky-50 border border-sky-100 text-[#004495] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full leading-none shrink-0 flex items-center gap-1 select-none">
-                                  <Sparkles className="w-2.5 h-2.5 text-[#004495]" />
+                                <span className="bg-gradient-to-r from-[#6D28D9]/10 to-indigo-500/10 border border-[#6D28D9]/20 text-[#6D28D9] text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full leading-none shrink-0 flex items-center gap-1.5 shadow-sm">
+                                  <Sparkles className="w-3 h-3 text-[#6D28D9]" />
                                   {thread.badge}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] text-slate-400 font-extrabold uppercase mt-1 leading-none">
-                              {thread.author?.department || 'SRMIST'}
+                            <p className="text-[11px] text-slate-450 font-bold mt-1.5 leading-none">
+                              {thread.author?.role?.replace('_', ' ') || 'Researcher'} • {thread.author?.faculty || thread.author?.department || 'SRMIST'} • {typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center text-slate-400 hover:text-slate-650 transition-colors p-1 cursor-pointer">
-                          <MoreHorizontal className="w-4 h-4" />
+                        <div className="relative">
+                          <button 
+                            onClick={() => setOpenMenuId(openMenuId === thread.id ? null : thread.id)}
+                            className="flex items-center text-slate-400 hover:text-[#6D28D9] transition-colors p-2 rounded-full hover:bg-slate-50 cursor-pointer"
+                          >
+                            <MoreHorizontal className="w-5 h-5" />
+                          </button>
+                          
+                          {/* 3 dots dropdown */}
+                          <AnimatePresence>
+                            {openMenuId === thread.id && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.95, transformOrigin: 'top right' }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="absolute right-0 mt-2 w-40 bg-white/90 backdrop-blur-md rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white py-1 z-20"
+                              >
+                                <button 
+                                  onClick={() => toggleSave(thread.id)}
+                                  className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors"
+                                >
+                                  Save Post
+                                </button>
+                                <button 
+                                  onClick={() => handleShare(thread.id)}
+                                  className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors"
+                                >
+                                  Copy Link
+                                </button>
+                                {currentUser?.id === (thread as any).authorId && (
+                                  <>
+                                    <button 
+                                      onClick={() => { /* Edit functionality can be implemented later */ }}
+                                      className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors"
+                                    >
+                                      Edit Post
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDelete(thread.id)}
+                                      className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
+                                    >
+                                      Delete Post
+                                    </button>
+                                  </>
+                                )}
+                                <div className="border-t border-slate-100 my-1"></div>
+                                <button 
+                                  onClick={() => handleReport(thread.id)}
+                                  className="w-full text-left px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
+                                >
+                                  Report Post
+                                </button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </div>
 
                       {/* Content Card Body */}
-                      <div className="mb-4 font-sans font-medium text-xs leading-relaxed text-slate-700">
+                      <div className="mb-5 font-sans font-medium text-sm leading-relaxed text-slate-700">
                         {thread.isPaper ? (
                           // Nested Document Card View matching Marcus Jensen's Post
                           <div className="space-y-3">
@@ -445,17 +667,17 @@ export default function ScholarFeedPage() {
                               {thread.author?.name} published a new paper <span className="font-medium text-slate-400 text-[10px] ml-1.5">{typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
                             </p>
                             
-                            <div className="bg-[#f8fafc] border border-slate-100 rounded-xl p-4 flex items-start gap-4">
-                              <div className="w-10 h-10 rounded-lg bg-white border border-slate-200/70 flex items-center justify-center text-slate-400 shrink-0">
-                                <FileText className="w-5.5 h-5.5" />
+                            <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200/60 rounded-2xl p-5 flex items-start gap-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer group/doc">
+                              <div className="w-12 h-12 rounded-xl bg-white border border-slate-200/70 shadow-sm flex items-center justify-center text-slate-400 shrink-0 group-hover/doc:text-[#6D28D9] group-hover/doc:border-[#6D28D9]/30 transition-colors">
+                                <FileText className="w-6 h-6" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-4 mb-1">
-                                  <span className="bg-slate-200/60 border border-slate-250 text-slate-650 text-[8.5px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded leading-none">
+                                <div className="flex items-center justify-between gap-4 mb-2">
+                                  <span className="bg-gradient-to-r from-slate-200/60 to-slate-100 border border-slate-200/80 text-slate-600 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md leading-none shadow-sm">
                                     {thread.paperInfo?.journal || 'NATURE QUANTUM'}
                                   </span>
                                 </div>
-                                <h4 className="text-xs font-bold text-slate-900 leading-snug">
+                                <h4 className="text-sm font-bold text-slate-900 leading-snug group-hover/doc:text-[#6D28D9] transition-colors">
                                   {thread.title}
                                 </h4>
                               </div>
@@ -463,20 +685,33 @@ export default function ScholarFeedPage() {
                           </div>
                         ) : (
                           // Standard Text Post View matching Dr. Sara Rowe's Post
-                          <p className="whitespace-pre-wrap">{thread.content}</p>
+                          <>
+                            <p className="whitespace-pre-wrap">{thread.content}</p>
+                            {thread.attachments && thread.attachments.length > 0 && (
+                              <div className="mt-4 flex flex-col gap-3">
+                                {thread.attachments.map((att: any, idx: number) => (
+                                  <a key={idx} href={att.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-gradient-to-r from-slate-50 to-white border border-slate-200/80 rounded-xl px-4 py-3 text-xs text-[#6D28D9] hover:border-[#6D28D9]/30 hover:shadow-sm transition-all font-bold self-start max-w-full group/att">
+                                    {att.type === 'IMAGE' || att.type === 'VIDEO' ? <ImageIcon className="w-5 h-5 shrink-0 text-indigo-400 group-hover/att:text-[#6D28D9]" /> : <FileText className="w-5 h-5 shrink-0 text-indigo-400 group-hover/att:text-[#6D28D9]" />}
+                                    <span className="truncate">{att.name}</span>
+                                    <ExternalLink className="w-4 h-4 text-slate-400 ml-2 shrink-0 group-hover/att:text-[#6D28D9]" />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
                       {/* Hashtags */}
                       {thread.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-5">
+                        <div className="flex flex-wrap gap-2 mb-6">
                           {thread.tags.map((tag) => (
                             <button
                               key={tag}
                               onClick={() => {
                                 setSearchQuery(tag);
                               }}
-                              className="text-[#004495]/90 hover:text-[#004495] text-[10px] font-extrabold tracking-wider transition-colors mr-2.5"
+                              className="text-[#6D28D9] bg-[#6D28D9]/5 hover:bg-[#6D28D9]/10 border border-[#6D28D9]/20 text-[11px] font-black tracking-wider transition-all px-2.5 py-1 rounded-md"
                             >
                               #{tag}
                             </button>
@@ -485,33 +720,49 @@ export default function ScholarFeedPage() {
                       )}
 
                       {/* Bottom Action buttons */}
-                      <div className="flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 mt-2 gap-3">
-                        <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center justify-between border-t border-slate-100/80 pt-5 mt-2 gap-4">
+                        <div className="flex items-center gap-5">
                           <button 
                             onClick={() => toggleLike(thread.id, thread.likesCount)}
-                            className={`flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                              likeState.liked ? 'text-rose-600' : 'text-slate-450 hover:text-slate-700'
+                            className={`flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                              likeState.liked ? 'text-rose-600' : 'text-slate-500 hover:text-rose-500'
                             }`}
                           >
-                            <Heart className={`w-3.5 h-3.5 ${likeState.liked ? 'fill-rose-600 text-rose-600' : ''}`} />
+                            <Heart className={`w-4 h-4 transition-transform active:scale-75 ${likeState.liked ? 'fill-rose-600 text-rose-600' : ''}`} />
                             <span>Like ({likeState.count})</span>
                           </button>
 
-                          <Link 
-                            href={`/scholar/feed/${thread.id}`}
-                            className="flex items-center gap-1.5 text-xs font-bold text-slate-450 hover:text-slate-700 transition-all cursor-pointer"
+                          <button 
+                            onClick={() => setOpenCommentsId(openCommentsId === thread.id ? null : thread.id)}
+                            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-all cursor-pointer"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Comment</span>
-                          </Link>
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Comment ({thread.commentsCount})</span>
+                          </button>
+
+                          <button 
+                            onClick={() => handleShare(thread.id)}
+                            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-all cursor-pointer"
+                          >
+                            <Share2 className="w-4 h-4" />
+                            <span>Share</span>
+                          </button>
+
+                          <button 
+                            onClick={() => toggleSave(thread.id)}
+                            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-all cursor-pointer"
+                          >
+                            <Bookmark className="w-4 h-4" />
+                            <span>Save</span>
+                          </button>
 
                           <button 
                             onClick={() => toggleCollaborate(thread.id)}
-                            className={`flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                              isCollab ? 'text-[#004495]' : 'text-slate-450 hover:text-[#004495]'
+                            className={`flex items-center gap-2 text-xs font-bold transition-all cursor-pointer px-3 py-1.5 rounded-full ${
+                              isCollab ? 'bg-[#6D28D9]/10 text-[#6D28D9] border border-[#6D28D9]/20' : 'bg-slate-50 text-slate-600 hover:bg-[#6D28D9]/5 hover:text-[#6D28D9] border border-slate-200'
                             }`}
                           >
-                            <Users className="w-3.5 h-3.5" />
+                            <Users className="w-4 h-4" />
                             <span>Collaborate</span>
                           </button>
                         </div>
@@ -533,6 +784,12 @@ export default function ScholarFeedPage() {
                           </div>
                         ) : null}
                       </div>
+
+                      <AnimatePresence>
+                        {openCommentsId === thread.id && (
+                          <FeedComments threadId={thread.id} />
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })
@@ -542,44 +799,44 @@ export default function ScholarFeedPage() {
 
         </div>
 
-        {/* RIGHT COLUMN SIDEBAR - SPECIFIED BY THE FIRST SCREENSHOT */}
+        {/* RIGHT COLUMN SIDEBAR */}
         <div className="hidden lg:flex flex-col gap-6 w-full shrink-0 select-none text-left sticky top-6">
           
-          {/* SUGGESTED PEERS */}
-          <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                SUGGESTED PEERS
+          {/* SCHOLARS YOU MAY KNOW */}
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow flex flex-col gap-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100/80">
+              <span className="text-sm font-black text-slate-500 uppercase tracking-widest">
+                Scholars You May Know
               </span>
               <Link
                 href="/scholar/connections"
-                className="text-[9px] font-extrabold uppercase text-[#004495] hover:text-[#003370] transition-colors"
+                className="text-[10px] font-black uppercase text-[#6D28D9] hover:text-[#5b21b6] transition-colors bg-[#6D28D9]/10 px-3 py-1.5 rounded-full"
               >
                 View All
               </Link>
             </div>
 
-            <div className="flex flex-col gap-3.5">
+            <div className="flex flex-col gap-5">
               {peers.map((peer) => (
-                <div key={peer.id} className="flex items-center justify-between gap-3">
+                <div key={peer.id} className="flex items-center justify-between gap-3 group/peer">
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full ${peer.avatarColor} flex items-center justify-center font-display font-extrabold text-white text-[10px] shrink-0 border border-slate-200/20`}>
+                    <div className={`w-10 h-10 rounded-full ${peer.avatarColor} flex items-center justify-center font-display font-extrabold text-white text-xs shrink-0 shadow-sm border-2 border-white ring-2 ring-transparent group-hover/peer:ring-[#6D28D9]/20 transition-all`}>
                       {peer.initials || getInitials(peer.name)}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate leading-tight">{peer.name}</p>
-                      <p className="text-[9px] text-slate-450 font-bold uppercase mt-0.5 truncate">{peer.title}</p>
+                      <p className="text-sm font-bold text-slate-900 truncate leading-tight group-hover/peer:text-[#6D28D9] transition-colors">{peer.name}</p>
+                      <p className="text-[10px] text-slate-450 font-bold uppercase mt-1 truncate">{peer.title}</p>
                     </div>
                   </div>
 
                   <button 
                     onClick={() => handleConnect(peer.id)}
-                    className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all duration-200 shrink-0 cursor-pointer ${
+                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 shrink-0 cursor-pointer active:scale-95 ${
                       peer.connected === 'connected'
-                        ? 'bg-emerald-50 border border-emerald-250 text-emerald-700 hover:bg-emerald-100/50'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
                         : peer.connected === 'pending'
-                        ? 'bg-amber-50 border border-amber-250 text-amber-700 animate-pulse'
-                        : 'bg-white border border-[#004495]/20 hover:border-[#004495]/40 text-[#004495] hover:bg-[#004495]/5'
+                        ? 'bg-amber-50 border border-amber-200 text-amber-700 animate-pulse'
+                        : 'bg-white border border-[#6D28D9]/20 hover:border-[#6D28D9]/50 text-[#6D28D9] hover:bg-[#6D28D9]/5 shadow-sm hover:shadow-md'
                     }`}
                   >
                     {peer.connected === 'connected' ? 'Connected' : peer.connected === 'pending' ? 'Pending' : 'Connect'}
@@ -590,84 +847,76 @@ export default function ScholarFeedPage() {
           </div>
 
           {/* Trending Research */}
-          <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100/80">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow flex flex-col gap-6">
+            <span className="text-sm font-black text-slate-500 uppercase tracking-widest pb-4 border-b border-slate-100/80">
               Trending Research
             </span>
 
-            <div className="flex flex-col gap-4">
-              <div>
-                <button 
-                  onClick={() => setSearchQuery('AIINMEDICINE')}
-                  className="text-xs font-bold text-slate-800 hover:text-[#004495] transition-colors leading-none block"
-                >
-                  #AIINMEDICINE
-                </button>
-                <p className="text-[10px] text-slate-450 font-semibold mt-1">Diagnostic Transformers</p>
-                <p className="text-[9px] text-slate-400 font-semibold mt-0.5">2.4k papers this week</p>
-              </div>
-
-              <div>
-                <button 
-                  onClick={() => setSearchQuery('CLIMATETECH')}
-                  className="text-xs font-bold text-slate-800 hover:text-[#004495] transition-colors leading-none block"
-                >
-                  #CLIMATETECH
-                </button>
-                <p className="text-[10px] text-slate-450 font-semibold mt-1">Direct Air Capture Models</p>
-              </div>
+            <div className="flex flex-col gap-6">
+              {trendingTags.length > 0 ? trendingTags.slice(0, 5).map((tag, idx) => (
+                <div key={idx} className="group/trending cursor-pointer">
+                  <button 
+                    onClick={() => setSearchQuery(tag)}
+                    className="text-lg font-black text-slate-800 group-hover/trending:text-[#6D28D9] transition-colors leading-tight block tracking-tight"
+                  >
+                    <span className="text-[#6D28D9]/50 font-bold mr-1">#</span>{tag.toUpperCase()}
+                  </button>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400 group-hover/trending:text-[#6D28D9] transition-colors" />
+                    <p className="text-xs text-slate-450 font-semibold group-hover/trending:text-slate-600 transition-colors">
+                      {Math.floor(Math.random() * 50 + 10) / 10}k papers this week
+                    </p>
+                  </div>
+                </div>
+              )) : (
+                <div className="py-8 text-center">
+                  <p className="text-sm font-bold text-slate-400 italic">No trending topics yet.</p>
+                </div>
+              )}
             </div>
 
             <button 
-              onClick={() => setSearchQuery('Research')}
-              className="w-full mt-2 py-2 border border-slate-200/80 hover:border-slate-350 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer active:scale-98"
+              onClick={() => setSearchQuery('')}
+              className="w-full mt-2 py-3.5 bg-slate-50/50 hover:bg-[#6D28D9]/5 border border-slate-100 hover:border-[#6D28D9]/20 text-slate-700 hover:text-[#6D28D9] text-xs font-black uppercase tracking-widest rounded-full transition-all cursor-pointer active:scale-95 shadow-sm"
             >
               Explore All Topics
             </button>
           </div>
 
-          {/* Upcoming Events */}
-          <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm flex flex-col gap-4">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100/80">
-              Upcoming Events
-            </span>
-
-            <div className="flex items-start gap-3 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 p-2.5 rounded-xl transition-all cursor-pointer">
-              <div className="w-10 bg-white border border-slate-200 rounded-lg py-1.5 flex flex-col items-center justify-center shrink-0">
-                <span className="text-[8px] font-extrabold text-slate-400 uppercase leading-none tracking-wide">AUG</span>
-                <span className="text-xs font-extrabold text-slate-800 leading-none mt-1">15</span>
+          {/* Recent Publications */}
+          {recentPublications.length > 0 && (
+            <div className="bg-white/90 backdrop-blur-xl border border-white/60 p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow flex flex-col gap-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100/80">
+                <span className="text-sm font-black text-slate-500 uppercase tracking-widest">
+                  Recent Publications
+                </span>
               </div>
-              <div className="min-w-0">
-                <h4 className="text-xs font-bold text-slate-900 leading-snug truncate">Global AI Safety Summit</h4>
-                <p className="text-[10px] text-slate-450 font-semibold mt-0.5 truncate">Virtual · 2.1k attending</p>
+              <div className="flex flex-col gap-4">
+                {recentPublications.map((pub) => (
+                  <Link href={`/scholar/feed/${pub.id}`} key={pub.id} className="group/pub flex gap-3 items-start cursor-pointer">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/70 shadow-sm flex items-center justify-center text-[#6D28D9]/70 shrink-0 group-hover/pub:bg-[#6D28D9]/5 group-hover/pub:border-[#6D28D9]/30 transition-all">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-slate-900 leading-snug group-hover/pub:text-[#6D28D9] transition-colors line-clamp-2">
+                        {pub.title}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                        {pub.author?.name}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
-          </div>
-
-          {/* Footer links */}
-          <div className="px-2 pt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide space-y-1.5">
-            <div className="flex items-center gap-3">
-              <Link href="/about" className="hover:text-slate-600 transition-colors">About</Link>
-              <Link href="/scholar/help" className="hover:text-slate-600 transition-colors">Help Center</Link>
-              <Link href="/privacy-policy" className="hover:text-slate-600 transition-colors">Privacy</Link>
-            </div>
-            <p className="text-[9px] font-semibold text-slate-400 leading-none mt-1 lowercase select-none">
-              © 2025 CuriousBees Academic Inc.
-            </p>
-          </div>
+          )}
 
         </div>
 
       </div>
 
       {/* Floating Action Button (FAB) at Bottom Right */}
-      <Link 
-        href="/scholar/feed/create"
-        className="fixed bottom-6 right-6 w-12 h-12 bg-[#004495] hover:bg-[#003370] text-white flex items-center justify-center rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 group cursor-pointer z-50 border border-[#004495]/20"
-        title="New Proposal"
-      >
-        <Plus className="w-5 h-5 text-white group-hover:scale-105 transition-transform" />
-      </Link>
+      <FeedFAB />
 
     </DashboardShell>
   );

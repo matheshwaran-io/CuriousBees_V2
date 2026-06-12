@@ -37,7 +37,18 @@ export const CreateThreadSchema = z.object({
   tags: z
     .array(z.string().min(1, 'Tag must not be empty'))
     .min(1, 'Please add at least one tag')
-    .max(5, 'You can add up to 5 tags only')
+    .max(5, 'You can add up to 5 tags only'),
+  type: z.enum(['TEXT', 'RESEARCH_UPDATE', 'DISCUSSION', 'QUESTION', 'ANNOUNCEMENT', 'PUBLICATION', 'ACHIEVEMENT', 'COLLABORATION_REQUEST']).optional(),
+  isPaper: z.boolean().optional(),
+  paperJournal: z.string().optional().nullable(),
+  attachments: z.array(
+    z.object({
+      name: z.string(),
+      url: z.string().url(),
+      size: z.number(),
+      type: z.enum(['PDF', 'IMAGE', 'VIDEO', 'DOCUMENT'])
+    })
+  ).optional()
 });
 
 // 2. Comment Creation Schema
@@ -47,7 +58,8 @@ export const CreateCommentSchema = z.object({
     .min(2, 'Comment must be at least 2 characters')
     .max(500, 'Comment cannot exceed 500 characters')
     .refine((val) => val.trim().length > 0, 'Comment cannot be empty'),
-  threadId: z.string().cuid('Invalid thread identifier')
+  threadId: z.string().cuid('Invalid thread identifier'),
+  parentId: z.string().cuid('Invalid parent identifier').optional()
 });
 
 // 3. Faculty Opportunity Creation Schema

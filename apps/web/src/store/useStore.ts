@@ -67,8 +67,20 @@ interface AppState {
   syncUserSession: (options?: { throwOnError?: boolean; force?: boolean }) => Promise<User | null>;
   fetchData: () => Promise<void>;
   fetchCollaborators: (search?: string, department?: string) => Promise<User[]>;
-  createThread: (title: string, content: string, tags: string[]) => Promise<Thread>;
-  addComment: (threadId: string, content: string) => Promise<Comment>;
+  createThread: (title: string, content: string, tags: string[], options?: { type?: any; isPaper?: boolean; paperJournal?: string | null; attachments?: any[] }) => Promise<Thread>;
+  addComment: (threadId: string, content: string, parentId?: string) => Promise<Comment>;
+  toggleLikeThread: (threadId: string) => Promise<{ liked: boolean }>;
+  toggleSaveThread: (threadId: string) => Promise<{ saved: boolean }>;
+  shareThread: (threadId: string, platform?: string) => Promise<void>;
+  reportThread: (threadId: string, reason: string) => Promise<void>;
+  requestThreadCollaboration: (threadId: string, message?: string) => Promise<void>;
+  deleteThread: (threadId: string) => Promise<void>;
+  updateThread: (threadId: string, data: Partial<{ title: string; content: string; tags: string[]; type: any; isPaper: boolean }>) => Promise<Thread>;
+  getSavedThreads: () => Promise<Thread[]>;
+  
+  fetchTrendingResearch: () => Promise<string[]>;
+  fetchSuggestedPeers: () => Promise<User[]>;
+  searchFeed: (query: string) => Promise<{ threads: Thread[], publications: Publication[], users: User[] }>;
   createOpportunity: (title: string, description: string, department: string, researchDomain: string) => Promise<Opportunity>;
   updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
   fetchEvents: (showIndicator?: boolean) => Promise<Event[]>;
@@ -397,13 +409,14 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   // 4. Create a new discussion thread
-  createThread: async (title, content, tags) => {
+  createThread: async (title, content, tags, options) => {
     set({ isLoading: true });
     try {
+      const payload = { title, content, tags, ...options };
       const res = await apiFetch('/api/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, tags }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         const newThread = await res.json();
@@ -419,34 +432,112 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   // 5. Comment on an active thread
-  addComment: async (threadId, content) => {
+  addComment: async (threadId, content, parentId) => {
     set({ isLoading: true });
     try {
+      const payload = { threadId, content, parentId };
       const res = await apiFetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, content }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         const newComment = await res.json();
-        set((state) => {
-          const updatedThreads = state.threads.map((t) => {
-            if (t.id === threadId) {
-              return {
-                ...t,
-                comments: [...(t.comments || []), newComment]
-              };
-            }
-            return t;
-          });
-          return { threads: updatedThreads };
-        });
+        // The reload of threads might be better but let's update locally for now
         return newComment;
       }
       throw new Error('Failed to publish comment.');
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  toggleLikeThread: async (threadId) => {
+    const res = await apiFetch(`/api/threads/${threadId}/like`, { method: 'POST' });
+    if (res.ok) return await res.json();
+    throw new Error('Failed to like thread');
+  },
+
+  toggleSaveThread: async (threadId) => {
+    const res = await apiFetch(`/api/threads/${threadId}/save`, { method: 'POST' });
+    if (res.ok) return await res.json();
+    throw new Error('Failed to save thread');
+  },
+
+  shareThread: async (threadId, platform) => {
+    const res = await apiFetch(`/api/threads/${threadId}/share`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform })
+    });
+    if (!res.ok) throw new Error('Failed to share thread');
+  },
+
+  reportThread: async (threadId, reason) => {
+    const res = await apiFetch(`/api/threads/${threadId}/report`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    });
+    if (!res.ok) throw new Error('Failed to report thread');
+  },
+
+  requestThreadCollaboration: async (threadId, message) => {
+    const res = await apiFetch(`/api/threads/${threadId}/collaborate`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    if (!res.ok) throw new Error('Failed to request collaboration');
+  },
+
+  deleteThread: async (threadId) => {
+    const res = await apiFetch(`/api/threads/${threadId}`, { method: 'DELETE' });
+    if (res.ok) {
+      set(state => ({ threads: state.threads.filter(t => t.id !== threadId) }));
+    } else {
+      throw new Error('Failed to delete thread');
+    }
+  },
+
+  updateThread: async (threadId, data) => {
+    const res = await apiFetch(`/api/threads/${threadId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      const updatedThread = await res.json();
+      set(state => ({
+        threads: state.threads.map(t => t.id === threadId ? updatedThread : t)
+      }));
+      return updatedThread;
+    }
+    throw new Error('Failed to update thread');
+  },
+
+  getSavedThreads: async () => {
+    const res = await apiFetch('/api/threads/saved');
+    if (res.ok) return await res.json();
+    return [];
+  },
+
+  fetchTrendingResearch: async () => {
+    const res = await apiFetch('/api/feed/trending');
+    if (res.ok) return await res.json();
+    return [];
+  },
+
+  fetchSuggestedPeers: async () => {
+    const res = await apiFetch('/api/feed/peers');
+    if (res.ok) return await res.json();
+    return [];
+  },
+
+  searchFeed: async (query) => {
+    const res = await apiFetch(`/api/feed/search?q=${encodeURIComponent(query)}`);
+    if (res.ok) return await res.json();
+    return { threads: [], publications: [], users: [] };
   },
 
   // 6. Publish a research opportunity (Hiring/Collaboration)
