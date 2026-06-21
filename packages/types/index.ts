@@ -73,6 +73,7 @@ export interface ThreadReport {
   threadId: string;
   reporterId: string;
   reason: string;
+  description?: string | null;
   status: string;
   createdAt: Date | string;
 }

@@ -7,13 +7,16 @@ import { CreateThreadSchema } from '@curiousbees/shared-utils';
 export class ThreadsService {
   constructor(private prisma: PrismaService) {}
 
-  async getThreads(search?: string, tag?: string) {
+  async getThreads(search?: string, tag?: string, type?: string, userId?: string) {
     return this.prisma.thread.findMany({
       where: {
         ...(tag && {
           tags: {
             has: tag
           }
+        }),
+        ...(type && type !== 'ALL' && {
+          type: type as any
         }),
         ...(search && {
           OR: [
@@ -35,6 +38,23 @@ export class ThreadsService {
           }
         },
         attachments: true,
+        saves: userId ? {
+          where: { userId }
+        } : undefined,
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                role: true,
+                department: true
+              }
+            }
+          }
+        },
         _count: {
           select: { comments: true, likes: true, shares: true, saves: true }
         }
@@ -43,6 +63,32 @@ export class ThreadsService {
         createdAt: 'desc'
       }
     });
+  }
+
+  async getThreadCounts(search?: string) {
+    const whereClause: any = search ? {
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } }
+      ]
+    } : undefined;
+
+    const counts = await this.prisma.thread.groupBy({
+      by: ['type'],
+      _count: { _all: true },
+      where: whereClause
+    });
+
+    const totalCount = await this.prisma.thread.count({
+      where: whereClause
+    });
+
+    const result: Record<string, number> = { ALL: totalCount };
+    counts.forEach(c => {
+      result[c.type as string] = (c as any)._count._all;
+    });
+
+    return result;
   }
 
   async getThreadById(id: string) {
@@ -183,10 +229,16 @@ export class ThreadsService {
 
     if (existing) {
       await this.prisma.savedThread.delete({ where: { id: existing.id } });
+      await this.prisma.auditLog.create({
+        data: { userId, action: 'Post Unsaved', details: `Unsaved thread ${threadId}` }
+      });
       return { saved: false };
     } else {
       await this.prisma.savedThread.create({
         data: { threadId, userId }
+      });
+      await this.prisma.auditLog.create({
+        data: { userId, action: 'Post Saved', details: `Saved thread ${threadId}` }
       });
       return { saved: true };
     }
@@ -202,17 +254,22 @@ export class ThreadsService {
     });
   }
 
-  async reportThread(threadId: string, reporterId: string, reason: string) {
+  async reportThread(threadId: string, reporterId: string, reason: string, description?: string) {
     if (!reason) {
       throw new BadRequestException('Reason is required');
     }
-    return this.prisma.threadReport.create({
+    const report = await this.prisma.threadReport.create({
       data: {
         threadId,
         reporterId,
-        reason
+        reason,
+        description
       }
     });
+    await this.prisma.auditLog.create({
+      data: { userId: reporterId, action: 'Post Reported', details: `Reported thread ${threadId} for ${reason}` }
+    });
+    return report;
   }
 
   async requestCollaboration(threadId: string, scholarId: string, message?: string) {
@@ -260,24 +317,28 @@ export class ThreadsService {
   }
 
   async deleteThread(threadId: string, userId: string) {
-    const thread = await this.prisma.thread.findUnique({ where: { id: threadId }});
-    if (!thread || thread.authorId !== userId) {
+    const thread = await this.prisma.thread.findUnique({ where: { id: threadId }, include: { author: true }});
+    // Check if user is author or admin
+    if (!thread || (thread.authorId !== userId && thread.author.role !== 'INSTITUTE_ADMIN')) {
       throw new BadRequestException('Unauthorized or thread not found');
     }
     await this.prisma.thread.delete({ where: { id: threadId } });
+    await this.prisma.auditLog.create({
+      data: { userId, action: 'Post Deleted', details: `Deleted thread ${threadId}` }
+    });
     return { success: true };
   }
 
   async updateThread(threadId: string, userId: string, data: Partial<CreateThreadInput>) {
-    const thread = await this.prisma.thread.findUnique({ where: { id: threadId }});
-    if (!thread || thread.authorId !== userId) {
+    const thread = await this.prisma.thread.findUnique({ where: { id: threadId }, include: { author: true }});
+    if (!thread || (thread.authorId !== userId && thread.author.role !== 'INSTITUTE_ADMIN')) {
       throw new BadRequestException('Unauthorized or thread not found');
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { attachments, ...updateData } = data; // skip attachment editing for now
 
-    return this.prisma.thread.update({
+    const updated = await this.prisma.thread.update({
       where: { id: threadId },
       data: updateData as any, // Cast to any to handle type diffs, or selectively pick fields
       include: {
@@ -298,5 +359,11 @@ export class ThreadsService {
         }
       }
     });
+    
+    await this.prisma.auditLog.create({
+      data: { userId, action: 'Post Edited', details: `Edited thread ${threadId}` }
+    });
+
+    return updated;
   }
 }

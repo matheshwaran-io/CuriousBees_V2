@@ -96,7 +96,11 @@ export default function Navbar() {
 
           {/* Settings */}
           <Link
-            href="/profile"
+            href={
+              role === 'INSTITUTE_ADMIN' ? '/admin/settings' :
+              role === 'RESEARCH_SUPERVISOR' ? '/supervisor/settings' :
+              '/scholar/settings'
+            }
             className="p-2 rounded-full hover:bg-surface-container hover:text-primary transition-colors flex items-center justify-center"
           >
             <Settings className="w-5 h-5" />

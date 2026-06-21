@@ -563,11 +563,12 @@ model ThreadShare {
 }
 
 model ThreadReport {
-  id        String   @id @default(cuid())
-  threadId  String
-  reporterId String
-  reason    String
-  status    String   @default("PENDING")
+  id          String   @id @default(cuid())
+  threadId    String
+  reporterId  String
+  reason      String
+  description String?
+  status      String   @default("PENDING")
   createdAt DateTime @default(now())
 
   thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)

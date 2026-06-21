@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -14,8 +14,10 @@ import {
   GraduationCap, 
   UserSquare, 
   FileText,
-  Paperclip
+  Paperclip,
+  Loader2
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { DashboardShell } from '@/components/shared/dashboard-shell';
@@ -30,7 +32,31 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
   
   const router = useRouter();
   const { threads, addComment, currentUser } = useStore();
-  const thread = threads.find((t) => t.id === id);
+  const storeThread = threads.find((t) => t.id === id);
+  const [localThread, setLocalThread] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(!storeThread);
+
+  useEffect(() => {
+    if (!storeThread) {
+      setIsLoading(true);
+      apiFetch(`/api/threads/${id}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Not found');
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.id) {
+            setLocalThread(data);
+          }
+        })
+        .catch(err => console.error(err))
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, [id, storeThread]);
+
+  const thread = storeThread || localThread;
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(CreateCommentSchema),
@@ -39,6 +65,16 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
       threadId: id
     }
   });
+
+  if (isLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0C4DA2]" />
+        </div>
+      </DashboardShell>
+    );
+  }
 
   if (!thread) {
     return (
@@ -61,7 +97,13 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
 
   const handleCommentSubmit = async (data: any) => {
     try {
-      await addComment(thread.id, data.content);
+      const newComment = await addComment(thread.id, data.content);
+      if (localThread) {
+        setLocalThread((prev: any) => ({
+          ...prev,
+          comments: [...(prev.comments || []), newComment]
+        }));
+      }
       reset(); // Clear input
     } catch (e: any) {
       alert(`Error submitting comment: ${e.message}`);

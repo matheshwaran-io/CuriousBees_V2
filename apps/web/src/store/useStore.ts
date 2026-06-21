@@ -34,6 +34,7 @@ interface AppState {
 
   // Domain states
   threads: Thread[];
+  feedCounts: Record<string, number>;
   opportunities: Opportunity[];
   events: Event[];
 
@@ -65,18 +66,23 @@ interface AppState {
 
   // Live REST API Actions (Integrates Clerk Bearer JWT)
   syncUserSession: (options?: { throwOnError?: boolean; force?: boolean }) => Promise<User | null>;
-  fetchData: () => Promise<void>;
+  fetchData: (skipThreads?: boolean) => Promise<void>;
+  fetchFeedThreads: (search?: string, type?: string) => Promise<void>;
+  fetchFeedCounts: (search?: string) => Promise<void>;
   fetchCollaborators: (search?: string, department?: string) => Promise<User[]>;
   createThread: (title: string, content: string, tags: string[], options?: { type?: any; isPaper?: boolean; paperJournal?: string | null; attachments?: any[] }) => Promise<Thread>;
   addComment: (threadId: string, content: string, parentId?: string) => Promise<Comment>;
   toggleLikeThread: (threadId: string) => Promise<{ liked: boolean }>;
   toggleSaveThread: (threadId: string) => Promise<{ saved: boolean }>;
   shareThread: (threadId: string, platform?: string) => Promise<void>;
-  reportThread: (threadId: string, reason: string) => Promise<void>;
+  reportThread: (threadId: string, reason: string, description?: string) => Promise<void>;
   requestThreadCollaboration: (threadId: string, message?: string) => Promise<void>;
   deleteThread: (threadId: string) => Promise<void>;
   updateThread: (threadId: string, data: Partial<{ title: string; content: string; tags: string[]; type: any; isPaper: boolean }>) => Promise<Thread>;
   getSavedThreads: () => Promise<Thread[]>;
+  deleteThreadLocally: (threadId: string) => void;
+  updateThreadLocally: (threadId: string, data: Thread) => void;
+  toggleSaveThreadLocally: (threadId: string, saved: boolean, userId: string) => void;
   
   fetchTrendingResearch: () => Promise<string[]>;
   fetchSuggestedPeers: () => Promise<User[]>;
@@ -192,6 +198,7 @@ export const useStore = create<AppState>((set, get) => ({
   theme: 'light',
 
   threads: [],
+  feedCounts: { ALL: 0 },
   opportunities: [],
   events: [],
 
@@ -368,23 +375,63 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   // 2. Fetch live Threads and Opportunities concurrently
-  fetchData: async () => {
+  fetchData: async (skipThreads?: boolean) => {
     set({ isLoading: true });
     try {
-      const [threadsRes, oppsRes] = await Promise.all([
-        apiFetch('/api/threads'),
-        apiFetch('/api/opportunities'),
-      ]);
+      const promises = [apiFetch('/api/opportunities')];
+      if (!skipThreads) {
+        promises.push(apiFetch('/api/threads'));
+      }
 
-      if (threadsRes.ok && oppsRes.ok) {
-        const threads = await threadsRes.json();
+      const results = await Promise.all(promises);
+      const oppsRes = results[0];
+      const threadsRes = !skipThreads ? results[1] : null;
+
+      if (oppsRes.ok) {
         const opportunities = await oppsRes.json();
-        set({ threads, opportunities });
+        set({ opportunities });
+      }
+
+      if (threadsRes && threadsRes.ok) {
+        const threads = await threadsRes.json();
+        set({ threads });
       }
     } catch (e) {
       console.error('Failed to load data:', e);
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchFeedThreads: async (search?: string, type?: string) => {
+    set({ isLoading: true });
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (type) params.append('type', type);
+      const res = await apiFetch(`/api/threads?${params.toString()}`);
+      if (res.ok) {
+        const threads = await res.json();
+        set({ threads });
+      }
+    } catch (e) {
+      console.error('Failed to load feed threads:', e);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchFeedCounts: async (search?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      const res = await apiFetch(`/api/threads/counts?${params.toString()}`);
+      if (res.ok) {
+        const feedCounts = await res.json();
+        set({ feedCounts });
+      }
+    } catch (e) {
+      console.error('Failed to load feed counts:', e);
     }
   },
 
@@ -425,7 +472,8 @@ export const useStore = create<AppState>((set, get) => ({
         }));
         return newThread;
       }
-      throw new Error('Failed to publish thread.');
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || 'Failed to publish thread.');
     } finally {
       set({ isLoading: false });
     }
@@ -443,7 +491,17 @@ export const useStore = create<AppState>((set, get) => ({
       });
       if (res.ok) {
         const newComment = await res.json();
-        // The reload of threads might be better but let's update locally for now
+        set(state => ({
+          threads: state.threads.map(t => {
+            if (t.id === threadId) {
+              return {
+                ...t,
+                comments: [...(t.comments || []), newComment]
+              };
+            }
+            return t;
+          })
+        }));
         return newComment;
       }
       throw new Error('Failed to publish comment.');
@@ -473,11 +531,11 @@ export const useStore = create<AppState>((set, get) => ({
     if (!res.ok) throw new Error('Failed to share thread');
   },
 
-  reportThread: async (threadId, reason) => {
+  reportThread: async (threadId, reason, description) => {
     const res = await apiFetch(`/api/threads/${threadId}/report`, { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason })
+      body: JSON.stringify({ reason, description })
     });
     if (!res.ok) throw new Error('Failed to report thread');
   },
@@ -520,6 +578,26 @@ export const useStore = create<AppState>((set, get) => ({
     const res = await apiFetch('/api/threads/saved');
     if (res.ok) return await res.json();
     return [];
+  },
+
+  deleteThreadLocally: (threadId: string) => {
+    set(state => ({ threads: state.threads.filter(t => t.id !== threadId) }));
+  },
+
+  updateThreadLocally: (threadId: string, data: Thread) => {
+    set(state => ({ threads: state.threads.map(t => t.id === threadId ? data : t) }));
+  },
+
+  toggleSaveThreadLocally: (threadId: string, saved: boolean, userId: string) => {
+    set(state => ({
+      threads: state.threads.map(t => {
+        if (t.id === threadId) {
+          const newSaves = saved ? [{ userId, threadId, id: 'temp', createdAt: new Date() }] : [];
+          return { ...t, saves: newSaves as any };
+        }
+        return t;
+      })
+    }));
   },
 
   fetchTrendingResearch: async () => {
@@ -582,7 +660,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // 8. Event Operations (Calendar view hooks)
+
+
   fetchEvents: async (showIndicator = false) => {
     if (showIndicator) set({ isLoading: true });
     try {

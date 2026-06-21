@@ -10,8 +10,13 @@ export class ThreadsController {
   constructor(private readonly threadsService: ThreadsService) {}
 
   @Get()
-  async getThreads(@Query('search') search?: string, @Query('tag') tag?: string) {
-    return this.threadsService.getThreads(search, tag);
+  async getThreads(@Req() req: any, @Query('search') search?: string, @Query('tag') tag?: string, @Query('type') type?: string) {
+    return this.threadsService.getThreads(search, tag, type, req.user?.id);
+  }
+
+  @Get('counts')
+  async getThreadCounts(@Query('search') search?: string) {
+    return this.threadsService.getThreadCounts(search);
   }
 
   @Get('saved')
@@ -55,8 +60,8 @@ export class ThreadsController {
   }
 
   @Post(':id/report')
-  async reportThread(@Req() req: any, @Param('id') id: string, @Body('reason') reason: string) {
-    return this.threadsService.reportThread(id, req.user.id, reason);
+  async reportThread(@Req() req: any, @Param('id') id: string, @Body('reason') reason: string, @Body('description') description?: string) {
+    return this.threadsService.reportThread(id, req.user.id, reason, description);
   }
 
   @Post(':id/collaborate')

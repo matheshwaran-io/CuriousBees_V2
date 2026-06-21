@@ -103,12 +103,12 @@ export default function FeedComments({ threadId }: FeedCommentsProps) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Write a comment..."
-            className="w-full pl-3 pr-10 py-1.5 rounded-full border border-slate-200 focus:border-[#6D28D9] focus:ring-1 focus:ring-[#6D28D9]/20 outline-none text-xs font-semibold transition-all bg-slate-50"
+            className="w-full pl-3 pr-10 py-1.5 rounded-full border border-slate-200 focus:border-[#0C4DA2] focus:ring-1 focus:ring-[#0C4DA2]/20 outline-none text-xs font-semibold transition-all bg-slate-50"
           />
           <button
             type="submit"
             disabled={isSubmitting || !content.trim()}
-            className="absolute right-1 top-1 bottom-1 p-1.5 rounded-full bg-[#6D28D9] hover:bg-[#5b21b6] disabled:opacity-50 text-white transition-all shadow-sm cursor-pointer"
+            className="absolute right-1 top-1 bottom-1 p-1.5 rounded-full bg-[#0C4DA2] hover:bg-[#042654] disabled:opacity-50 text-white transition-all shadow-sm cursor-pointer"
           >
             {isSubmitting ? (
               <Loader2 className="w-3 h-3 animate-spin" />

@@ -58,7 +58,11 @@ export function ProfileDropdown() {
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    router.push(currentUser.role === 'INSTITUTE_ADMIN' ? '/admin/settings' : '/profile');
+                    router.push(
+                      currentUser.role === 'INSTITUTE_ADMIN' ? '/admin/settings' :
+                      currentUser.role === 'RESEARCH_SUPERVISOR' ? '/supervisor/settings' :
+                      '/scholar/settings'
+                    );
                   }}
                   className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors w-full text-left"
                 >

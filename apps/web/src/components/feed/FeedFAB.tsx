@@ -26,7 +26,7 @@ export default function FeedFAB() {
               className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-slate-50 transition-colors group cursor-pointer"
             >
               <span className="text-xs font-bold text-slate-700">Write Post</span>
-              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-blue-600 group-hover:bg-indigo-100 transition-colors">
                 <PenTool className="w-4 h-4" />
               </div>
             </button>
@@ -50,7 +50,7 @@ export default function FeedFAB() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-gradient-to-tr from-[#6D28D9] to-indigo-600 text-white flex items-center justify-center rounded-full shadow-[0_8px_30px_rgb(109,40,217,0.4)] hover:shadow-[0_12px_40px_rgb(109,40,217,0.6)] transition-all duration-300 active:scale-90 group cursor-pointer border-2 border-white"
+        className="w-14 h-14 bg-gradient-to-tr from-[#0C4DA2] to-blue-600 text-white flex items-center justify-center rounded-full shadow-[0_8px_30px_rgb(109,40,217,0.4)] hover:shadow-[0_12px_40px_rgb(109,40,217,0.6)] transition-all duration-300 active:scale-90 group cursor-pointer border-2 border-white"
         title="Actions"
       >
         <Plus className={`w-6 h-6 text-white transition-transform duration-300 ${isOpen ? 'rotate-45' : 'group-hover:rotate-90'}`} />

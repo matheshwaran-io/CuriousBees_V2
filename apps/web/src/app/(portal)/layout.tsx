@@ -72,7 +72,8 @@ export default function PortalLayout({
       setIsAuthVerifying(false);
       if (activeUser) {
         console.info('[PortalLayout] Initial sync complete. Triggering data fetch.');
-        fetchData();
+        const skipThreads = window.location.pathname.includes('/scholar/feed');
+        fetchData(skipThreads);
       }
     };
 

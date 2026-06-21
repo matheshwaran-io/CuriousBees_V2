@@ -73,10 +73,10 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
         items: [
           { name: 'Research Feed', href: '/threads', icon: MessageSquare },
           { name: 'Dashboard', href: '/supervisor', icon: LayoutDashboard },
-          { name: 'Researchers', href: '/researchers', icon: Users },
           { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
-          { name: 'Workspaces', href: '/workspace', icon: FolderOpen },
           { name: 'Events', href: '/events', icon: CalendarIcon },
+          { name: 'Workspace', href: '/workspace', icon: FolderOpen },
+          { name: 'Chat & Collaboration', href: '/chat', icon: Users },
         ],
       },
       {
@@ -98,10 +98,10 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
       items: [
         { name: 'Research Feed', href: '/scholar/feed', icon: MessageSquare },
         { name: 'Dashboard', href: '/scholar/dashboard', icon: LayoutDashboard },
-        { name: 'Connections', href: '/scholar/connections', icon: Users },
         { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
-        { name: 'Workspaces', href: '/scholar/workspaces', icon: FolderOpen },
         { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
+        { name: 'Workspace', href: '/scholar/workspaces', icon: FolderOpen },
+        { name: 'Chat & Collaboration', href: '/scholar/chat', icon: Users },
       ],
     },
   ];
