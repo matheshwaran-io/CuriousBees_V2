@@ -289,7 +289,7 @@ export default function ThreadsFeedPage() {
 
         <div className="flex items-center gap-4 text-slate-500 shrink-0">
           <button 
-            onClick={fetchData}
+            onClick={() => fetchData()}
             className="p-1.5 rounded-full hover:bg-slate-100 text-slate-550 hover:text-slate-800 transition-all flex items-center justify-center shrink-0 cursor-pointer"
             title="Sync Feed"
           >

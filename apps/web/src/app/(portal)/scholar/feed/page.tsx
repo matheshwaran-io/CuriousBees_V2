@@ -51,7 +51,9 @@ interface Thread {
   title: string;
   content: string;
   createdAt: string | Date;
+  authorId?: string;
   author?: {
+    id?: string;
     name: string | null;
     image: string | null;
     role: string;
@@ -71,6 +73,8 @@ interface Thread {
   };
   interestedCount?: number;
   attachments?: any[];
+  saves?: Array<{ userId: string; threadId: string; id: string; createdAt: any }>;
+  comments?: any[];
 }
 
 interface Peer {
@@ -688,8 +692,8 @@ export default function ScholarFeedPage() {
                                   onClick={() => toggleSave(thread)}
                                   className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-between"
                                 >
-                                  <span>{thread.saves?.length > 0 ? 'Saved' : 'Save Post'}</span>
-                                  {thread.saves?.length > 0 && <Check className="w-3.5 h-3.5 text-emerald-500" />}
+                                  <span>{(thread.saves?.length ?? 0) > 0 ? 'Saved' : 'Save Post'}</span>
+                                  {(thread.saves?.length ?? 0) > 0 && <Check className="w-3.5 h-3.5 text-emerald-500" />}
                                 </button>
                                 <button 
                                   onClick={() => handleShare(thread.id)}
