@@ -243,7 +243,7 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
               <p className="text-xs italic text-slate-400 font-semibold">No comments shared on this thread yet. Be the first to start the conversation!</p>
             </div>
           ) : (
-            thread.comments?.map((comment) => (
+            thread.comments?.map((comment: any) => (
               <motion.div 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
