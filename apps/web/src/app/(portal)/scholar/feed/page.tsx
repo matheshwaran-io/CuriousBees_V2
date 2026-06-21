@@ -52,6 +52,7 @@ interface Thread {
     image: string | null;
     role: string;
     department: string | null;
+    faculty?: string | null;
   };
   tags: string[];
   commentsCount: number;

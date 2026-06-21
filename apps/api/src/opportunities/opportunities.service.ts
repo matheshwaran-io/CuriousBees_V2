@@ -97,9 +97,10 @@ export class OpportunitiesService {
     }
 
     // 3. Prevent duplicate requests
-    const existing = await this.prisma.collaborationRequest.findUnique({
+    const existing = await this.prisma.collaborationRequest.findFirst({
       where: {
-        scholarId_opportunityId: { scholarId, opportunityId }
+        scholarId,
+        opportunityId
       }
     });
     if (existing) {
@@ -179,6 +180,10 @@ export class OpportunitiesService {
 
     if (!request) {
       throw new BadRequestException('Collaboration request not found.');
+    }
+
+    if (!request.opportunity) {
+      throw new BadRequestException('Collaboration request does not have an associated opportunity.');
     }
 
     if (request.opportunity.authorId !== supervisorId) {
