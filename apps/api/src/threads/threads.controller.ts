@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Param, UseGuards, Req, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Param, UseGuards, Req, Put, Delete, NotFoundException } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { ThreadsService } from './threads.service';
@@ -67,5 +67,20 @@ export class ThreadsController {
   @Post(':id/collaborate')
   async requestCollaboration(@Req() req: any, @Param('id') id: string, @Body('message') message?: string) {
     return this.threadsService.requestCollaboration(id, req.user.id, message);
+  }
+}
+
+// Public controller — no auth required (for share links)
+@Controller('threads/public')
+export class ThreadsPublicController {
+  constructor(private readonly threadsService: ThreadsService) {}
+
+  @Get(':id')
+  async getThreadPublic(@Param('id') id: string) {
+    const thread = await this.threadsService.getThreadPublic(id);
+    if (!thread) {
+      throw new NotFoundException('This post is no longer available.');
+    }
+    return thread;
   }
 }

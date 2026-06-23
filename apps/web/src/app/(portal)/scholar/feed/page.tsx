@@ -43,6 +43,7 @@ import FeedFAB from '@/components/feed/FeedFAB';
 import EditPostModal from '@/components/feed/EditPostModal';
 import ReportPostModal from '@/components/feed/ReportPostModal';
 import ConfirmDeleteModal from '@/components/feed/ConfirmDeleteModal';
+import ShareModal from '@/components/feed/ShareModal';
 
 // ─── TYPES & INTERFACES ──────────────────────────────────────────────────────
 
@@ -116,6 +117,9 @@ export default function ScholarFeedPage() {
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [reportingPost, setReportingPost] = useState<any | null>(null);
   const [deletingPost, setDeletingPost] = useState<any | null>(null);
+  const [sharingPost, setSharingPost] = useState<any | null>(null);
+  // track optimistic share counts
+  const [shareCounts, setShareCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const savedDraft = localStorage.getItem('curiousbees_post_draft');
@@ -357,16 +361,17 @@ export default function ScholarFeedPage() {
     setOpenMenuId(null);
   };
 
-  const handleShare = async (threadId: string) => {
-    try {
-      const url = `${window.location.origin}/scholar/feed/${threadId}`;
-      await navigator.clipboard.writeText(url);
-      alert("Link copied to clipboard!");
-      await shareThread(threadId); // track analytics
-    } catch (e) {
-      console.error(e);
-    }
+  const handleShare = (thread: Thread) => {
+    setSharingPost(thread);
     setOpenMenuId(null);
+  };
+
+  const handleShareSuccess = (platform: string) => {
+    if (!sharingPost) return;
+    setShareCounts(prev => ({
+      ...prev,
+      [sharingPost.id]: (prev[sharingPost.id] ?? (sharingPost._count?.shares || 0)) + 1
+    }));
   };
 
   const getAvatarBg = (initials: string) => {
@@ -696,10 +701,10 @@ export default function ScholarFeedPage() {
                                   {(thread.saves?.length ?? 0) > 0 && <Check className="w-3.5 h-3.5 text-emerald-500" />}
                                 </button>
                                 <button 
-                                  onClick={() => handleShare(thread.id)}
+                                  onClick={() => handleShare(thread)}
                                   className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors"
                                 >
-                                  Copy Link
+                                  Share / Copy Link
                                 </button>
                                 {(currentUser?.id === (thread as any).authorId || currentUser?.role === 'INSTITUTE_ADMIN') && (
                                   <>
@@ -822,11 +827,11 @@ export default function ScholarFeedPage() {
                           </button>
 
                           <button 
-                            onClick={() => handleShare(thread.id)}
+                            onClick={() => handleShare(thread)}
                             className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-all cursor-pointer"
                           >
                             <Share2 className="w-4 h-4" />
-                            <span>Share</span>
+                            <span>Share ({shareCounts[thread.id] ?? thread.collaboratorsCount})</span>
                           </button>
 
                           <button 
@@ -1019,6 +1024,14 @@ export default function ScholarFeedPage() {
           isOpen={!!deletingPost} 
           onClose={() => setDeletingPost(null)} 
           thread={deletingPost} 
+        />
+      )}
+      {sharingPost && (
+        <ShareModal
+          isOpen={!!sharingPost}
+          onClose={() => setSharingPost(null)}
+          thread={sharingPost}
+          onShareSuccess={handleShareSuccess}
         />
       )}
     </DashboardShell>

@@ -156,6 +156,43 @@ export class ThreadsService {
     return thread;
   }
 
+  async getThreadPublic(id: string) {
+    return this.prisma.thread.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            role: true,
+            faculty: true,
+            department: true,
+          }
+        },
+        attachments: true,
+        _count: {
+          select: { comments: true, likes: true, shares: true }
+        },
+        comments: {
+          where: { parentId: null },
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                role: true,
+                department: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    });
+  }
+
   async createThread(authorId: string, input: CreateThreadInput) {
     const parsed = CreateThreadSchema.safeParse(input);
     if (!parsed.success) {
