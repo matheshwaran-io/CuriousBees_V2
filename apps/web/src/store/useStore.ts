@@ -67,7 +67,7 @@ interface AppState {
   // Live REST API Actions (Integrates Clerk Bearer JWT)
   syncUserSession: (options?: { throwOnError?: boolean; force?: boolean }) => Promise<User | null>;
   fetchData: (skipThreads?: boolean) => Promise<void>;
-  fetchFeedThreads: (search?: string, type?: string) => Promise<void>;
+  fetchFeedThreads: (search?: string, type?: string, sort?: 'latest' | 'top') => Promise<void>;
   fetchFeedCounts: (search?: string) => Promise<void>;
   fetchCollaborators: (search?: string, department?: string) => Promise<User[]>;
   createThread: (title: string, content: string, tags: string[], options?: { type?: any; isPaper?: boolean; paperJournal?: string | null; attachments?: any[] }) => Promise<Thread>;
@@ -84,8 +84,9 @@ interface AppState {
   updateThreadLocally: (threadId: string, data: Thread) => void;
   toggleSaveThreadLocally: (threadId: string, saved: boolean, userId: string) => void;
   
-  fetchTrendingResearch: () => Promise<string[]>;
-  fetchSuggestedPeers: () => Promise<User[]>;
+  fetchTrendingResearch: () => Promise<Array<{tag: string, count: number}>>;
+  fetchSuggestedPeers: () => Promise<any[]>;
+  connectWithPeer: (peerId: string) => Promise<'connect' | 'pending' | 'connected' | null>;
   searchFeed: (query: string) => Promise<{ threads: Thread[], publications: Publication[], users: User[] }>;
   createOpportunity: (title: string, description: string, department: string, researchDomain: string) => Promise<Opportunity>;
   updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
@@ -403,19 +404,36 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  fetchFeedThreads: async (search?: string, type?: string) => {
+  fetchFeedThreads: async (search?: string, type?: string, sort?: 'latest' | 'top') => {
     set({ isLoading: true });
     try {
+      if (type === 'SAVED') {
+        const res = await apiFetch('/api/threads/saved');
+        if (res.ok) {
+          const threads = await res.json();
+          set({ threads });
+        } else {
+          const err = await readApiError(res);
+          get().addToast(`Failed to load saved posts: ${err}`, 'error');
+        }
+        return;
+      }
+
       const params = new URLSearchParams();
       if (search) params.append('search', search);
-      if (type) params.append('type', type);
+      if (type && type !== 'ALL') params.append('type', type);
+      if (sort) params.append('sort', sort);
       const res = await apiFetch(`/api/threads?${params.toString()}`);
       if (res.ok) {
         const threads = await res.json();
         set({ threads });
+      } else {
+        const err = await readApiError(res);
+        get().addToast(`Failed to load feed: ${err}`, 'error');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to load feed threads:', e);
+      get().addToast(`Network error: ${e.message}`, 'error');
     } finally {
       set({ isLoading: false });
     }
@@ -589,15 +607,26 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleSaveThreadLocally: (threadId: string, saved: boolean, userId: string) => {
-    set(state => ({
-      threads: state.threads.map(t => {
+    set(state => {
+      const updatedThreads = state.threads.map(t => {
         if (t.id === threadId) {
           const newSaves = saved ? [{ userId, threadId, id: 'temp', createdAt: new Date() }] : [];
           return { ...t, saves: newSaves as any };
         }
         return t;
-      })
-    }));
+      });
+
+      const newFeedCounts = state.feedCounts ? { ...state.feedCounts } : {};
+      if (saved) {
+        newFeedCounts.SAVED = (newFeedCounts.SAVED || 0) + 1;
+        newFeedCounts.saved = newFeedCounts.SAVED;
+      } else {
+        newFeedCounts.SAVED = Math.max(0, (newFeedCounts.SAVED || 0) - 1);
+        newFeedCounts.saved = newFeedCounts.SAVED;
+      }
+
+      return { threads: updatedThreads, feedCounts: newFeedCounts };
+    });
   },
 
   fetchTrendingResearch: async () => {
@@ -607,9 +636,43 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   fetchSuggestedPeers: async () => {
-    const res = await apiFetch('/api/feed/peers');
-    if (res.ok) return await res.json();
-    return [];
+    try {
+      const res = await apiFetch('/api/users/collaborators');
+      if (res.ok) {
+        const data = await res.json();
+        return data.map((u: any) => {
+          let connected: 'connect' | 'pending' | 'connected' = 'connect';
+          if (u.connectionStatus === 'PENDING') connected = 'pending';
+          else if (u.connectionStatus === 'CONNECTED') connected = 'connected';
+          return {
+            id: u.id,
+            name: u.name,
+            role: u.role,
+            department: u.department,
+            connected
+          };
+        });
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to load peers:', e);
+      return [];
+    }
+  },
+
+  connectWithPeer: async (peerId: string) => {
+    try {
+      const res = await apiFetch(`/api/users/${peerId}/connect`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        return data.status as 'connect' | 'pending' | 'connected';
+      }
+      get().addToast('Failed to send connection request', 'error');
+      return null;
+    } catch (err) {
+      get().addToast('Network error while connecting', 'error');
+      return null;
+    }
   },
 
   searchFeed: async (query) => {

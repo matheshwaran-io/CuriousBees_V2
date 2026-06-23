@@ -107,8 +107,8 @@ export class FeedService {
     const sortedTags = Object.entries(tagCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([tag]) => tag);
+      .map(([tag, count]) => ({ tag, count: Math.floor(count) }));
 
-    return sortedTags.length > 0 ? sortedTags : ['Neuroscience', 'AI', 'QuantumComputing', 'Biotech'];
+    return sortedTags;
   }
 }

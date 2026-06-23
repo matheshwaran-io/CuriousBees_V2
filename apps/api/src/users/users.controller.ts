@@ -28,6 +28,11 @@ export class UsersController {
     return this.usersService.getCollaborators(req.user.id, search, department);
   }
 
+  @Post(':id/connect')
+  async toggleConnection(@Req() req: any, @Param('id') targetUserId: string) {
+    return this.usersService.toggleConnection(req.user.id, targetUserId);
+  }
+
   @Get('interests')
   async getAllInterests() {
     return this.usersService.getAllInterests();

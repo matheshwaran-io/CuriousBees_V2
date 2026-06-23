@@ -35,6 +35,9 @@ export default function ScholarDashboard() {
     reports,
     events,
     notifications,
+    peers,
+    fetchSuggestedPeers,
+    connectWithPeer,
     fetchWorkspaces,
     fetchPublications,
     fetchReports,
@@ -53,7 +56,8 @@ export default function ScholarDashboard() {
     fetchReports();
     fetchEvents();
     fetchNotifications();
-  }, [currentUser, fetchWorkspaces, fetchPublications, fetchReports, fetchEvents, fetchNotifications]);
+    fetchSuggestedPeers();
+  }, [currentUser, fetchWorkspaces, fetchPublications, fetchReports, fetchEvents, fetchNotifications, fetchSuggestedPeers]);
 
   const prefix = '/scholar';
 
@@ -131,43 +135,41 @@ export default function ScholarDashboard() {
 
       {/* 🚀 2. METRICS & RESEARCHGATE STRENGTH GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Strength Block */}
+        {/* Profile Completion Block */}
         <div className="cb-card p-5 bg-white flex flex-col justify-between lg:col-span-1 text-left">
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span>RG Scholar Score</span>
-              </h3>
-              <span className="text-[10px] font-mono font-bold text-primary px-2 py-0.5 bg-[#004495]/5 border border-[#004495]/10 rounded-md">
-                {profileStrength}% Strength
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed mt-2">
-              Complete your profile metrics to raise your indexing placement in campus matchmaking pools.
-            </p>
+          <div className="space-y-1.5 border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-bold text-slate-800">
+              Profile Completion
+            </h3>
           </div>
 
-          <div className="space-y-3.5 mt-4">
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${profileStrength}%` }} />
+          <div className="space-y-5 mt-4">
+            <div className="space-y-2">
+              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                <div className="h-full bg-[#FEC727] rounded-full transition-all duration-500" style={{ width: `${profileStrength}%` }} />
+              </div>
+              <div className="flex justify-between items-center text-[11px] font-bold text-slate-600">
+                <span>{profileStrength}% Complete</span>
+                <Link href={`${prefix}/settings`} className="text-primary hover:underline font-semibold">Edit Info</Link>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600 font-bold uppercase tracking-wider">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className={`w-3.5 h-3.5 ${hasBio ? 'text-emerald-500' : 'text-slate-300'}`} />
-                <span>Bio Details</span>
+
+            <div className="flex flex-col gap-3 text-xs font-semibold text-slate-700">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className={`w-4 h-4 ${hasBio ? 'text-[#059669]' : 'text-slate-300'}`} />
+                <span className={!hasBio ? 'text-slate-400' : ''}>Academic History Verified</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className={`w-3.5 h-3.5 ${hasInterests ? 'text-emerald-500' : 'text-slate-300'}`} />
-                <span>Interests Tags</span>
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className={`w-4 h-4 ${hasPubs ? 'text-[#059669]' : 'text-slate-300'}`} />
+                <span className={!hasPubs ? 'text-slate-400' : ''}>Link ResearchGate Account</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className={`w-3.5 h-3.5 ${hasPubs ? 'text-emerald-500' : 'text-slate-300'}`} />
-                <span>Publications</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className={`w-3.5 h-3.5 ${hasReports ? 'text-emerald-500' : 'text-slate-300'}`} />
-                <span>Advisory Log</span>
+              <div className="flex items-center gap-2.5">
+                {hasInterests ? (
+                  <CheckCircle2 className="w-4 h-4 text-[#059669]" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />
+                )}
+                <span className={!hasInterests ? 'text-slate-400' : ''}>Complete Interests Tags</span>
               </div>
             </div>
           </div>
@@ -390,6 +392,78 @@ export default function ScholarDashboard() {
               <p className="text-[11px] text-slate-600 leading-relaxed font-semibold">
                 Please complete your monthly progress logs and submit any co-authored publications before the semester audits.
               </p>
+            </div>
+          </div>
+
+          {/* Suggested Collaborators */}
+          <div className="cb-card p-5 bg-white text-left space-y-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-center border-b border-slate-100/80 pb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary shrink-0" />
+                <span>Suggested Collaborators</span>
+              </h3>
+              <Link href={`${prefix}/connections`} className="text-[10px] font-bold text-primary hover:text-primary/80 transition-colors">
+                View all
+              </Link>
+            </div>
+            <div className="flex flex-col gap-3">
+              {peers?.slice(0, 3).map((peer) => (
+                <div key={peer.id} className="flex items-center justify-between gap-2 group">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img src={peer.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer.name)}&background=random`} className="w-8 h-8 rounded-full shrink-0 group-hover:ring-2 ring-primary/20 transition-all" alt="" />
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-800 line-clamp-1">{peer.name}</h4>
+                      <p className="text-[10px] text-slate-500 truncate">{peer.role?.replace('_', ' ') || 'Researcher'}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => connectWithPeer(peer.id)}
+                    className="px-3 py-1 text-[10px] font-bold rounded-full border border-slate-200 hover:border-primary text-slate-600 hover:text-primary transition-all shrink-0 bg-slate-50 group-hover:bg-white"
+                  >
+                    {peer.connectionStatus === 'connected' ? 'Connected' : peer.connectionStatus === 'pending' ? 'Pending' : 'Follow'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Your Interests */}
+          <div className="cb-card p-5 bg-white text-left space-y-4 shadow-sm hover:shadow-md transition-shadow">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-slate-100/80 pb-3">
+              <Bookmark className="w-4 h-4 text-primary shrink-0" />
+              <span>Your Interests</span>
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {currentUser?.interests?.map((tag: string) => (
+                <span key={tag} className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
+                  #{tag}
+                </span>
+              ))}
+              {(!currentUser?.interests || currentUser.interests.length === 0) && (
+                <p className="text-xs text-slate-400 italic">No interests added yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Notifications */}
+          <div className="cb-card p-5 bg-white text-left space-y-4 shadow-sm hover:shadow-md transition-shadow">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 border-b border-slate-100/80 pb-3">
+              <Bell className="w-4 h-4 text-primary shrink-0" />
+              <span>Notifications</span>
+            </h3>
+            <div className="space-y-3">
+              {notifications?.slice(0, 3).map((notif: any) => (
+                <div key={notif.id} className="flex gap-2.5 items-start group cursor-pointer">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0 group-hover:scale-125 transition-transform" />
+                  <div>
+                    <h4 className="text-xs font-semibold text-slate-800 leading-snug group-hover:text-primary transition-colors">{notif.title}</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{notif.message}</p>
+                  </div>
+                </div>
+              ))}
+              {(!notifications || notifications.length === 0) && (
+                <p className="text-xs text-slate-400 italic">No new notifications.</p>
+              )}
             </div>
           </div>
         </div>

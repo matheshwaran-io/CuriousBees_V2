@@ -85,9 +85,19 @@ export class UsersService {
   }
 
   async getCollaborators(userId: string, search?: string, department?: string) {
-    return this.prisma.user.findMany({
+    const requester = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (!requester) throw new BadRequestException('User not found');
+
+    let roleFilter: Role | undefined;
+    if (requester.role === 'RESEARCH_SCHOLAR') roleFilter = 'RESEARCH_SCHOLAR';
+    else if (requester.role === 'RESEARCH_SUPERVISOR') roleFilter = 'RESEARCH_SUPERVISOR';
+    // If admin, they might not see any peers, or maybe they see other admins. We'll restrict to exact role.
+    else roleFilter = requester.role;
+
+    const users = await this.prisma.user.findMany({
       where: {
         id: { not: userId },
+        role: roleFilter,
         ...(department && { department }),
         ...(search && {
           OR: [
@@ -114,6 +124,47 @@ export class UsersService {
       },
       take: 20
     });
+
+    const connections = await this.prisma.researchConnection.findMany({
+      where: {
+        OR: [
+          { requesterId: userId },
+          { receiverId: userId }
+        ]
+      }
+    });
+
+    return users.map(user => {
+      const conn = connections.find(c => 
+        (c.requesterId === userId && c.receiverId === user.id) ||
+        (c.receiverId === userId && c.requesterId === user.id)
+      );
+      return {
+        ...user,
+        connectionStatus: conn ? conn.status : 'NONE'
+      };
+    });
+  }
+
+  async toggleConnection(requesterId: string, receiverId: string) {
+    const existing = await this.prisma.researchConnection.findFirst({
+      where: {
+        OR: [
+          { requesterId, receiverId },
+          { requesterId: receiverId, receiverId: requesterId }
+        ]
+      }
+    });
+
+    if (existing) {
+      await this.prisma.researchConnection.delete({ where: { id: existing.id } });
+      return { status: 'connect' };
+    } else {
+      await this.prisma.researchConnection.create({
+        data: { requesterId, receiverId, status: 'PENDING' }
+      });
+      return { status: 'pending' };
+    }
   }
 
   async getAllInterests() {

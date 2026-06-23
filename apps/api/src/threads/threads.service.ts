@@ -7,7 +7,7 @@ import { CreateThreadSchema } from '@curiousbees/shared-utils';
 export class ThreadsService {
   constructor(private prisma: PrismaService) {}
 
-  async getThreads(search?: string, tag?: string, type?: string, userId?: string) {
+  async getThreads(search?: string, tag?: string, type?: string, userId?: string, sort?: 'latest' | 'top') {
     return this.prisma.thread.findMany({
       where: {
         ...(tag && {
@@ -59,17 +59,22 @@ export class ThreadsService {
           select: { comments: true, likes: true, shares: true, saves: true }
         }
       },
-      orderBy: {
+      orderBy: sort === 'top' ? [
+        { likes: { _count: 'desc' } },
+        { comments: { _count: 'desc' } },
+        { createdAt: 'desc' }
+      ] : {
         createdAt: 'desc'
       }
     });
   }
 
-  async getThreadCounts(search?: string) {
+  async getThreadCounts(search?: string, userId?: string) {
     const whereClause: any = search ? {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } }
+        { content: { contains: search, mode: 'insensitive' } },
+        { tags: { has: search } }
       ]
     } : undefined;
 
@@ -83,7 +88,14 @@ export class ThreadsService {
       where: whereClause
     });
 
-    const result: Record<string, number> = { ALL: totalCount };
+    let savedCount = 0;
+    if (userId) {
+      savedCount = await this.prisma.savedThread.count({
+        where: { userId }
+      });
+    }
+
+    const result: Record<string, number> = { ALL: totalCount, SAVED: savedCount, saved: savedCount };
     counts.forEach(c => {
       result[c.type as string] = (c as any)._count._all;
     });
@@ -342,6 +354,9 @@ export class ThreadsService {
               }
             },
             attachments: true,
+            saves: {
+              where: { userId }
+            },
             _count: {
               select: { comments: true, likes: true, shares: true, saves: true }
             }

@@ -281,25 +281,22 @@ export default function ShareModal({ isOpen, onClose, thread, onShareSuccess }: 
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"
           />
 
-          {/* Modal — centered on desktop, bottom sheet on mobile */}
-          <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.97 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-            className="fixed z-50 
-              bottom-0 left-0 right-0 rounded-t-3xl 
-              sm:bottom-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-1/2 sm:-translate-y-1/2 
-              sm:w-[480px] sm:rounded-3xl
-              bg-white shadow-2xl overflow-hidden"
-          >
+          {/* Modal Wrapper for robust positioning */}
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center pointer-events-none sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              className="w-full sm:w-[480px] rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto"
+            >
             {/* Drag handle on mobile */}
             <div className="flex justify-center pt-3 sm:hidden">
               <div className="w-10 h-1 rounded-full bg-slate-200" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[#0C4DA2]/10 flex items-center justify-center">
                   <Share2 className="w-4 h-4 text-[#0C4DA2]" />
@@ -314,7 +311,9 @@ export default function ShareModal({ isOpen, onClose, thread, onShareSuccess }: 
               </button>
             </div>
 
-            {/* Post Preview */}
+            {/* Scrollable Area */}
+            <div className="overflow-y-auto overflow-x-hidden flex-1 pb-safe">
+              {/* Post Preview */}
             <div className="mx-5 mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
               <div className="flex items-center gap-2.5 mb-2">
                 <div className="w-8 h-8 rounded-full bg-[#0C4DA2] flex items-center justify-center text-white text-[10px] font-black shrink-0">
@@ -390,7 +389,7 @@ export default function ShareModal({ isOpen, onClose, thread, onShareSuccess }: 
             </div>
 
             {/* Post URL pill */}
-            <div className="mx-5 mb-5 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <div className="mx-5 mb-5 flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 shrink-0">
               <ExternalLink className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <p className="text-[11px] text-slate-500 font-semibold truncate flex-1">{postUrl}</p>
               <button
@@ -400,7 +399,9 @@ export default function ShareModal({ isOpen, onClose, thread, onShareSuccess }: 
                 {copied ? '✅ Copied' : 'Copy'}
               </button>
             </div>
-          </motion.div>
+            </div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

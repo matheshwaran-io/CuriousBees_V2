@@ -10,13 +10,19 @@ export class ThreadsController {
   constructor(private readonly threadsService: ThreadsService) {}
 
   @Get()
-  async getThreads(@Req() req: any, @Query('search') search?: string, @Query('tag') tag?: string, @Query('type') type?: string) {
-    return this.threadsService.getThreads(search, tag, type, req.user?.id);
+  async getThreads(
+    @Req() req: any, 
+    @Query('search') search?: string, 
+    @Query('tag') tag?: string, 
+    @Query('type') type?: string,
+    @Query('sort') sort?: 'latest' | 'top'
+  ) {
+    return this.threadsService.getThreads(search, tag, type, req.user?.id, sort);
   }
 
   @Get('counts')
-  async getThreadCounts(@Query('search') search?: string) {
-    return this.threadsService.getThreadCounts(search);
+  async getThreadCounts(@Req() req: any, @Query('search') search?: string) {
+    return this.threadsService.getThreadCounts(search, req.user?.id);
   }
 
   @Get('saved')
