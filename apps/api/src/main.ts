@@ -161,7 +161,7 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 4000;
 
   logger.log(`Attempting to listen on port ${port}...`);
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port);
   logger.log(`🚀 NestJS Application successfully started. Listening on: http://0.0.0.0:${port}`);
 }
 
