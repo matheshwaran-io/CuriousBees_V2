@@ -46,6 +46,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/notifications',
     '/approval-requests',
     '/supervisor',
+    '/chat',
   ],
   RESEARCH_SCHOLAR: [
     '/dashboard',
@@ -59,6 +60,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/reports',
     '/notifications',
     '/scholar',
+    '/chat',
   ],
 };
 

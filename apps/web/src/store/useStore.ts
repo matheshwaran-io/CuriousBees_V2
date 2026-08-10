@@ -92,7 +92,7 @@ interface AppState {
   updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
   fetchEvents: (showIndicator?: boolean) => Promise<Event[]>;
 
-  createEvent: (title: string, date: string, time: string, venue: string) => Promise<Event>;
+  createEvent: (title: string, date: string, time: string, venue: string, description?: string) => Promise<Event>;
   updateEvent: (id: string, title: string, date: string, time: string, venue: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
   logout: () => void;
@@ -744,13 +744,13 @@ export const useStore = create<AppState>((set, get) => ({
 
 
 
-  createEvent: async (title, date, time, venue) => {
+  createEvent: async (title, date, time, venue, description) => {
     set({ isLoading: true });
     try {
       const res = await apiFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, date, time, venue }),
+        body: JSON.stringify({ title, date, time, venue, description }),
       });
       if (res.ok) {
         const data = await res.json();
