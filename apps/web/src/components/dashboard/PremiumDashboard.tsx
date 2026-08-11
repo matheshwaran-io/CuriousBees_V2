@@ -145,6 +145,30 @@ export function PremiumDashboard() {
           
           {/* Left Column (Metrics + Chart + Attachments) */}
           <div className="lg:col-span-2 space-y-6">
+
+            {/* Pending Actions Box */}
+            <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-sm">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-amber-900">Pending Governance Actions</h4>
+                  <p className="text-xs text-amber-700">Requires review or approval</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href="/approval-requests" className="px-3.5 py-1.5 bg-white border border-amber-200 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition-colors">
+                  3 Supervision Requests
+                </Link>
+                <Link href="/reports" className="px-3.5 py-1.5 bg-white border border-amber-200 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition-colors">
+                  2 Reports Awaiting Review
+                </Link>
+                <Link href="/publications" className="px-3.5 py-1.5 bg-white border border-amber-200 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition-colors">
+                  1 Publication Verification
+                </Link>
+              </div>
+            </div>
             
             {/* 3 Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">

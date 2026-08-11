@@ -54,7 +54,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
   if (role === 'INSTITUTE_ADMIN') {
     return [
       {
-        label: 'Admin Console',
+        label: 'ADMIN CONSOLE',
         items: [
           { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
           { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
@@ -64,45 +64,75 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
           { name: 'System Settings', href: '/admin/settings', icon: Shield },
         ],
       },
+      {
+        label: 'NETWORK',
+        items: [
+          { name: 'Researcher Network', href: '/researchers', icon: Users },
+          { name: 'Curious Nexus', href: '/nexus', icon: Network },
+        ]
+      }
     ];
   }
 
   if (role === 'RESEARCH_SUPERVISOR') {
     return [
       {
-        label: 'Research Portal',
+        label: 'RESEARCH',
         items: [
           { name: 'Research Feed', href: '/threads', icon: MessageSquare },
           { name: 'Dashboard', href: '/supervisor', icon: LayoutDashboard },
           { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
           { name: 'Events', href: '/events', icon: CalendarIcon },
-          { name: 'Curious Nexus', href: '/nexus', icon: Network },
         ],
       },
       {
-        label: 'Faculty Advisory',
+        label: 'NETWORK',
+        items: [
+          { name: 'Researcher Network', href: '/researchers', icon: Users },
+          { name: 'Curious Nexus', href: '/nexus', icon: Network },
+        ]
+      },
+      {
+        label: 'SUPERVISION',
         items: [
           { name: 'My Scholars', href: '/my-scholars', icon: UserCog },
-          { name: 'Approval Requests', href: '/approval-requests', icon: Clock },
-          { name: 'Publications Audit', href: '/publications', icon: BookOpen },
+          { name: 'Supervision Requests', href: '/approval-requests', icon: Clock },
           { name: 'Advisory Reports', href: '/reports', icon: BarChart3 },
         ],
       },
+      {
+        label: 'RESEARCH RECORDS',
+        items: [
+          { name: 'Publications', href: '/publications', icon: BookOpen },
+        ]
+      }
     ];
   }
 
   // Scholar
   return [
     {
-      label: 'Research Portal',
+      label: 'RESEARCH',
       items: [
         { name: 'Research Feed', href: '/scholar/feed', icon: MessageSquare },
         { name: 'Dashboard', href: '/scholar/dashboard', icon: LayoutDashboard },
         { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
         { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
-        { name: 'Curious Nexus', href: '/nexus', icon: Network },
       ],
     },
+    {
+      label: 'NETWORK',
+      items: [
+        { name: 'Researcher Network', href: '/researchers', icon: Users },
+        { name: 'Curious Nexus', href: '/nexus', icon: Network },
+      ]
+    },
+    {
+      label: 'RESEARCH RECORDS',
+      items: [
+        { name: 'Publications', href: '/publications', icon: BookOpen },
+      ]
+    }
   ];
 };
 
@@ -131,25 +161,16 @@ function NavItem({
       onClick={onClick}
       onMouseEnter={() => setHoveredItem(name)}
       onMouseLeave={() => setHoveredItem(null)}
-      className="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-200 select-none group"
-    >
-      {/* Sliding Backdrop Pill */}
-      {hoveredItem === name && (
-        <motion.span
-          layoutId="sidebar-backdrop"
-          className="absolute inset-0 bg-primary/5 rounded-lg z-0"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-        />
+      className={cn(
+        "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 select-none group",
+        active ? "bg-[#EEF4FF] text-[#0B4EA2]" : "text-[#4A5568] hover:bg-[#EEF4FF]/50 hover:text-[#0B4EA2]"
       )}
-
-      {/* Active State Indicator */}
+    >
+      {/* Active Blue Bar Indicator */}
       {active && (
         <motion.span
           layoutId="sidebar-active-indicator"
-          className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-full z-10"
+          className="absolute left-0 top-2 bottom-2 w-[3.5px] bg-[#0B4EA2] rounded-r-full z-10"
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         />
       )}
@@ -157,19 +178,19 @@ function NavItem({
       <Icon
         className={cn(
           'w-[18px] h-[18px] shrink-0 transition-colors duration-200 relative z-10',
-          active ? 'text-primary' : 'text-textSecondary group-hover:text-primary'
+          active ? 'text-[#0B4EA2]' : 'text-[#6B7890] group-hover:text-[#0B4EA2]'
         )}
       />
       <span
         className={cn(
           'truncate leading-none relative z-10 transition-colors duration-200',
-          active ? 'text-primary font-bold' : 'text-textSecondary group-hover:text-black'
+          active ? 'text-[#0B4EA2] font-extrabold' : 'text-[#4A5568] group-hover:text-[#17233D]'
         )}
       >
         {name}
       </span>
       {active && (
-        <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary relative z-10" />
+        <ChevronRight className="w-3.5 h-3.5 ml-auto text-[#0B4EA2] relative z-10" />
       )}
     </Link>
   );

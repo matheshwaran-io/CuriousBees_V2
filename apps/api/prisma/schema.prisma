@@ -83,9 +83,26 @@ model User {
   connectionsRequested ResearchConnection[] @relation("ConnectionRequester")
   connectionsReceived  ResearchConnection[] @relation("ConnectionReceiver")
   hostedEvents         Event[]
+  // Researcher Network Follow Relations
+  following            UserFollow[] @relation("UserFollowing")
+  followers            UserFollow[] @relation("UserFollowers")
 
   @@index([departmentId])
   @@index([supervisorId])
+}
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 // SRM_Recollab Custom MVP Models

@@ -19,12 +19,14 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export function PremiumOpportunities() {
   const { opportunities, createOpportunity, currentUser } = useStore();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   // Filtering states
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
@@ -133,7 +135,7 @@ export function PremiumOpportunities() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Opportunity Listings</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Discover funded PhD positions, active lab roles, and collaborative projects.
+              Discover funded PhD positions, active lab roles, grants, and collaborative projects.
             </p>
           </div>
           
@@ -148,13 +150,31 @@ export function PremiumOpportunities() {
             {currentUser?.role === 'RESEARCH_SUPERVISOR' && (
               <button
                 onClick={handleOpenDrawer}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#004495] hover:bg-[#003370] text-white rounded-full text-sm font-bold shadow-md shadow-blue-900/20 transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95"
               >
                 <Plus className="w-4 h-4" />
                 <span>Post Opportunity</span>
               </button>
             )}
           </div>
+        </div>
+
+        {/* Category Pills Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          {['All Opportunities', 'PhD Positions', 'Assistantships', 'Research Projects', 'Grants & Fellowships', 'CFPs & Conferences', 'Hackathons'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat === 'All Opportunities' ? '' : cat)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer",
+                (selectedCategory === cat || (!selectedCategory && cat === 'All Opportunities'))
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
 
         {/* 🚀 MAIN LAYOUT (2-COLUMN) */}

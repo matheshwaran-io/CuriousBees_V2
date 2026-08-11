@@ -38,6 +38,7 @@ import { useStore } from '@/store/useStore';
 
 interface CuriousNexusHubProps {
   initialView?: 'messages' | 'workspaces';
+  initialUserId?: string | null;
 }
 
 interface NexusMessage {
@@ -59,7 +60,7 @@ interface NexusMessage {
   replyTo?: { id: string; senderName: string; content: string };
 }
 
-export function CuriousNexusHub({ initialView = 'messages' }: CuriousNexusHubProps) {
+export function CuriousNexusHub({ initialView = 'messages', initialUserId }: CuriousNexusHubProps) {
   const { currentUser, workspaces, collaborators, threads } = useStore();
 
   // Active View State: 'messages' or 'workspaces'
@@ -68,7 +69,7 @@ export function CuriousNexusHub({ initialView = 'messages' }: CuriousNexusHubPro
   const [filterMode, setFilterMode] = useState<'all' | 'unread'>('all');
   
   // Selection States
-  const [selectedConversationId, setSelectedConversationId] = useState<string>('c1');
+  const [selectedConversationId, setSelectedConversationId] = useState<string>(initialUserId ? `conv-${initialUserId}` : 'c1');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('w1');
   const [showDetailsPane, setShowDetailsPane] = useState<boolean>(true);
   const [workspaceSubTab, setWorkspaceSubTab] = useState<'chat' | 'overview' | 'members' | 'files' | 'milestones' | 'announcements'>('overview');

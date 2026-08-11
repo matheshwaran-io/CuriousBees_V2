@@ -7,11 +7,13 @@ import { useSearchParams } from 'next/navigation';
 export default function NexusPage() {
   const searchParams = useSearchParams();
   const viewParam = searchParams.get('view');
+  const userId = searchParams.get('userId');
+  
   const initialView = viewParam === 'workspaces' ? 'workspaces' : 'messages';
 
   return (
     <div className="w-full h-full">
-      <CuriousNexusHub initialView={initialView} />
+      <CuriousNexusHub initialView={initialView} initialUserId={userId} />
     </div>
   );
 }

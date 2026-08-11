@@ -181,7 +181,7 @@ export function PremiumEvents() {
               <button 
                 onClick={() => setCalendarView('list')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'list' ? 'bg-[#004495] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  calendarView === 'list' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 List
@@ -189,7 +189,7 @@ export function PremiumEvents() {
               <button 
                 onClick={() => setCalendarView('month')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'month' ? 'bg-[#004495] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  calendarView === 'month' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Month
@@ -197,7 +197,7 @@ export function PremiumEvents() {
               <button 
                 onClick={() => setCalendarView('week')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'week' ? 'bg-[#004495] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  calendarView === 'week' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Week
@@ -205,7 +205,7 @@ export function PremiumEvents() {
               <button 
                 onClick={() => setCalendarView('day')}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'day' ? 'bg-[#004495] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  calendarView === 'day' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Day

@@ -8,7 +8,7 @@ export class ThreadsService {
   constructor(private prisma: PrismaService) {}
 
   async getThreads(search?: string, tag?: string, type?: string, userId?: string, sort?: 'latest' | 'top') {
-    return this.prisma.thread.findMany({
+    const threads = await this.prisma.thread.findMany({
       where: {
         ...(tag && {
           tags: {
@@ -34,7 +34,11 @@ export class ThreadsService {
             image: true,
             role: true,
             faculty: true,
-            department: true
+            department: true,
+            followers: userId ? {
+              where: { followerId: userId },
+              select: { id: true }
+            } : undefined
           }
         },
         attachments: true,
@@ -67,6 +71,24 @@ export class ThreadsService {
         createdAt: 'desc'
       }
     });
+
+    // Deterministic feed ranking for V1 (if this is the main feed)
+    if (userId && !search && !tag && sort !== 'top') {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      threads.sort((a, b) => {
+        const aFollowed = (a.author as any).followers?.length > 0;
+        const bFollowed = (b.author as any).followers?.length > 0;
+        
+        // Prioritize recent posts from followed users
+        if (aFollowed && a.createdAt > weekAgo && (!bFollowed || b.createdAt <= weekAgo)) return -1;
+        if (bFollowed && b.createdAt > weekAgo && (!aFollowed || a.createdAt <= weekAgo)) return 1;
+        
+        // Otherwise default to createdAt desc
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+    }
+
+    return threads;
   }
 
   async getThreadCounts(search?: string, userId?: string) {

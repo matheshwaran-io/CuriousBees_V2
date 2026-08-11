@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
+import QueryProvider from '@/components/QueryProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -41,14 +42,15 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-darkBg text-textPrimary relative min-h-screen">
-
-        <ClerkProvider>
-          {/* Global 3% noise texture overlay */}
-          <div className="noise-overlay" />
-          {/* Clerk Smart CAPTCHA anchor for Custom Flows */}
-          <div id="clerk-captcha" />
-          {children}
-        </ClerkProvider>
+        <QueryProvider>
+          <ClerkProvider>
+            {/* Global 3% noise texture overlay */}
+            <div className="noise-overlay" />
+            {/* Clerk Smart CAPTCHA anchor for Custom Flows */}
+            <div id="clerk-captcha" />
+            {children}
+          </ClerkProvider>
+        </QueryProvider>
       </body>
     </html>
   );
