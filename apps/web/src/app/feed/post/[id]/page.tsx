@@ -230,10 +230,6 @@ export default async function PublicPostPage({ params }: { params: Promise<{ id:
                 <MessageSquare className="w-3.5 h-3.5 text-[#0C4DA2]" />
                 {thread._count?.comments || 0} Comments
               </span>
-              <span className="flex items-center gap-1.5">
-                <Share2 className="w-3.5 h-3.5 text-emerald-500" />
-                {thread._count?.shares || 0} Shares
-              </span>
             </div>
           </div>
         </article>

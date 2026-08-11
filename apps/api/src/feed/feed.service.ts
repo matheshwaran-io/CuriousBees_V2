@@ -24,7 +24,7 @@ export class FeedService {
         author: {
           select: { id: true, name: true, image: true, role: true, department: true }
         },
-        _count: { select: { comments: true, likes: true, shares: true, saves: true } }
+        _count: { select: { comments: true, likes: true, saves: true } }
       },
       take: 10
     });

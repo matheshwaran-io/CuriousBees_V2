@@ -30,6 +30,11 @@ export class ThreadsController {
     return this.threadsService.getSavedThreads(req.user.id);
   }
 
+  @Get('liked')
+  async getLikedThreads(@Req() req: any) {
+    return this.threadsService.getLikedThreads(req.user.id);
+  }
+
   @Get(':id')
   async getThreadById(@Param('id') id: string) {
     return this.threadsService.getThreadById(id);

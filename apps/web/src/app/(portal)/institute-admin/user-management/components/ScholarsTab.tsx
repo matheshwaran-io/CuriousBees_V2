@@ -266,9 +266,15 @@ export default function ScholarsTab() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Department</label>
-                    <select value={selDept} onChange={e => { setSelDept(e.target.value); setSelSupervisor(''); }} disabled={!selFaculty} className="cb-input w-full cursor-pointer disabled:opacity-50">
+                    <select value={selDept} onChange={e => {
+                      const deptId = e.target.value;
+                      setSelDept(deptId);
+                      setSelSupervisor('');
+                      const dObj = departments.find(d => d.id === deptId);
+                      if (dObj?.facultyId) setSelFaculty(dObj.facultyId);
+                    }} className="cb-input w-full cursor-pointer">
                       <option value="">Select Department...</option>
-                      {departments.filter(d => d.facultyId === selFaculty).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      {(selFaculty ? departments.filter(d => d.facultyId === selFaculty) : departments).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -317,9 +323,15 @@ export default function ScholarsTab() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Department</label>
-                    <select value={addDept} onChange={e => { setAddDept(e.target.value); setAddSupervisor(''); }} disabled={!addFaculty} className="cb-input w-full cursor-pointer disabled:opacity-50">
+                    <select value={addDept} onChange={e => {
+                      const deptId = e.target.value;
+                      setAddDept(deptId);
+                      setAddSupervisor('');
+                      const dObj = departments.find(d => d.id === deptId);
+                      if (dObj?.facultyId) setAddFaculty(dObj.facultyId);
+                    }} className="cb-input w-full cursor-pointer">
                       <option value="">Select Department...</option>
-                      {departments.filter(d => d.facultyId === addFaculty).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      {(addFaculty ? departments.filter(d => d.facultyId === addFaculty) : departments).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">

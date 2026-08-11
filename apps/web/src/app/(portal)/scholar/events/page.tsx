@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Bot, Sparkles } from 'lucide-react';
 import PipelineStats from '@/components/events/PipelineStats';
+import PendingEmailQueue from '@/components/events/PendingEmailQueue';
 import EventCalendar from '@/components/events/EventCalendar';
 import LiveEventFeed from '@/components/events/LiveEventFeed';
 import EventDetailModal from '@/components/events/EventDetailModal';
@@ -43,6 +44,9 @@ export default function ScholarEventsPage() {
 
       {/* 📊 Pipeline Statistics */}
       <PipelineStats />
+
+      {/* 📩 Staged Inbound Email Intake Queue */}
+      <PendingEmailQueue />
 
       {/* 🗓️ Main Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">

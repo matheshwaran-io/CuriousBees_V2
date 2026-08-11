@@ -60,14 +60,6 @@ export interface ThreadLike {
   createdAt: Date | string;
 }
 
-export interface ThreadShare {
-  id: string;
-  threadId: string;
-  userId: string;
-  platform?: string | null;
-  createdAt: Date | string;
-}
-
 export interface ThreadReport {
   id: string;
   threadId: string;
@@ -109,10 +101,9 @@ export interface Thread {
   comments?: Comment[];
   attachments?: ThreadAttachment[];
   likes?: ThreadLike[];
-  shares?: ThreadShare[];
   reports?: ThreadReport[];
   saves?: SavedThread[];
-  _count?: { comments?: number, likes?: number, shares?: number, saves?: number };
+  _count?: { comments?: number, likes?: number, saves?: number };
   createdAt: Date | string;
 }
 

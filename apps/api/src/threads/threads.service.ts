@@ -38,6 +38,9 @@ export class ThreadsService {
           }
         },
         attachments: true,
+        likes: userId ? {
+          where: { userId }
+        } : undefined,
         saves: userId ? {
           where: { userId }
         } : undefined,
@@ -56,7 +59,7 @@ export class ThreadsService {
           }
         },
         _count: {
-          select: { comments: true, likes: true, shares: true, saves: true }
+          select: { comments: true, likes: true, saves: true }
         }
       },
       orderBy: sort === 'top' ? [
@@ -121,7 +124,7 @@ export class ThreadsService {
         },
         attachments: true,
         _count: {
-          select: { comments: true, likes: true, shares: true, saves: true }
+          select: { comments: true, likes: true, saves: true }
         },
         comments: {
           where: { parentId: null },
@@ -184,7 +187,7 @@ export class ThreadsService {
         },
         attachments: true,
         _count: {
-          select: { comments: true, likes: true, shares: true }
+          select: { comments: true, likes: true }
         },
         comments: {
           where: { parentId: null },
@@ -245,7 +248,7 @@ export class ThreadsService {
         },
         attachments: true,
         _count: {
-          select: { comments: true, likes: true, shares: true, saves: true }
+          select: { comments: true, likes: true, saves: true }
         }
       }
     });
@@ -258,15 +261,65 @@ export class ThreadsService {
       }
     });
 
+    let liked = false;
     if (existing) {
       await this.prisma.threadLike.delete({ where: { id: existing.id } });
-      return { liked: false };
+      liked = false;
     } else {
       await this.prisma.threadLike.create({
         data: { threadId, userId }
       });
-      return { liked: true };
+      liked = true;
     }
+
+    const likesCount = await this.prisma.threadLike.count({ where: { threadId } });
+    return { liked, likesCount };
+  }
+
+  async getLikedThreads(userId: string) {
+    const likedRecords = await this.prisma.threadLike.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        thread: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+                role: true,
+                faculty: true,
+                department: true
+              }
+            },
+            attachments: true,
+            likes: { where: { userId } },
+            saves: { where: { userId } },
+            comments: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                    role: true,
+                    department: true
+                  }
+                }
+              }
+            },
+            _count: {
+              select: { comments: true, likes: true, saves: true }
+            }
+          }
+        }
+      }
+    });
+
+    return likedRecords.map(r => r.thread);
   }
 
   async toggleSave(threadId: string, userId: string) {
@@ -294,13 +347,7 @@ export class ThreadsService {
   }
 
   async shareThread(threadId: string, userId: string, platform?: string) {
-    return this.prisma.threadShare.create({
-      data: {
-        threadId,
-        userId,
-        platform
-      }
-    });
+    return { success: true };
   }
 
   async reportThread(threadId: string, reporterId: string, reason: string, description?: string) {
@@ -354,11 +401,14 @@ export class ThreadsService {
               }
             },
             attachments: true,
+            likes: {
+              where: { userId }
+            },
             saves: {
               where: { userId }
             },
             _count: {
-              select: { comments: true, likes: true, shares: true, saves: true }
+              select: { comments: true, likes: true, saves: true }
             }
           }
         }
@@ -407,7 +457,7 @@ export class ThreadsService {
         },
         attachments: true,
         _count: {
-          select: { comments: true, likes: true, shares: true, saves: true }
+          select: { comments: true, likes: true, saves: true }
         }
       }
     });

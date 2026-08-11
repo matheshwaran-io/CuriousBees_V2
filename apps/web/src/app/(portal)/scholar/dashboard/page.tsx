@@ -35,7 +35,6 @@ export default function ScholarDashboard() {
     reports,
     events,
     notifications,
-    peers,
     fetchSuggestedPeers,
     connectWithPeer,
     fetchWorkspaces,
@@ -45,6 +44,7 @@ export default function ScholarDashboard() {
     fetchNotifications,
   } = useStore();
 
+  const [peers, setPeers] = useState<any[]>([]);
   const [currentDate] = useState(new Date());
   const hasFetched = React.useRef(false);
 
@@ -56,7 +56,9 @@ export default function ScholarDashboard() {
     fetchReports();
     fetchEvents();
     fetchNotifications();
-    fetchSuggestedPeers();
+    fetchSuggestedPeers().then(res => {
+      if (Array.isArray(res)) setPeers(res);
+    });
   }, [currentUser, fetchWorkspaces, fetchPublications, fetchReports, fetchEvents, fetchNotifications, fetchSuggestedPeers]);
 
   const prefix = '/scholar';
@@ -434,11 +436,14 @@ export default function ScholarDashboard() {
               <span>Your Interests</span>
             </h3>
             <div className="flex flex-wrap gap-2">
-              {currentUser?.interests?.map((tag: string) => (
-                <span key={tag} className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
-                  #{tag}
-                </span>
-              ))}
+              {currentUser?.interests?.map((item: any) => {
+                const tagName = typeof item === 'string' ? item : (item.interest?.name || item.name || 'Interest');
+                return (
+                  <span key={item.id || tagName} className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors cursor-pointer">
+                    #{tagName}
+                  </span>
+                );
+              })}
               {(!currentUser?.interests || currentUser.interests.length === 0) && (
                 <p className="text-xs text-slate-400 italic">No interests added yet.</p>
               )}

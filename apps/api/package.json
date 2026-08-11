@@ -8,11 +8,11 @@
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/main",
-    "prisma:generate": "prisma generate",
-    "prisma:validate": "prisma validate",
-    "prisma:push": "prisma db push",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:generate": "dotenv -e ../../.env -- prisma generate",
+    "prisma:validate": "dotenv -e ../../.env -- prisma validate",
+    "prisma:push": "dotenv -e ../../.env -- prisma db push",
+    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
+    "prisma:seed": "dotenv -e ../../.env -- ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.5.0",

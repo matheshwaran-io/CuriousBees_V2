@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { EventStatus, Prisma } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailParserService } from './services/email-parser.service';
 
 @Injectable()
 export class EventsService {
@@ -9,8 +10,109 @@ export class EventsService {
 
   constructor(
     private prisma: PrismaService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private emailParserService: EmailParserService
   ) {}
+
+  /**
+   * Stages an inbound email into the temporary PendingEmailEvent table.
+   * Only processes emails where Subject contains "Event Announcement" (case-insensitive).
+   */
+  async stageInboundEmail(body: string, senderEmail: string, subject?: string) {
+    const rawSubject = subject ? subject.trim() : '';
+
+    // Verify Subject line contains "Event Announcement"
+    if (!rawSubject.toLowerCase().includes('event announcement')) {
+      this.logger.warn(`Skipped inbound email from ${senderEmail} — Subject does not contain "Event Announcement". Subject: "${rawSubject}"`);
+      return {
+        success: false,
+        ignored: true,
+        message: 'Inbound email ignored: Subject line must contain "Event Announcement".'
+      };
+    }
+
+    const parsed = this.emailParserService.parseEmail(body, senderEmail, subject);
+
+    const pending = await this.prisma.pendingEmailEvent.create({
+      data: {
+        senderEmail: parsed.senderEmail,
+        title: parsed.title,
+        speaker: parsed.speaker,
+        date: parsed.date,
+        time: parsed.time,
+        venue: parsed.venue,
+        department: parsed.department,
+        description: parsed.description,
+      }
+    });
+
+    this.logger.log(`Staged pending email event ${pending.id} from ${parsed.senderEmail} (Subject matched "Event Announcement")`);
+    return pending;
+  }
+
+  /**
+   * Retrieves all pending staged email events for Institute Admin review.
+   */
+  async getPendingEmailEvents() {
+    return this.prisma.pendingEmailEvent.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  /**
+   * Approves a pending email event:
+   * 1. Creates a published Event in the primary table.
+   * 2. Deletes the temporary PendingEmailEvent entry.
+   * 3. Dispatches notifications to interested scholars & faculty.
+   */
+  async approvePendingEmailEvent(id: string) {
+    const pending = await this.prisma.pendingEmailEvent.findUnique({ where: { id } });
+    if (!pending) {
+      throw new NotFoundException('Pending email event not found.');
+    }
+
+    const publishedEvent = await this.prisma.event.create({
+      data: {
+        title: pending.title,
+        eventType: 'Email Intake',
+        speaker: pending.speaker,
+        department: pending.department,
+        date: pending.date,
+        time: pending.time,
+        venue: pending.venue,
+        description: pending.description,
+        organizerEmail: pending.senderEmail,
+        status: EventStatus.PUBLISHED,
+        priority: 'MEDIUM',
+      }
+    });
+
+    // Delete from temporary table
+    await this.prisma.pendingEmailEvent.delete({ where: { id } });
+    this.logger.log(`Approved & published pending email event ${id} -> Event ${publishedEvent.id}`);
+
+    // Route notifications to subscribers
+    this.notificationsService.routeEvent(publishedEvent).catch(e => {
+      this.logger.error(`Failed to route notifications for event ${publishedEvent.id}: ${e.message}`);
+    });
+
+    return { success: true, event: publishedEvent };
+  }
+
+  /**
+   * Rejects and discards a pending email event.
+   */
+  async rejectPendingEmailEvent(id: string) {
+    const pending = await this.prisma.pendingEmailEvent.findUnique({ where: { id } });
+    if (!pending) {
+      throw new NotFoundException('Pending email event not found.');
+    }
+
+    await this.prisma.pendingEmailEvent.delete({ where: { id } });
+    this.logger.log(`Rejected & deleted pending email event ${id}`);
+
+    return { success: true };
+  }
 
   /**
    * Retrieves events with optional filtering and pagination.

@@ -186,8 +186,8 @@ async function main() {
       interests: ['Bioinformatics', 'Cancer Immunotherapy', 'Nanomaterials & Thin Films']
     },
     {
-      name: 'CuriousBees Admin',
-      email: 'admin@srmist.edu.in',
+      name: 'Lokesh (Institute Admin)',
+      email: 'lokesh0212004@gmail.com',
       image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       role: Role.INSTITUTE_ADMIN,
       facultyName: 'Engineering & Technology',
