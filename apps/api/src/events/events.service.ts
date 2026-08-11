@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EventStatus, Prisma } from '@prisma/client';
+import { EventStatus, Prisma, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -53,11 +53,23 @@ export class EventsService {
     return event;
   }
 
+  private checkEditPermissions(user: any, event: any) {
+    if (user.role === Role.INSTITUTE_ADMIN || user.role === 'ADMIN') return;
+    if (user.role === Role.RESEARCH_SUPERVISOR && event.authorId === user.id) return;
+    throw new UnauthorizedException('You do not have permission to modify this event.');
+  }
+
+  private checkCreatePermissions(user: any) {
+    if (user.role === Role.INSTITUTE_ADMIN || user.role === 'ADMIN' || user.role === Role.RESEARCH_SUPERVISOR) return;
+    throw new UnauthorizedException('You do not have permission to create an event.');
+  }
+
   /**
    * Creates an event manually (skipping AI).
    */
-  async createEvent(input: { title: string; date: string; time: string; venue: string; description?: string }) {
-    const { title, date, time, venue, description } = input;
+  async createEvent(user: any, input: { title: string; date: string; time: string; venue: string; description?: string, eventType?: string }) {
+    this.checkCreatePermissions(user);
+    const { title, date, time, venue, description, eventType } = input;
     if (!title || !date || !time || !venue) {
       throw new BadRequestException('Event details are incomplete.');
     }
@@ -70,8 +82,9 @@ export class EventsService {
           time, 
           venue, 
           description,
-          eventType: 'Manual Entry',
-          status: EventStatus.PUBLISHED
+          eventType: eventType || 'Manual Entry',
+          status: EventStatus.PUBLISHED,
+          authorId: user.id
         }
       });
     } catch (e) {
@@ -83,7 +96,10 @@ export class EventsService {
   /**
    * Updates full event details.
    */
-  async updateEvent(id: string, input: Prisma.EventUpdateInput) {
+  async updateEvent(user: any, id: string, input: Prisma.EventUpdateInput) {
+    const event = await this.getEventById(id);
+    this.checkEditPermissions(user, event);
+
     try {
       return await this.prisma.event.update({
         where: { id },
@@ -97,7 +113,10 @@ export class EventsService {
   /**
    * Patches only the status of an event (for AI review queue).
    */
-  async updateEventStatus(id: string, status: EventStatus) {
+  async updateEventStatus(user: any, id: string, status: EventStatus) {
+    const event = await this.getEventById(id);
+    this.checkEditPermissions(user, event);
+
     try {
       const updatedEvent = await this.prisma.event.update({
         where: { id },
@@ -121,7 +140,10 @@ export class EventsService {
   /**
    * Deletes an event.
    */
-  async deleteEvent(id: string) {
+  async deleteEvent(user: any, id: string) {
+    const event = await this.getEventById(id);
+    this.checkEditPermissions(user, event);
+
     try {
       return await this.prisma.event.delete({
         where: { id }
@@ -130,6 +152,4 @@ export class EventsService {
       throw new NotFoundException('Event not found.');
     }
   }
-
-
 }

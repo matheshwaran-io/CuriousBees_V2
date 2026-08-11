@@ -23,7 +23,6 @@ export function PremiumDashboard() {
     workspaces,
     publications,
     reports,
-    peers,
     fetchSuggestedPeers,
     connectWithPeer,
     fetchWorkspaces,
@@ -31,7 +30,16 @@ export function PremiumDashboard() {
     fetchReports,
   } = useStore();
 
+  const [reportsData, setReportsData] = useState(reports);
+  const [peers, setPeers] = useState<any[]>([]);
+
   const hasFetched = React.useRef(false);
+
+  useEffect(() => {
+    if (currentUser?.role === 'RESEARCH_SCHOLAR') {
+      fetchSuggestedPeers().then(data => setPeers(data || []));
+    }
+  }, [currentUser?.role, fetchSuggestedPeers]);
 
   useEffect(() => {
     if (!currentUser || hasFetched.current) return;
@@ -337,11 +345,14 @@ export function PremiumDashboard() {
             <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
               <h3 className="text-sm font-bold text-slate-800 mb-4">Your Interests</h3>
               <div className="flex flex-wrap gap-2">
-                {currentUser?.interests?.map((tag: string) => (
-                  <span key={tag} className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer">
-                    #{tag}
-                  </span>
-                ))}
+                {currentUser?.interests?.map((tag: any) => {
+                  const label = typeof tag === 'string' ? tag : (tag?.interest?.name || tag?.name || 'Interest');
+                  return (
+                    <span key={label} className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer">
+                      #{label}
+                    </span>
+                  );
+                })}
                 {(!currentUser?.interests || currentUser.interests.length === 0) && (
                   <p className="text-xs text-slate-400 italic">No interests added yet.</p>
                 )}

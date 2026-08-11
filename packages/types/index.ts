@@ -186,6 +186,9 @@ export interface Event {
   approvalStatus?: 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'NEEDS_INFO';
   tags?: string[];
   createdAt?: string;
+  authorId?: string;
+  eventType?: string;
+  priority?: 'HIGH' | 'MEDIUM' | 'LOW' | string;
 }
 
 export interface CreateEventInput {

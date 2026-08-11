@@ -161,7 +161,12 @@ export async function apiFetch(
 
   const authHeaders = skipAuth ? {} : await getAuthHeaders();
 
-  const url = path.startsWith('http') ? path : `${API_URL}${path}`;
+  const isServer = typeof window === 'undefined';
+  const url = path.startsWith('http')
+    ? path
+    : isServer
+    ? `${API_URL}${path}`
+    : path;
 
   const mergedHeaders: Record<string, string> = {
     ...authHeaders,

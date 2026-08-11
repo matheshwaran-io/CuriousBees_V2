@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, MapPin, User, Tag, Mail, Bot, CheckCircle } from 'lucide-react';
+import { X, Calendar, MapPin, User, Tag, Mail, Bot, Edit2, Trash2 } from 'lucide-react';
 import { Event } from '@curiousbees/types';
+import { useStore } from '@/store/useStore';
 
 type PrismaEvent = Event & {
   status: 'DRAFT' | 'PUBLISHED' | 'REVIEW_REQUIRED' | 'FAILED';
@@ -15,16 +16,26 @@ type PrismaEvent = Event & {
   speaker?: string;
   organizerEmail?: string;
   eventType?: string;
+  authorId?: string;
 };
 
 interface EventDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   event: PrismaEvent | null;
+  onEdit?: (event: PrismaEvent) => void;
+  onDelete?: (id: string) => void;
 }
 
-export default function EventDetailModal({ isOpen, onClose, event }: EventDetailModalProps) {
+export default function EventDetailModal({ isOpen, onClose, event, onEdit, onDelete }: EventDetailModalProps) {
+  const { currentUser } = useStore();
+  
   if (!event) return null;
+
+  const canEdit = 
+    (currentUser?.role as string) === 'INSTITUTE_ADMIN' || 
+    (currentUser?.role as string) === 'ADMIN' || 
+    (currentUser?.role === 'RESEARCH_SUPERVISOR' && event.authorId === currentUser?.id);
 
   return (
     <AnimatePresence>
@@ -66,12 +77,34 @@ export default function EventDetailModal({ isOpen, onClose, event }: EventDetail
                   </div>
                   <h2 className="font-display text-lg font-bold text-slate-900 leading-tight">{event.title}</h2>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  {canEdit && (
+                    <>
+                      <button
+                        onClick={() => onEdit?.(event)}
+                        className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Edit Event"
+                      >
+                        <Edit2 className="w-4.5 h-4.5" />
+                      </button>
+                      <button
+                        onClick={() => onDelete?.(event.id)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-4.5 h-4.5" />
+                      </button>
+                      <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                    </>
+                  )}
+                  <button
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Scrollable Content */}

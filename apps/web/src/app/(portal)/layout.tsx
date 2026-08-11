@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from '@/components/Toast';
+import { PushNotificationPrompt } from '@/components/shared/PushNotificationPrompt';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { isRouteAllowedForRole } from '@/lib/auth/permissions';
@@ -200,8 +201,9 @@ export default function PortalLayout({
             </AnimatePresence>
           </main>
         </div>
+        <PushNotificationPrompt />
+        <ToastContainer />
       </div>
-      <ToastContainer />
     </QueryClientProvider>
   );
 }

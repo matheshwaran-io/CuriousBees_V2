@@ -44,9 +44,10 @@ const EventFormSchema = z.object({
 type EventFormValues = z.infer<typeof EventFormSchema>;
 
 export function PremiumEvents() {
-  const { events, fetchEvents, createEvent, currentUser } = useStore();
+  const { events, fetchEvents, createEvent, updateEvent, deleteEvent, currentUser } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<PrismaEvent | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
   // Views & Filter states
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -77,9 +78,13 @@ export function PremiumEvents() {
 
   const onSubmit = async (data: EventFormValues) => {
     try {
-      // Modify store/API logic dynamically to create a manual event
-      await createEvent(data.title, data.date, data.time, data.venue, data.description);
+      if (editingEventId) {
+        await updateEvent(editingEventId, data.title, data.date, data.time, data.venue, data.description, data.eventType);
+      } else {
+        await createEvent(data.title, data.date, data.time, data.venue, data.description, data.eventType);
+      }
       setIsDrawerOpen(false);
+      setEditingEventId(null);
       reset();
       fetchEvents(); // Refresh items
     } catch (e: any) {
@@ -207,10 +212,20 @@ export function PremiumEvents() {
               </button>
             </div>
 
-            {/* Host Event Button */}
-            {currentUser?.role === 'RESEARCH_SUPERVISOR' && (
+            {(currentUser?.role === 'RESEARCH_SUPERVISOR' || (currentUser?.role as string) === 'INSTITUTE_ADMIN' || (currentUser?.role as string) === 'ADMIN') && (
               <button 
-                onClick={() => setIsDrawerOpen(true)}
+                onClick={() => {
+                  setEditingEventId(null);
+                  reset({
+                    title: '',
+                    date: '',
+                    time: '',
+                    venue: '',
+                    description: '',
+                    eventType: 'Conferences'
+                  });
+                  setIsDrawerOpen(true);
+                }}
                 className="flex items-center gap-2 px-6 py-2.5 bg-[#004495] hover:bg-[#003370] text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-md shadow-blue-900/20 transition-all duration-300 active:scale-95 cursor-pointer"
               >
                 <Plus className="w-4.5 h-4.5 shrink-0" />
@@ -412,6 +427,26 @@ export function PremiumEvents() {
         isOpen={!!selectedEvent} 
         onClose={() => setSelectedEvent(null)} 
         event={selectedEvent} 
+        onEdit={(event) => {
+          setSelectedEvent(null);
+          setEditingEventId(event.id);
+          reset({
+            title: event.title,
+            date: new Date(event.date).toISOString().split('T')[0],
+            time: event.time,
+            venue: event.venue,
+            description: event.description || '',
+            eventType: event.eventType || 'Conferences'
+          });
+          setIsDrawerOpen(true);
+        }}
+        onDelete={async (id) => {
+          if (confirm('Are you sure you want to delete this event?')) {
+            await deleteEvent(id);
+            setSelectedEvent(null);
+            fetchEvents();
+          }
+        }}
       />
 
       {/* 🚀 SLIDE OUT DRAWER FORM (For Faculty Event Creation) */}
@@ -443,8 +478,12 @@ export function PremiumEvents() {
                       <Sparkles className="w-5 h-5 text-[#004495]" />
                     </div>
                     <div>
-                      <h3 className="font-display font-bold text-base text-slate-900 leading-none">Schedule Academic Event</h3>
-                      <p className="text-[10px] text-[#004495] font-bold uppercase tracking-wider mt-1.5">Verified Principal Investigator Panel</p>
+                      <h3 className="font-display font-bold text-base text-slate-900 leading-none">
+                        {editingEventId ? 'Edit Academic Event' : 'Schedule Academic Event'}
+                      </h3>
+                      <p className="text-[10px] text-[#004495] font-bold uppercase tracking-wider mt-1.5">
+                        {editingEventId ? 'Update Event Details' : 'Verified Principal Investigator Panel'}
+                      </p>
                     </div>
                   </div>
                   <button 
@@ -539,16 +578,9 @@ export function PremiumEvents() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-6 py-3 bg-[#004495] hover:bg-[#003370] text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md shadow-blue-900/20 transition-all duration-200 active:scale-95 flex items-center space-x-2 cursor-pointer"
+                      className="flex-1 bg-[#004495] hover:bg-[#003370] text-white py-3 px-4 rounded-xl font-extrabold text-xs uppercase tracking-wider shadow-md shadow-[#004495]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                      {isSubmitting ? (
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 shrink-0" />
-                          <span>Publish Event</span>
-                        </>
-                      )}
+                      {isSubmitting ? (editingEventId ? 'Updating...' : 'Publishing...') : (editingEventId ? 'Update Event' : 'Publish Event')}
                     </button>
                   </div>
                 </form>
