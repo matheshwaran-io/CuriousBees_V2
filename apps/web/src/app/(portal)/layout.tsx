@@ -109,6 +109,18 @@ export default function PortalLayout({
       return;
     }
 
+    if (activeUser.role === 'RESEARCH_SCHOLAR' && !activeUser.supervisorId) {
+      console.warn('[PortalLayout] Scholar has no supervisor assigned. Redirecting to /onboarding.');
+      router.push('/onboarding');
+      return;
+    }
+
+    if (activeUser.status === 'REJECTED' && activeUser.role === 'RESEARCH_SCHOLAR') {
+      console.warn('[PortalLayout] Scholar request was rejected. Redirecting to /verification-pending.');
+      router.push('/verification-pending');
+      return;
+    }
+
     if (activeUser.status === 'REJECTED') {
       console.warn('[PortalLayout] User account was rejected. Redirecting to /access-denied.');
       router.push('/access-denied');
@@ -126,8 +138,8 @@ export default function PortalLayout({
       activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
       activeUser.status === 'PENDING_ADMIN_APPROVAL'
     ) {
-      console.warn('[PortalLayout] User is pending approval. Redirecting to /approval-pending.');
-      router.push('/approval-pending');
+      console.warn('[PortalLayout] User is pending approval. Redirecting to /verification-pending.');
+      router.push('/verification-pending');
       return;
     }
 

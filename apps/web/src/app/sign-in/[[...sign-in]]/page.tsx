@@ -4,6 +4,7 @@ import { useSignIn } from '@clerk/nextjs/legacy';
 import { useAuth, useClerk, SignIn } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useStore } from '@/store/useStore';
 import { motion } from 'framer-motion';
 import {
   ShieldCheck, AlertCircle, Info, Loader2, Award, Zap, Network
@@ -21,7 +22,8 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (authLoaded && isSignedIn) {
-      router.push('/dashboard');
+      const { dashboardRoute } = useStore.getState();
+      router.push(dashboardRoute);
     }
   }, [authLoaded, isSignedIn, router]);
 
@@ -33,7 +35,7 @@ export default function SignInPage() {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/dashboard',
+        redirectUrlComplete: useStore.getState().dashboardRoute,
       });
     } catch (err: any) {
       setError(err?.message || 'Google authentication failed.');

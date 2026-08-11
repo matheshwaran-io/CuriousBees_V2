@@ -187,7 +187,7 @@ let activeSyncPromise: Promise<User | null> | null = null;
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null, // Default to null for strict live login checking
   roleOverride: 'RESEARCH_SCHOLAR',
-  dashboardRoute: '/dashboard',
+  dashboardRoute: '/scholar/feed',
   interestsList: MOCK_INTERESTS,
   notProvisioned: false,
   isSuspended: false,
@@ -227,7 +227,7 @@ export const useStore = create<AppState>((set, get) => ({
       set({ currentUser: user, roleOverride: user.role, dashboardRoute: route, notProvisioned: false, isSuspended: false });
     } else {
       deleteCookie(ROLE_COOKIE_NAME);
-      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/dashboard', notProvisioned: false, isSuspended: false });
+      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/scholar/feed', notProvisioned: false, isSuspended: false });
     }
   },
   setDashboardRoute: (route) => set({ dashboardRoute: route }),
@@ -814,16 +814,24 @@ export const useStore = create<AppState>((set, get) => ({
     if (typeof window !== 'undefined' && window.Clerk) {
       window.Clerk.signOut().catch(() => { });
     }
-    set({ currentUser: null, dashboardRoute: '/dashboard', roleOverride: 'RESEARCH_SCHOLAR' });
+    set({ currentUser: null, dashboardRoute: '/scholar/feed', roleOverride: 'RESEARCH_SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {
     try {
-      const res = await apiFetch('/api/users/approvals');
+      const res = await apiFetch('/api/supervisor-requests');
       if (res.ok) {
         const data = await res.json();
-        set({ pendingApprovals: data });
-        return data;
+        // Filter to PENDING requests and extract scholar info
+        const pendingRequests = data.filter((r: any) => r.status === 'PENDING');
+        // Map to User-like objects with _requestId for approve/decline
+        const scholars = pendingRequests.map((r: any) => ({
+          ...r.scholar,
+          _requestId: r.id,
+          _requestCreatedAt: r.createdAt,
+        }));
+        set({ pendingApprovals: scholars });
+        return scholars;
       }
       return [];
     } catch (e) {
@@ -835,20 +843,18 @@ export const useStore = create<AppState>((set, get) => ({
   approveScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await apiFetch('/api/users/approve-scholar', {
+      // scholarId here is actually the request ID from the new supervisor-requests API
+      // The approval-queue now passes _requestId
+      const res = await apiFetch(`/api/supervisor-requests/${scholarId}/approve`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify({ scholarId })
       });
       if (!res.ok) throw new Error(await readApiError(res));
-      const updatedScholar = await res.json();
+      const updatedRequest = await res.json();
       set(state => ({
-        pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId),
-        myScholars: [...state.myScholars, updatedScholar]
+        pendingApprovals: state.pendingApprovals.filter((s: any) => (s._requestId || s.id) !== scholarId),
       }));
       get().addToast('Scholar approved successfully', 'success');
-      return updatedScholar;
+      return updatedRequest;
     } catch (err: any) {
       get().addToast(err.message, 'error');
       throw err;
@@ -860,19 +866,17 @@ export const useStore = create<AppState>((set, get) => ({
   declineScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await apiFetch('/api/users/decline-scholar', {
+      // scholarId here is actually the request ID
+      const res = await apiFetch(`/api/supervisor-requests/${scholarId}/reject`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify({ scholarId })
       });
       if (!res.ok) throw new Error(await readApiError(res));
       set(state => ({
-        pendingApprovals: state.pendingApprovals.filter(s => s.id !== scholarId)
+        pendingApprovals: state.pendingApprovals.filter((s: any) => (s._requestId || s.id) !== scholarId)
       }));
       get().addToast('Scholar request declined', 'info');
-      const declinedScholar = await res.json();
-      return declinedScholar;
+      const updatedRequest = await res.json();
+      return updatedRequest;
     } catch (err: any) {
       get().addToast(err.message, 'error');
       throw err;
@@ -884,17 +888,15 @@ export const useStore = create<AppState>((set, get) => ({
   requestSupervisor: async (supervisorId: string) => {
     set({ isLoading: true });
     try {
-      const headers = await getBearerHeader();
-      const res = await apiFetch('/api/users/request-supervisor', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ supervisorId })
+      const res = await apiFetch('/api/supervisor-requests', {
+        method: 'POST',
+        body: JSON.stringify({ supervisorId }),
       });
       if (!res.ok) throw new Error(await readApiError(res));
-      const updatedUser = await res.json();
-      set({ currentUser: updatedUser });
-      get().addToast('Supervisor requested successfully', 'success');
-      return updatedUser;
+      // Refresh the current user to reflect PENDING_SUPERVISOR_APPROVAL status
+      await get().syncUserSession({ force: true });
+      get().addToast('Supervisor request submitted successfully', 'success');
+      return get().currentUser as any;
     } catch (err: any) {
       get().addToast(err.message, 'error');
       throw err;

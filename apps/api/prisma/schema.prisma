@@ -451,6 +451,7 @@ model SupervisorProfile {
   department    Department  @relation(fields: [departmentId], references: [id])
   designation   String
   employeeId    String      @unique
+  researchArea  String?
   maxScholars   Int         @default(5)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

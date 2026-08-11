@@ -77,7 +77,7 @@ export default function HeroSection() {
             </SignUpButton>
           </Show>
           <Show when="signed-in">
-            <Link href="/dashboard">
+            <Link href="/sign-in">
               <button className="w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800 px-8 py-3.5 rounded-full text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 group font-semibold">
                 Go to Dashboard
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

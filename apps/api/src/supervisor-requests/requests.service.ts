@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RequestStatus, UserStatus, Role } from '@prisma/client';
+import { MailService } from '../users/mail.service';
 
 @Injectable()
 export class RequestsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   async createRequest(scholarId: string, supervisorId: string) {
     const scholar = await this.prisma.user.findUnique({
@@ -38,8 +42,8 @@ export class RequestsService {
       }
     });
 
-    if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR || supervisor.status !== UserStatus.ACTIVE) {
-      throw new BadRequestException('Selected supervisor is not active.');
+    if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
+      throw new BadRequestException('Selected user is not a valid Research Supervisor.');
     }
 
     const currentScholars = supervisor._count.scholars;
@@ -59,9 +63,9 @@ export class RequestsService {
       throw new BadRequestException('You already have a pending supervisor request.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const req = await this.prisma.$transaction(async (tx) => {
       // Create request
-      const req = await tx.scholarSupervisorRequest.create({
+      const createdReq = await tx.scholarSupervisorRequest.create({
         data: {
           scholarId,
           supervisorId,
@@ -78,8 +82,31 @@ export class RequestsService {
         }
       });
 
-      return req;
+      return createdReq;
     });
+
+    // Asynchronously trigger Resend Email Notification
+    this.mailService.sendScholarSupervisionRequestAlert({
+      supervisorEmail: supervisor.email,
+      supervisorName: supervisor.name || 'Supervisor',
+      scholarName: scholar.name || scholar.email,
+      scholarEmail: scholar.email,
+      department: scholar.department || 'SRMIST',
+      researchArea: scholar.scholarProfile?.researchArea || '',
+      requestId: req.id,
+      createdAt: req.createdAt,
+    }).catch(() => {});
+
+    // Audit Logging
+    await this.prisma.auditLog.create({
+      data: {
+        userId: scholarId,
+        action: 'SCHOLAR_SUPERVISION_REQUEST_CREATED',
+        details: JSON.stringify({ requestId: req.id, supervisorId }),
+      }
+    }).catch(() => {});
+
+    return req;
   }
 
   async getRequests(userId: string, role: Role) {
@@ -138,6 +165,46 @@ export class RequestsService {
     throw new ForbiddenException('Invalid role context.');
   }
 
+  async getRequestById(userId: string, role: Role, requestId: string) {
+    const request = await this.prisma.scholarSupervisorRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        scholar: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            department: true,
+            image: true,
+            bio: true,
+            scholarProfile: true,
+          }
+        },
+        supervisor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            department: true,
+            image: true,
+            supervisorProfile: true,
+          }
+        }
+      }
+    });
+
+    if (!request) {
+      throw new NotFoundException('Request not found.');
+    }
+
+    // Security Check: User must be the scholar, supervisor, or Institute Admin
+    if (role !== Role.INSTITUTE_ADMIN && request.scholarId !== userId && request.supervisorId !== userId) {
+      throw new ForbiddenException('You are not authorized to view this request.');
+    }
+
+    return request;
+  }
+
   async approveRequest(supervisorId: string, requestId: string) {
     const request = await this.prisma.scholarSupervisorRequest.findUnique({
       where: { id: requestId },
@@ -160,9 +227,9 @@ export class RequestsService {
       where: { id: supervisorId }
     });
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedReq = await this.prisma.$transaction(async (tx) => {
       // 1. Update request status
-      const updatedReq = await tx.scholarSupervisorRequest.update({
+      const req = await tx.scholarSupervisorRequest.update({
         where: { id: requestId },
         data: { status: RequestStatus.APPROVED },
       });
@@ -178,13 +245,35 @@ export class RequestsService {
         },
       });
 
-      return updatedReq;
+      return req;
     });
+
+    // Trigger Email Notification
+    if (request.scholar?.email) {
+      this.mailService.sendScholarSupervisionApprovedAlert({
+        scholarEmail: request.scholar.email,
+        scholarName: request.scholar.name || request.scholar.email,
+        supervisorName: supervisor?.name || 'Your Research Supervisor',
+        department: supervisor?.department || 'SRMIST',
+      }).catch(() => {});
+    }
+
+    // Audit Logging
+    await this.prisma.auditLog.create({
+      data: {
+        userId: supervisorId,
+        action: 'SUPERVISION_REQUEST_APPROVED',
+        details: JSON.stringify({ requestId, scholarId: request.scholarId }),
+      }
+    }).catch(() => {});
+
+    return updatedReq;
   }
 
   async rejectRequest(supervisorId: string, requestId: string) {
     const request = await this.prisma.scholarSupervisorRequest.findUnique({
-      where: { id: requestId }
+      where: { id: requestId },
+      include: { scholar: true }
     });
 
     if (!request) {
@@ -199,9 +288,13 @@ export class RequestsService {
       throw new BadRequestException('Request is already processed.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const supervisor = await this.prisma.user.findUnique({
+      where: { id: supervisorId }
+    });
+
+    const updatedReq = await this.prisma.$transaction(async (tx) => {
       // 1. Update request status
-      const updatedReq = await tx.scholarSupervisorRequest.update({
+      const req = await tx.scholarSupervisorRequest.update({
         where: { id: requestId },
         data: { status: RequestStatus.REJECTED },
       });
@@ -215,7 +308,73 @@ export class RequestsService {
         },
       });
 
-      return updatedReq;
+      return req;
     });
+
+    // Trigger Email Notification
+    if (request.scholar?.email) {
+      this.mailService.sendScholarSupervisionRejectedAlert({
+        scholarEmail: request.scholar.email,
+        scholarName: request.scholar.name || request.scholar.email,
+        supervisorName: supervisor?.name || 'Research Supervisor',
+      }).catch(() => {});
+    }
+
+    // Audit Logging
+    await this.prisma.auditLog.create({
+      data: {
+        userId: supervisorId,
+        action: 'SUPERVISION_REQUEST_REJECTED',
+        details: JSON.stringify({ requestId, scholarId: request.scholarId }),
+      }
+    }).catch(() => {});
+
+    return updatedReq;
+  }
+
+  async cancelRequest(scholarId: string, requestId: string) {
+    const request = await this.prisma.scholarSupervisorRequest.findUnique({
+      where: { id: requestId }
+    });
+
+    if (!request) {
+      throw new NotFoundException('Request not found.');
+    }
+
+    if (request.scholarId !== scholarId) {
+      throw new ForbiddenException('You are not authorized to cancel this request.');
+    }
+
+    if (request.status !== RequestStatus.PENDING) {
+      throw new BadRequestException('Only pending requests can be cancelled.');
+    }
+
+    const updatedReq = await this.prisma.$transaction(async (tx) => {
+      const req = await tx.scholarSupervisorRequest.update({
+        where: { id: requestId },
+        data: { status: RequestStatus.REJECTED },
+      });
+
+      await tx.user.update({
+        where: { id: scholarId },
+        data: {
+          status: UserStatus.REJECTED,
+          approved: false,
+        },
+      });
+
+      return req;
+    });
+
+    // Audit Logging
+    await this.prisma.auditLog.create({
+      data: {
+        userId: scholarId,
+        action: 'SUPERVISION_REQUEST_CANCELLED',
+        details: JSON.stringify({ requestId }),
+      }
+    }).catch(() => {});
+
+    return updatedReq;
   }
 }

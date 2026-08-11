@@ -9,7 +9,7 @@ import { MailService } from './mail.service';
   imports: [AuthModule, NotificationsModule],
   controllers: [UsersController],
   providers: [UsersService, MailService],
-  exports: [UsersService]
+  exports: [UsersService, MailService]
 })
 export class UsersModule {}
 

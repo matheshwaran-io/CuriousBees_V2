@@ -35,7 +35,7 @@ const PATH_MAP: Record<string, string> = {
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { currentUser, showMobileSidebar, setMobileSidebar } = useStore();
+  const { currentUser, showMobileSidebar, setMobileSidebar, dashboardRoute } = useStore();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Listen for global keyboard shortcut (CMD+K or CTRL+K)
@@ -53,7 +53,7 @@ export default function Navbar() {
   // Generate dynamic breadcrumbs
   const getBreadcrumbs = () => {
     const segments = pathname.split('/').filter(Boolean);
-    const breadcrumbs = [{ name: 'CuriousBees', href: '/dashboard' }];
+    const breadcrumbs = [{ name: 'CuriousBees', href: dashboardRoute }];
 
     let currentHref = '';
     segments.forEach((segment, index) => {

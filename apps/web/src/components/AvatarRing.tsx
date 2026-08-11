@@ -27,8 +27,8 @@ export default function AvatarRing({
   };
 
   const ringColor = isFaculty
-    ? 'border-indigoElectric shadow-[0_0_12px_rgba(108,99,255,0.25)]'
-    : 'border-tealGlow shadow-[0_0_12px_rgba(0,194,178,0.25)]';
+    ? 'border-[#0B4EA2] shadow-sm'
+    : 'border-[#F5B800] shadow-sm';
 
   const initials = name
     .split(' ')
@@ -41,7 +41,7 @@ export default function AvatarRing({
     <div className={cn('relative shrink-0 select-none group', className)}>
       <div
         className={cn(
-          'rounded-full border-2 p-[2px] transition-all duration-500 group-hover:scale-105',
+          'rounded-full border-2 p-[2px] transition-all duration-300 group-hover:scale-105',
           ringColor
         )}
       >
@@ -49,21 +49,21 @@ export default function AvatarRing({
           <img
             src={src}
             alt={name}
-            className="w-full h-full rounded-full object-cover bg-darkSurfaceMuted"
+            className="w-full h-full rounded-full object-cover bg-[#EEF4FF]"
           />
         ) : (
           <div className={cn(
-            "w-full h-full rounded-full flex items-center justify-center font-bold tracking-tighter bg-gradient-to-br text-textPrimary bg-darkSurfaceMuted",
-            isFaculty ? "from-indigoElectric/20 to-violetRoyal/10" : "from-tealGlow/20 to-indigoElectric/10"
+            "w-full h-full rounded-full flex items-center justify-center font-bold text-[#17233D]",
+            isFaculty ? "bg-[#EEF4FF] text-[#0B4EA2]" : "bg-[#FFF9E6] text-[#92400E]"
           )}>
             {initials}
           </div>
         )}
       </div>
-      {/* Dynamic pulse indicator for presence online */}
+      {/* Presence indicator */}
       <span className={cn(
-        "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-darkBg animate-pulse",
-        isFaculty ? "bg-indigoElectric" : "bg-tealGlow"
+        "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white",
+        isFaculty ? "bg-[#0B4EA2]" : "bg-[#F5B800]"
       )} />
     </div>
   );

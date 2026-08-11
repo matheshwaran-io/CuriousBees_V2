@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Req, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { RolesGuard } from '../auth/roles/roles.guard';
@@ -15,6 +15,11 @@ export class RequestsController {
     return this.requestsService.getRequests(req.user.id, req.user.role);
   }
 
+  @Get(':id')
+  async getRequestById(@Req() req: any, @Param('id') requestId: string) {
+    return this.requestsService.getRequestById(req.user.id, req.user.role, requestId);
+  }
+
   @Post()
   @Roles(Role.RESEARCH_SCHOLAR)
   async createRequest(@Req() req: any, @Body('supervisorId') supervisorId: string) {
@@ -22,6 +27,12 @@ export class RequestsController {
       throw new BadRequestException('supervisorId is required.');
     }
     return this.requestsService.createRequest(req.user.id, supervisorId);
+  }
+
+  @Delete(':id')
+  @Roles(Role.RESEARCH_SCHOLAR)
+  async cancelRequest(@Req() req: any, @Param('id') requestId: string) {
+    return this.requestsService.cancelRequest(req.user.id, requestId);
   }
 
   @Put(':id/approve')

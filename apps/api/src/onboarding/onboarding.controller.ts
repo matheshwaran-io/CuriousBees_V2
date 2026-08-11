@@ -15,11 +15,12 @@ export class OnboardingController {
       departmentId: string;
       designation: string;
       employeeId: string;
+      researchArea: string;
       maxScholars?: number;
     }
   ) {
-    if (!body.facultyId || !body.departmentId || !body.designation || !body.employeeId) {
-      throw new BadRequestException('All fields (facultyId, departmentId, designation, employeeId) are required.');
+    if (!body.facultyId || !body.departmentId || !body.designation || !body.employeeId || !body.researchArea) {
+      throw new BadRequestException('All fields (facultyId, departmentId, designation, employeeId, researchArea) are required.');
     }
     return this.onboardingService.onboardSupervisor(req.user.id, body);
   }

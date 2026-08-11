@@ -21,6 +21,29 @@ import {
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 
+const RESEARCH_DOMAINS = [
+  "Artificial Intelligence & Machine Learning",
+  "Data Science & Big Data Analytics",
+  "Cybersecurity & Cryptography",
+  "Internet of Things (IoT) & Sensor Networks",
+  "Cloud & Edge Computing",
+  "Bioinformatics & Computational Biology",
+  "Robotics & Automation",
+  "Computer Vision & Image Processing",
+  "Natural Language Processing (NLP)",
+  "Blockchain & Distributed Ledgers",
+  "Software Engineering & Architecture",
+  "Human-Computer Interaction (HCI)",
+  "Quantum Computing",
+  "Wireless Communications & 5G/6G",
+  "Power Electronics & Renewable Energy",
+  "VLSI Design & Embedded Systems",
+  "Materials Science & Nanotechnology",
+  "Structural Engineering",
+  "Environmental Engineering",
+  "Biomedical Engineering"
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { 
@@ -43,8 +66,10 @@ export default function OnboardingPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [maxScholars, setMaxScholars] = useState(5);
   
-  // Scholar
-  const [researchArea, setResearchArea] = useState('');
+  // Scholar / Research Area
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [customDomain, setCustomDomain] = useState('');
+  
   const [supervisors, setSupervisors] = useState<any[]>([]);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState('');
   
@@ -54,14 +79,33 @@ export default function OnboardingPage() {
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingSupervisors, setLoadingSupervisors] = useState(false);
 
-  // Check if they are already onboarded
+  // Check if they are already onboarded and pre-select role
   useEffect(() => {
-    if (currentUser && currentUser.onboardingCompleted) {
-      const route = 
-        currentUser.status === 'ACTIVE' 
-          ? (currentUser.role === 'INSTITUTE_ADMIN' ? '/admin/dashboard' : '/dashboard')
-          : '/verification-pending';
-      router.replace(route);
+    if (currentUser) {
+      // Pre-select role if already assigned in DB
+      if (currentUser.role === 'RESEARCH_SCHOLAR') {
+        setRole('SCHOLAR');
+      } else if (currentUser.role === 'RESEARCH_SUPERVISOR') {
+        setRole('SUPERVISOR');
+      }
+
+      if (currentUser.onboardingCompleted) {
+        // If scholar has no supervisor assigned, keep them on this page to select one
+        if (currentUser.role === 'RESEARCH_SCHOLAR' && !currentUser.supervisorId) {
+          if (currentUser.departmentId) {
+            // If they have department, try to pre-fill it. Note: faculty might require an API call to resolve if not in user object, 
+            // but we can try to rely on their backend scholarProfile if available. Since it's complex, they can just re-select it
+            // to trigger the cascade loading properly.
+          }
+          return;
+        }
+        
+        const route = 
+          currentUser.status === 'ACTIVE' 
+            ? useStore.getState().dashboardRoute
+            : '/verification-pending';
+        router.replace(route);
+      }
     }
   }, [currentUser, router]);
 
@@ -146,14 +190,16 @@ export default function OnboardingPage() {
       return;
     }
 
+    const finalResearchArea = [...selectedDomains, customDomain.trim()].filter(Boolean).join(', ');
+
     if (role === 'SUPERVISOR') {
-      if (!designation || !employeeId) {
-        setErrorMsg('Please provide your Designation and Employee ID.');
+      if (!designation || !employeeId || !finalResearchArea) {
+        setErrorMsg('Please provide your Designation, Employee ID, and select at least one Research Area.');
         return;
       }
     } else {
-      if (!researchArea || !selectedSupervisorId) {
-        setErrorMsg('Please provide your Research Area and select a supervisor.');
+      if (!finalResearchArea || !selectedSupervisorId) {
+        setErrorMsg('Please select at least one Research Area and select a supervisor.');
         return;
       }
     }
@@ -167,18 +213,19 @@ export default function OnboardingPage() {
         ? '/api/users/onboarding/supervisor' 
         : '/api/users/onboarding/scholar';
 
-      const body = role === 'SUPERVISOR' 
+          const body = role === 'SUPERVISOR' 
         ? {
             facultyId: selectedFacultyId,
             departmentId: selectedDepartmentId,
             designation,
             employeeId,
+            researchArea: finalResearchArea,
             maxScholars: Number(maxScholars),
           }
         : {
             facultyId: selectedFacultyId,
             departmentId: selectedDepartmentId,
-            researchArea,
+            researchArea: finalResearchArea,
             supervisorId: selectedSupervisorId,
           };
 
@@ -199,6 +246,46 @@ export default function OnboardingPage() {
       setIsSubmitting(false);
     }
   };
+
+  const toggleDomain = (domain: string) => {
+    setSelectedDomains(prev => 
+      prev.includes(domain) ? prev.filter(d => d !== domain) : [...prev, domain]
+    );
+  };
+
+  const researchAreaSelectionBlock = (
+    <div className="space-y-3">
+      <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
+        Research Area / Domain (Select Multiple)
+      </label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50 shadow-inner">
+        {RESEARCH_DOMAINS.map(domain => (
+          <label key={domain} className="flex items-start gap-2 cursor-pointer p-1.5 hover:bg-white rounded transition-colors text-xs font-semibold text-slate-700">
+            <input 
+              type="checkbox" 
+              checked={selectedDomains.includes(domain)} 
+              onChange={() => toggleDomain(domain)}
+              className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary/20 bg-white"
+            />
+            <span className="leading-tight">{domain}</span>
+          </label>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <label className="block text-[10px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="custom-domain">
+          Other (Custom Domain)
+        </label>
+        <input
+          id="custom-domain"
+          type="text"
+          placeholder="Type your own research area if not listed..."
+          value={customDomain}
+          onChange={(e) => setCustomDomain(e.target.value)}
+          className="w-full cb-input py-2 px-3 text-xs border border-borderStroke rounded-lg focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6 relative overflow-hidden font-sans w-full">
@@ -234,10 +321,11 @@ export default function OnboardingPage() {
 
           <form onSubmit={handleSubmit} className="w-full space-y-6 text-left">
             {/* Step 1: Role Selection */}
-            <div className="space-y-2">
-              <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
-                Select Your Role
-              </label>
+            {(!currentUser?.onboardingCompleted && !currentUser?.role) && (
+              <div className="space-y-2">
+                <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
+                  Select Your Role
+                </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -272,12 +360,13 @@ export default function OnboardingPage() {
                     <Briefcase className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className={cn("text-xs font-bold", role === 'SUPERVISOR' ? "text-primary" : "text-black")}>Faculty Guide</h3>
+                    <h3 className={cn("text-xs font-bold", role === 'SUPERVISOR' ? "text-primary" : "text-black")}>Research Supervisor</h3>
                     <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I supervise scholars</p>
                   </div>
                 </button>
               </div>
             </div>
+            )}
 
             {role && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -381,33 +470,35 @@ export default function OnboardingPage() {
                       />
                       <p className="text-[10px] text-textSecondary font-semibold">Maximum scholars you can guide at full capacity.</p>
                     </div>
+
+                    <div className="col-span-1 md:col-span-2">
+                      {researchAreaSelectionBlock}
+                    </div>
                   </div>
                 )}
 
                 {/* Step 3: Scholar Details */}
                 {role === 'SCHOLAR' && (
                   <div className="space-y-4 border-t border-slate-100 pt-4">
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="research-area">
-                        Research Area / Domain
-                      </label>
-                      <input
-                        id="research-area"
-                        type="text"
-                        placeholder="e.g. Deep Learning in Bio-informatics"
-                        value={researchArea}
-                        onChange={(e) => setResearchArea(e.target.value)}
-                        className="w-full cb-input py-2 px-3 text-xs border border-borderStroke rounded-lg focus:ring-2 focus:ring-primary/20"
-                      />
-                    </div>
+                    {researchAreaSelectionBlock}
 
-                    {selectedFacultyId && selectedDepartmentId && (
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
-                          Select Academic Supervisor
-                        </label>
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
+                        Select Research Supervisor
+                      </label>
+                      {(!selectedFacultyId || !selectedDepartmentId) ? (
+                        <div className="border border-borderStroke rounded-lg p-6 bg-slate-50 text-center flex flex-col items-center gap-2">
+                          <Users className="w-6 h-6 text-slate-300" />
+                          <p className="text-xs text-textSecondary font-semibold">Please select your Faculty and Department above to view available supervisors.</p>
+                        </div>
+                      ) : (
                         <div className="border border-borderStroke rounded-lg max-h-[160px] overflow-y-auto bg-white p-1 divide-y divide-slate-100 shadow-inner">
-                          {supervisors.length > 0 ? (
+                          {loadingSupervisors ? (
+                            <div className="p-6 text-center text-xs text-textSecondary font-semibold flex flex-col items-center gap-2">
+                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                              <span>Loading supervisors...</span>
+                            </div>
+                          ) : supervisors.length > 0 ? (
                             supervisors.map((sup) => {
                               const atCapacity = sup.currentScholars >= sup.maxScholars;
                               return (
@@ -459,19 +550,13 @@ export default function OnboardingPage() {
                             })
                           ) : (
                             <div className="text-center py-8 text-xs text-textSecondary/40 flex flex-col items-center justify-center space-y-2">
-                              {loadingSupervisors ? (
-                                <Loader2 className="w-4 h-4 animate-spin opacity-45" />
-                              ) : (
-                                <>
-                                  <Users className="w-5 h-5 opacity-45" />
-                                  <span>No supervisors registered in this department.</span>
-                                </>
-                              )}
+                              <Users className="w-5 h-5 opacity-45" />
+                              <span>No supervisors registered in this department.</span>
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -491,8 +576,9 @@ export default function OnboardingPage() {
                 !role || 
                 !selectedFacultyId || 
                 !selectedDepartmentId || 
+                (selectedDomains.length === 0 && !customDomain.trim()) ||
                 (role === 'SUPERVISOR' && (!designation || !employeeId)) ||
-                (role === 'SCHOLAR' && (!researchArea || !selectedSupervisorId))
+                (role === 'SCHOLAR' && !selectedSupervisorId)
               }
               className="w-full py-3 flex items-center justify-center bg-primary hover:bg-[#0c4da2]/95 text-white font-bold text-xs rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99] shadow"
             >

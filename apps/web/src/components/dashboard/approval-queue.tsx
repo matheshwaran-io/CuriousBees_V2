@@ -124,14 +124,14 @@ export default function ApprovalQueue({
                   <span>Review</span>
                 </button>
                 <button
-                  onClick={() => onApproveScholar(scholar.id)}
+                  onClick={() => onApproveScholar((scholar as any)._requestId || scholar.id)}
                   className="bg-primary text-white font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg hover:bg-[#0c4da2]/95 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Approve</span>
                 </button>
                 <button
-                  onClick={() => onDeclineScholar(scholar.id)}
+                  onClick={() => onDeclineScholar((scholar as any)._requestId || scholar.id)}
                   className="bg-white border border-rose-250/20 text-[#ba1a1a] hover:bg-rose-50/50 font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -301,7 +301,7 @@ export default function ApprovalQueue({
                   <>
                     <button
                       onClick={() => {
-                        onDeclineScholar(selectedItem.scholar.id);
+                        onDeclineScholar((selectedItem.scholar as any)._requestId || selectedItem.scholar.id);
                         setSelectedItem(null);
                       }}
                       className="bg-white border border-rose-200 text-[#ba1a1a] hover:bg-rose-50 font-bold text-xs py-2 px-4 rounded-lg transition-colors cursor-pointer"
@@ -310,7 +310,7 @@ export default function ApprovalQueue({
                     </button>
                     <button
                       onClick={() => {
-                        onApproveScholar(selectedItem.scholar.id);
+                        onApproveScholar((selectedItem.scholar as any)._requestId || selectedItem.scholar.id);
                         setSelectedItem(null);
                       }}
                       className="bg-primary text-white font-bold text-xs py-2 px-4 rounded-lg hover:bg-[#0c4da2]/95 transition-colors cursor-pointer shadow-sm"

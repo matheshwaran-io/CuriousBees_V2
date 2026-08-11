@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
-import { PremiumProfileView } from '@/components/profile/PremiumProfileView';
+import { AcademicProfileView } from '@/components/profile/AcademicProfileView';
 import { SRM_DEPARTMENTS } from '@curiousbees/shared-utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UpdateProfileSchema } from '@curiousbees/shared-utils';
 import { UserRole } from '@curiousbees/types';
+import { cn } from '@/lib/utils';
 import { 
   BookOpen, 
   MapPin, 
@@ -139,7 +140,7 @@ export default function ProfilePage() {
 
   if (!isEditing) {
     return (
-      <PremiumProfileView 
+      <AcademicProfileView 
         user={currentUser} 
         isOwnProfile={true} 
         onEditClick={() => setIsEditing(true)} 
@@ -148,617 +149,368 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto select-none">
+    <div className="space-y-6 max-w-[1240px] mx-auto select-none pb-24 text-left">
       
-      {/* 🚀 Profile Header Banner */}
-      <div className="cb-card p-6 relative overflow-hidden bg-white/90 backdrop-blur-md text-left flex flex-col md:flex-row items-start md:items-center gap-6">
-        <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl pointer-events-none" />
-        
-        {/* Avatar Area */}
-        <div className="relative shrink-0 z-10 self-center">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white shadow-md bg-primary-container flex items-center justify-center relative group">
-            {currentUser?.image ? (
-              <img 
-                src={currentUser.image} 
-                alt={currentUser.name || 'User Profile'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-3xl sm:text-4xl font-display font-bold text-primary">
-                {getInitials(currentUser?.name)}
-              </span>
-            )}
-            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-primary shadow-sm">
-            <Sparkles className="w-4 h-4 text-[#775a00] fill-[#fec727]/30" />
+      {/* 🚀 Profile Header Banner Card */}
+      <div className="bg-white border border-[#E4E9F2] rounded-3xl overflow-hidden shadow-xs relative">
+        <div className="h-32 w-full bg-[#001E4C] relative overflow-hidden flex items-center justify-end px-6">
+          <svg className="absolute inset-0 w-full h-full opacity-15 pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+            <path d="M50 0 L93.3 25 L93.3 75 L50 100 L6.7 75 L6.7 25 Z" fill="none" stroke="#FFFFFF" strokeWidth="1" />
+            <path d="M0 50 L43.3 75 L43.3 125 L0 150 L-43.3 125 L-43.3 75 Z" fill="none" stroke="#FFFFFF" strokeWidth="1" />
+          </svg>
+          <div className="relative z-10 flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-white text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5 text-[#F5B800]" />
+            <span>Profile Settings & Credential Control</span>
           </div>
         </div>
 
-        {/* User Bio and Basic Information */}
-        <div className="flex-1 min-w-0 z-10 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-xl sm:text-2xl font-bold text-slate-900 leading-tight tracking-tight">
-              {currentUser?.name || 'Academic Scholar'}
-            </h2>
-            <span className="px-2.5 py-0.5 bg-primary/5 text-primary border border-primary/10 rounded-full text-[10px] font-bold uppercase tracking-wider">
-              {isFaculty ? 'Principal Investigator' : 'Research Scholar'}
-            </span>
-            {currentUser?.approved && (
-              <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <Check className="w-3 h-3 stroke-[3px]" />
-                Verified
-              </span>
-            )}
-          </div>
-          
-          <p className="text-slate-500 text-xs sm:text-sm font-semibold uppercase tracking-wider">
-            {currentUser?.department || 'Department of Computing Technologies'} • SRMIST
-          </p>
+        <div className="p-6 md:p-8 pt-0 relative z-20 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-6 -mt-12">
+          {/* Avatar & User Details */}
+          <div className="flex items-end gap-5">
+            <div className="relative shrink-0">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-md bg-[#001E4C] text-white font-extrabold flex items-center justify-center text-2xl sm:text-3xl ring-2 ring-[#F5B800]">
+                {currentUser?.image ? (
+                  <img 
+                    src={currentUser.image} 
+                    alt={currentUser.name || 'User Profile'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{getInitials(currentUser?.name)}</span>
+                )}
+              </div>
+            </div>
 
-          {/* Top 3 Research Interests Tags */}
-          <div className="flex flex-wrap gap-1.5">
-            {selectedInterests.slice(0, 3).map((interest) => (
-              <span 
-                key={interest}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200/60 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-wider"
-              >
-                <Tag className="w-3 h-3 text-slate-400" />
-                {interest}
-              </span>
-            ))}
-            {selectedInterests.length === 0 && (
-              <span className="text-xs text-slate-400 italic font-semibold">
-                No focus areas defined. Edit profile settings to add research tags.
-              </span>
-            )}
+            <div className="space-y-1.5 pb-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-sans text-xl sm:text-2xl font-extrabold text-[#17233D] leading-tight tracking-tight">
+                  {currentUser?.name || 'Academic Scholar'}
+                </h2>
+                <span className="px-2.5 py-0.5 bg-[#EEF4FF] text-[#0B4EA2] border border-[#0B4EA2]/20 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                  {isFaculty ? 'Research Supervisor' : 'Research Scholar'}
+                </span>
+                {currentUser?.approved && (
+                  <span className="px-2.5 py-0.5 bg-[#FFF9E6] text-[#92400E] border border-[#F5B800]/40 rounded-full text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+                    <Check className="w-3 h-3 stroke-[3px] text-[#F5B800]" />
+                    Verified
+                  </span>
+                )}
+              </div>
+              
+              <p className="text-[#0B4EA2] text-xs font-bold uppercase tracking-wider">
+                {currentUser?.department || 'Department of Computer Science & Engineering'} • SRMIST
+              </p>
+
+              {/* Research Tags */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {selectedInterests.slice(0, 4).map((interest) => (
+                  <span 
+                    key={interest}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#EEF4FF] border border-[#0B4EA2]/20 text-[#0B4EA2] rounded-lg text-[10px] font-bold uppercase tracking-wider"
+                  >
+                    <Tag className="w-3 h-3 text-[#0B4EA2]" />
+                    {interest}
+                  </span>
+                ))}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-4 py-2 bg-[#0B4EA2] hover:bg-[#073B7A] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>{isEditing ? 'View Credentials Record' : 'Edit Profile Settings'}</span>
+                </button>
+                <button 
+                  onClick={() => alert(`Shareable credential link: ${window.location.origin}/researchers/${currentUser?.id || ''}`)}
+                  className="px-4 py-2 bg-white text-[#4A5568] border border-[#E4E9F2] hover:bg-[#EEF4FF] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-[#0B4EA2]" />
+                  <span>Share Credentials</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* CTA / Operations Buttons */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary/95 transition-all shadow flex items-center gap-1.5 cursor-pointer"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>{isEditing ? 'View Profile' : 'Edit Settings'}</span>
-            </button>
-            <button 
-              onClick={() => alert(`Share link generated: ${window.location.origin}/profile/${currentUser?.id || ''}`)}
-              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <Share2 className="w-3.5 h-3.5 text-slate-400" />
-              <span>Share Profile</span>
-            </button>
+          {/* Quick Stats Panel */}
+          <div className="flex md:flex-row lg:flex-col gap-4 w-full md:w-auto lg:w-48 bg-[#F5F7FC] border border-[#E4E9F2] p-4 rounded-2xl text-center md:text-left justify-around shrink-0">
+            <div>
+              <div className="text-xl sm:text-2xl font-extrabold text-[#17233D]">{citationsVal}</div>
+              <div className="text-[10px] font-bold text-[#6B7890] uppercase tracking-wider mt-0.5">Citations</div>
+            </div>
+            <div className="hidden md:block w-[1px] lg:h-[1px] lg:w-full bg-[#E4E9F2]" />
+            <div>
+              <div className="text-xl sm:text-2xl font-extrabold text-[#17233D]">{publicationsVal}</div>
+              <div className="text-[10px] font-bold text-[#6B7890] uppercase tracking-wider mt-0.5">Publications</div>
+            </div>
+            <div className="hidden md:block w-[1px] lg:h-[1px] lg:w-full bg-[#E4E9F2]" />
+            <div>
+              <div className="text-xl sm:text-2xl font-extrabold text-[#17233D]">{thirdStatVal}</div>
+              <div className="text-[10px] font-bold text-[#6B7890] uppercase tracking-wider mt-0.5">{thirdStatName}</div>
+            </div>
           </div>
         </div>
-
-        {/* Quick Stats Widget Panel */}
-        <div className="flex md:flex-row lg:flex-col gap-4 w-full md:w-auto lg:w-48 bg-slate-50/50 border border-slate-200/50 p-4 rounded-xl text-center md:text-left justify-around shrink-0 z-10 self-stretch">
-          <div className="flex-1 md:flex-initial">
-            <div className="text-xl sm:text-2xl font-bold text-slate-800 leading-none">{citationsVal}</div>
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Citations</div>
-          </div>
-          <div className="hidden md:block w-[1px] lg:h-[1px] lg:w-full bg-slate-200" />
-          <div className="flex-1 md:flex-initial">
-            <div className="text-xl sm:text-2xl font-bold text-slate-800 leading-none">{publicationsVal}</div>
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Publications</div>
-          </div>
-          <div className="hidden md:block w-[1px] lg:h-[1px] lg:w-full bg-slate-200" />
-          <div className="flex-1 md:flex-initial">
-            <div className="text-xl sm:text-2xl font-bold text-slate-800 leading-none">{thirdStatVal}</div>
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{thirdStatName}</div>
-          </div>
-        </div>
-
       </div>
 
-      {/* ⚡ Transition Panel (Bento Grid vs. Tabbed Settings Editor) */}
-      <AnimatePresence mode="wait">
-        {!isEditing ? (
-          <motion.div
-            key="profile-display"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left"
-          >
-            {/* ── LEFT COLUMN: Biography & Skills Matrix ── */}
-            <div className="lg:col-span-1 flex flex-col gap-6">
-              
-              {/* Biography Block */}
-              <div className="cb-card p-5 bg-white flex flex-col justify-between min-h-[220px]">
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2.5">
-                    <FileText className="w-4.5 h-4.5 text-primary" />
-                    <span>Academic Biography</span>
-                  </h3>
-                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
-                    {currentUser?.bio || 
-                      'Introduce your scientific projects, grant pipelines, and collaboration requirements. Hit Edit Settings to complete your details.'}
-                  </p>
-                </div>
-                
-                <div className="mt-6 pt-3 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  <span className="flex items-center gap-1">
-                    <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Verified Researcher</span>
-                  </span>
-                  <span className="font-mono text-slate-500 font-medium lowercase select-text">{currentUser?.email}</span>
-                </div>
-              </div>
+      {/* ── SETTINGS FORM & NAVIGATION ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+        {/* Left Navigation Menu */}
+        <div className="lg:col-span-3 flex flex-col gap-1.5">
+          {([
+            { id: 'identity', label: 'Identity & Bio', icon: User },
+            { id: 'domains', label: 'Research Focus', icon: Tag },
+            { id: 'security', label: 'Security & Access', icon: Lock }
+          ] as const).map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSettingsTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveSettingsTab(tab.id)}
+                className={cn(
+                  "flex items-center space-x-3 py-3 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-left cursor-pointer",
+                  isActive 
+                    ? "bg-[#0B4EA2] text-white shadow-xs" 
+                    : "bg-white text-[#4A5568] hover:bg-[#EEF4FF] hover:text-[#0B4EA2] border border-[#E4E9F2]"
+                )}
+              >
+                <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#F5B800]" : "text-[#0B4EA2]")} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-              {/* Skills Matrix / Research Domains */}
-              <div className="cb-card p-5 bg-white">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2.5 mb-4">
-                  <Award className="w-4.5 h-4.5 text-primary" />
-                  <span>Skills & Proficiency Matrix</span>
-                </h3>
-                <div className="space-y-4">
-                  {selectedInterests.length > 0 ? (
-                    selectedInterests.map((interest, idx) => {
-                      const proficiencies = ['90%', '85%', '75%', '60%', '50%'];
-                      const labels = ['Advanced', 'Advanced', 'Proficient', 'Proficient', 'Intermediate'];
-                      const profVal = proficiencies[idx] || '45%';
-                      const labelVal = labels[idx] || 'Competent';
-                      
-                      return (
-                        <div key={interest} className="space-y-1.5">
-                          <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
-                            <span className="text-slate-700">{interest}</span>
-                            <span className="text-primary">{labelVal}</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/55">
-                            <div 
-                              className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500" 
-                              style={{ width: profVal }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-6 text-xs text-slate-400 italic font-semibold">
-                      No research skills defined. Update focus tags in settings.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT COLUMN: Collaboration Network & Publications ── */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
-              
-              {/* Collaboration Network Panel */}
-              <div className="cb-card p-5 bg-white min-h-[320px] flex flex-col justify-between">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <Network className="w-4.5 h-4.5 text-primary" />
-                    <span>Academic Collaboration Network</span>
-                  </h3>
-                  <Link 
-                    href="/researchers"
-                    className="text-primary text-[10px] font-bold uppercase tracking-wider hover:underline"
-                  >
-                    Find Peers
-                  </Link>
-                </div>
-                
-                {/* Network Graph Simulator Box */}
-                <div className="flex-grow min-h-[200px] bg-slate-50/50 rounded-xl border border-slate-200/60 relative overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#0c4da2 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }}></div>
+        {/* Right Settings Form Pane */}
+        <div className="lg:col-span-9 bg-white border border-[#E4E9F2] rounded-3xl p-6 md:p-8 shadow-xs">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            
+            <AnimatePresence mode="wait">
+              {/* IDENTITY TAB */}
+              {activeSettingsTab === 'identity' && (
+                <motion.div
+                  key="tab-identity"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-5"
+                >
+                  <div className="border-b border-[#E4E9F2] pb-3">
+                    <h3 className="text-sm font-extrabold text-[#17233D] uppercase tracking-wider">Academic Identity</h3>
+                    <p className="text-xs text-[#6B7890] font-medium mt-0.5">Manage your display credentials, role designations, and research statement.</p>
+                  </div>
                   
-                  {/* Center Node (Self) */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12.5 h-12.5 bg-primary text-white rounded-full flex flex-col items-center justify-center shadow-md z-10 border border-primary/20">
-                    <span className="font-display font-bold text-[10px] leading-none">{getInitials(currentUser?.name)}</span>
-                    <span className="text-[6px] font-bold uppercase tracking-wider mt-0.5 opacity-80">Self</span>
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">Full Name</label>
+                      <input
+                        type="text"
+                        {...register('name')}
+                        className="w-full bg-[#F5F7FC] border border-[#E4E9F2] rounded-xl p-3 text-xs font-bold text-[#17233D] outline-none focus:border-[#0B4EA2] focus:ring-2 focus:ring-[#0B4EA2]/20 transition-all"
+                        placeholder="E.g. Dr. Ramesh Kumar"
+                      />
+                      {errors.name && <p className="text-xs text-red-500 font-bold mt-1">{errors.name.message as string}</p>}
+                    </div>
 
-                  {/* SVG Connection Lines */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-                    <line stroke="#c3c6d6" strokeWidth="1" strokeDasharray="3 3" x1="50%" y1="50%" x2="30%" y2="25%" />
-                    <line stroke="#c3c6d6" strokeWidth="1" strokeDasharray="3 3" x1="50%" y1="50%" x2="72%" y2="35%" />
-                    <line stroke="#c3c6d6" strokeWidth="1" strokeDasharray="3 3" x1="50%" y1="50%" x2="42%" y2="80%" />
-                  </svg>
-
-                  {/* Node 1 */}
-                  <div className="absolute top-[18%] left-[24%] w-10 h-10 bg-white text-slate-800 rounded-full flex flex-col items-center justify-center shadow border border-slate-200 z-10 hover:scale-105 transition-transform" title={networkNodes[0].name}>
-                    <span className="font-display font-bold text-[9px] text-primary">{networkNodes[0].initials}</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider leading-none mt-0.5 truncate max-w-[32px]">{networkNodes[0].name.split(' ')[0]}</span>
-                  </div>
-
-                  {/* Node 2 */}
-                  <div className="absolute top-[28%] right-[20%] w-11 h-11 bg-white text-slate-800 rounded-full flex flex-col items-center justify-center shadow border border-slate-200 z-10 hover:scale-105 transition-transform" title={networkNodes[1].name}>
-                    <span className="font-display font-bold text-[9px] text-primary">{networkNodes[1].initials}</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider leading-none mt-0.5 truncate max-w-[36px]">{networkNodes[1].name.split(' ')[0]}</span>
-                  </div>
-
-                  {/* Node 3 */}
-                  <div className="absolute bottom-[16%] left-[38%] w-10 h-10 bg-white text-slate-800 rounded-full flex flex-col items-center justify-center shadow border border-slate-200 z-10 hover:scale-105 transition-transform" title={networkNodes[2].name}>
-                    <span className="font-display font-bold text-[9px] text-primary">{networkNodes[2].initials}</span>
-                    <span className="text-[6px] text-slate-400 font-bold uppercase tracking-wider leading-none mt-0.5 truncate max-w-[32px]">{networkNodes[2].name.split(' ')[0]}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Publications & Discussion Proposals list */}
-              <div className="cb-card p-5 bg-white text-left">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-4">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <BookOpen className="w-4.5 h-4.5 text-primary" />
-                    <span>Scholarly Output & Proposals</span>
-                  </h3>
-                  <Link 
-                    href="/threads" 
-                    className="text-primary text-[10px] font-bold uppercase tracking-wider flex items-center gap-0.5"
-                  >
-                    <span>View Feed</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-                
-                <div className="space-y-3">
-                  {userThreads.length > 0 ? (
-                    userThreads.slice(0, 3).map((thread) => (
-                      <div 
-                        key={thread.id} 
-                        className="p-3.5 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors group cursor-pointer"
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">Academic Role</label>
+                      <select
+                        {...register('role')}
+                        className="w-full bg-[#F5F7FC] border border-[#E4E9F2] rounded-xl p-3 text-xs font-bold text-[#17233D] outline-none focus:border-[#0B4EA2] focus:ring-2 focus:ring-[#0B4EA2]/20 transition-all cursor-pointer"
                       >
-                        <div className="flex gap-3 items-start">
-                          <div className="w-7 h-7 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 mt-0.5">
-                            <Layers className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <Link href={`/threads/${thread.id}`}>
-                              <h4 className="text-xs font-bold text-slate-950 group-hover:text-primary transition-colors leading-snug truncate">
-                                {thread.title}
-                              </h4>
-                            </Link>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                              Published {new Date(thread.createdAt).toLocaleDateString()} • Stage Proposal
-                            </p>
-                            <div className="flex gap-2 pt-1">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-200/50 rounded-md">
-                                {thread.tags?.[0] || 'General'}
-                              </span>
-                              <span className="text-[9px] text-primary font-bold uppercase tracking-wider px-2 py-0.5 bg-primary/5 rounded-md">
-                                {thread.comments?.length || 0} Comments
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <>
-                      {/* Premium Placeholders */}
-                      <div className="p-3.5 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors group cursor-pointer">
-                        <div className="flex gap-3 items-start">
-                          <div className="w-7 h-7 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 mt-0.5 border border-primary/10">
-                            <Layers className="w-4 h-4" />
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-xs font-bold text-slate-950 group-hover:text-primary transition-colors leading-snug">
-                              Quantum Error Correction in Synthetic DNA Sequencing
-                            </h4>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                              Nature Computational Science • Published Oct 2025
-                            </p>
-                            <div className="flex gap-2 pt-1">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-200/50 rounded-md">
-                                Peer Reviewed
-                              </span>
-                              <span className="text-[9px] text-primary font-bold uppercase tracking-wider px-2 py-0.5 bg-primary/5 rounded-md">
-                                42 Citations
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        <option value='RESEARCH_SCHOLAR'>Research Scholar</option>
+                        <option value='RESEARCH_SUPERVISOR'>Research Supervisor</option>
+                        <option value='INSTITUTE_ADMIN'>Institute Admin</option>
+                        <option value='ADMIN'>Admin</option>
+                      </select>
+                      {errors.role && <p className="text-xs text-red-500 font-bold mt-1">{errors.role.message as string}</p>}
+                    </div>
+                  </div>
 
-                      <div className="p-3.5 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors group cursor-pointer">
-                        <div className="flex gap-3 items-start">
-                          <div className="w-7 h-7 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 mt-0.5 border border-primary/10">
-                            <Layers className="w-4 h-4" />
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-xs font-bold text-slate-950 group-hover:text-primary transition-colors leading-snug">
-                              Algorithmic Approaches to Protein Folding via Qubits
-                            </h4>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                              Journal of Bioinformatics • Published May 2025
-                            </p>
-                            <div className="flex gap-2 pt-1">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-200/50 rounded-md">
-                                Open Access
-                              </span>
-                              <span className="text-[9px] text-primary font-bold uppercase tracking-wider px-2 py-0.5 bg-primary/5 rounded-md">
-                                18 Citations
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">Academic Department</label>
+                    <select
+                      {...register('department')}
+                      className="w-full bg-[#F5F7FC] border border-[#E4E9F2] rounded-xl p-3 text-xs font-bold text-[#17233D] outline-none focus:border-[#0B4EA2] focus:ring-2 focus:ring-[#0B4EA2]/20 transition-all cursor-pointer"
+                    >
+                      <option value="">Select SRMIST Department</option>
+                      {SRM_DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                    {errors.department && <p className="text-xs text-red-500 font-bold mt-1">{errors.department.message as string}</p>}
+                  </div>
 
-            </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">Research Agenda / Biography</label>
+                    <textarea
+                      rows={4}
+                      {...register('bio')}
+                      className="w-full bg-[#F5F7FC] border border-[#E4E9F2] rounded-xl p-3 text-xs leading-relaxed text-[#17233D] placeholder:text-[#6B7890] outline-none focus:border-[#0B4EA2] focus:ring-2 focus:ring-[#0B4EA2]/20 transition-all"
+                      placeholder="Outline your current research focus, lab specifications, and grant pipeline..."
+                    />
+                    {errors.bio && <p className="text-xs text-red-500 font-bold mt-1">{errors.bio.message as string}</p>}
+                  </div>
+                </motion.div>
+              )}
 
-          </motion.div>
-        ) : (
-          /* ── PROFILE EDITOR FORM ── */
-          <motion.div
-            key="profile-edit"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left"
-          >
-            {/* Left Hand Tab Navigation Menu */}
-            <div className="lg:col-span-3 flex flex-col gap-1">
-              {([
-                { id: 'identity', label: 'Identity & Bio', icon: User },
-                { id: 'domains', label: 'Research Focus', icon: Tag },
-                { id: 'security', label: 'Security & Access', icon: Lock }
-              ] as const).map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeSettingsTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveSettingsTab(tab.id)}
-                    className={`flex items-center space-x-2.5 py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 text-left cursor-pointer ${
-                      isActive 
-                        ? 'bg-primary text-white shadow-sm' 
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+              {/* RESEARCH DOMAINS TAB */}
+              {activeSettingsTab === 'domains' && (
+                <motion.div
+                  key="tab-domains"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-5"
+                >
+                  <div className="border-b border-[#E4E9F2] pb-3">
+                    <h3 className="text-sm font-extrabold text-[#17233D] uppercase tracking-wider">Research Focus Areas</h3>
+                    <p className="text-xs text-[#6B7890] font-medium mt-0.5">Specify core research topics to index your profile in institutional discovery and collaboration directories.</p>
+                  </div>
 
-            {/* Right Hand Settings Form Pane */}
-            <div className="lg:col-span-9 cb-card bg-white p-6 min-h-[400px] flex flex-col justify-between">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 flex-grow flex flex-col justify-between">
-                
-                <div className="flex-grow">
-                  <AnimatePresence mode="wait">
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">Selected Focus Tags (Max 8)</label>
                     
-                    {/* IDENTITY TAB */}
-                    {activeSettingsTab === 'identity' && (
-                      <motion.div
-                        key="tab-identity"
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -8 }}
-                        transition={{ duration: 0.15 }}
-                        className="space-y-5"
-                      >
-                        <div className="border-b border-slate-100 pb-2">
-                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Academic Identity</h3>
-                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Manage your display credentials and roles</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
-                            <input
-                              type="text"
-                              {...register('name')}
-                              className="cb-input"
-                              placeholder="E.g. Dr. Ramesh Kumar"
-                            />
-                            {errors.name && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-1">{errors.name.message as string}</p>}
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Academic Role</label>
-                            <select
-                              {...register('role')}
-                              className="cb-input cursor-pointer"
-                            >
-                              <option value='RESEARCH_SCHOLAR'>PhD Research Scholar</option>
-                              <option value='RESEARCH_SUPERVISOR'>Verified Faculty Guide</option>
-                            </select>
-                            {errors.role && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-1">{errors.role.message as string}</p>}
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Academic Department</label>
-                          <select
-                            {...register('department')}
-                            className="cb-input cursor-pointer"
+                    <div className="flex flex-wrap gap-2 p-4 bg-[#F5F7FC] border border-[#E4E9F2] rounded-2xl min-h-[60px]">
+                      {selectedInterests.length === 0 ? (
+                        <p className="text-[#6B7890] text-xs italic font-medium">No focus tags added yet. Choose from suggestions below or add custom tags.</p>
+                      ) : (
+                        selectedInterests.map((interest) => (
+                          <span
+                            key={interest}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#EEF4FF] border border-[#0B4EA2]/30 text-[#0B4EA2]"
                           >
-                            <option value="">Select Department</option>
-                            {SRM_DEPARTMENTS.map((dept) => (
-                              <option key={dept} value={dept}>{dept}</option>
-                            ))}
-                          </select>
-                          {errors.department && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-1">{errors.department.message as string}</p>}
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Research Biography</label>
-                          <textarea
-                            rows={4}
-                            {...register('bio')}
-                            className="w-full bg-white border border-slate-200 rounded-lg p-3 font-sans text-xs leading-relaxed text-slate-800 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-colors"
-                            placeholder="Outline your research focus, lab specifications, and grant history..."
-                          />
-                          {errors.bio && <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-1">{errors.bio.message as string}</p>}
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* RESEARCH DOMAINS TAB */}
-                    {activeSettingsTab === 'domains' && (
-                      <motion.div
-                        key="tab-domains"
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -8 }}
-                        transition={{ duration: 0.15 }}
-                        className="space-y-5"
-                      >
-                        <div className="border-b border-slate-100 pb-2">
-                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Research Focus Areas</h3>
-                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Specify domains that index your node in co-author matchmaking directories</p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selected Domains (Max 8)</label>
-                          
-                          {/* Pinned tags pool */}
-                          <div className="flex flex-wrap gap-1.5 p-3 bg-slate-50 border border-slate-200/50 rounded-xl">
-                            {selectedInterests.length === 0 ? (
-                              <p className="text-slate-400 text-xs italic font-semibold">No domains pinned yet. Select below or add custom ones.</p>
-                            ) : (
-                              selectedInterests.map((interest) => (
-                                <span
-                                  key={interest}
-                                  className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-primary/5 border border-primary/20 text-primary"
-                                >
-                                  <span>{interest}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveInterest(interest)}
-                                    className="ml-1 text-primary/60 hover:text-primary p-0.5 cursor-pointer"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </span>
-                              ))
-                            )}
-                          </div>
-
-                          {/* Custom tags input */}
-                          <div className="relative mt-2">
-                            <input
-                              type="text"
-                              value={newInterestInput}
-                              onChange={(e) => setNewInterestInput(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddInterest(newInterestInput))}
-                              placeholder="Type scientific discipline and press Enter..."
-                              className="cb-input pl-8 pr-10"
-                            />
-                            <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3.5" />
+                            <span>#{interest}</span>
                             <button
                               type="button"
-                              onClick={() => handleAddInterest(newInterestInput)}
-                              className="absolute right-1.5 top-1.5 p-1 rounded bg-slate-100 text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                              onClick={() => handleRemoveInterest(interest)}
+                              className="text-[#0B4EA2] hover:text-[#073B7A] cursor-pointer"
                             >
-                              <Plus className="w-4 h-4" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
-                          </div>
-                        </div>
+                          </span>
+                        ))
+                      )}
+                    </div>
 
-                        {/* Suggestions panel */}
-                        <div className="space-y-2 pt-3 border-t border-slate-100">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Recommended Fields</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {interestsList
-                              .filter(item => !selectedInterests.includes(item))
-                              .map((tag) => (
-                                <button
-                                  key={tag}
-                                  type="button"
-                                  onClick={() => handleAddInterest(tag)}
-                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-50 hover:bg-slate-100 border border-slate-200/50 text-slate-500 hover:text-primary transition-colors cursor-pointer"
-                                >
-                                  + {tag}
-                                </button>
-                              ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {/* SECURITY & CREDENTIALS TAB */}
-                    {activeSettingsTab === 'security' && (
-                      <motion.div
-                        key="tab-security"
-                        initial={{ opacity: 0, x: 8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -8 }}
-                        transition={{ duration: 0.15 }}
-                        className="space-y-5"
+                    <div className="relative mt-2">
+                      <input
+                        type="text"
+                        value={newInterestInput}
+                        onChange={(e) => setNewInterestInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddInterest(newInterestInput))}
+                        placeholder="Type research topic and press Enter..."
+                        className="w-full bg-[#F5F7FC] border border-[#E4E9F2] rounded-xl pl-9 pr-12 py-3 text-xs font-bold text-[#17233D] outline-none focus:border-[#0B4EA2] focus:ring-2 focus:ring-[#0B4EA2]/20 transition-all"
+                      />
+                      <Tag className="w-4 h-4 text-[#6B7890] absolute left-3 top-3.5" />
+                      <button
+                        type="button"
+                        onClick={() => handleAddInterest(newInterestInput)}
+                        className="absolute right-2 top-2 px-3 py-1.5 rounded-lg bg-[#0B4EA2] text-white hover:bg-[#073B7A] text-xs font-bold transition-colors cursor-pointer"
                       >
-                        <div className="border-b border-slate-100 pb-2">
-                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Account Security</h3>
-                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">Secure authentication and gateway keys</p>
+                        Add
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-3 border-t border-[#E4E9F2]">
+                    <p className="text-xs font-bold text-[#6B7890] uppercase tracking-wider">Suggested SRMIST Domains</p>
+                    <div className="flex flex-wrap gap-2">
+                      {interestsList
+                        .filter(item => !selectedInterests.includes(item))
+                        .map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => handleAddInterest(tag)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F5F7FC] hover:bg-[#EEF4FF] border border-[#E4E9F2] hover:border-[#0B4EA2]/30 text-[#4A5568] hover:text-[#0B4EA2] transition-all cursor-pointer"
+                          >
+                            + {tag}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* SECURITY TAB */}
+              {activeSettingsTab === 'security' && (
+                <motion.div
+                  key="tab-security"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-5"
+                >
+                  <div className="border-b border-[#E4E9F2] pb-3">
+                    <h3 className="text-sm font-extrabold text-[#17233D] uppercase tracking-wider">Account Security & Access</h3>
+                    <p className="text-xs text-[#6B7890] font-medium mt-0.5">Verified institutional credentials and authentication mapping.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">SRMIST Institutional Email</label>
+                      <input
+                        type="email"
+                        disabled
+                        value={currentUser?.email || ''}
+                        className="w-full bg-[#F5F7FC] border border-[#E4E9F2] rounded-xl p-3 text-xs font-bold text-[#17233D] cursor-not-allowed font-mono opacity-80"
+                      />
+                      <p className="text-[11px] text-[#6B7890] font-semibold">Managed via SRMIST institutional identity system</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-[#17233D] uppercase tracking-wider">Verification Clearance Status</label>
+                      <div className="p-4 bg-[#FFF9E6] border border-[#F5B800]/40 rounded-2xl flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#F5B800] text-[#17233D] flex items-center justify-center shrink-0">
+                          <Check className="w-5 h-5 stroke-[3px]" />
                         </div>
-
-                        <div className="space-y-4">
-                          <div className="space-y-1">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Email</label>
-                            <input
-                              type="email"
-                              disabled
-                              value={currentUser?.email || ''}
-                              className="cb-input select-all font-mono"
-                            />
-                            <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Managed via SRMIST institutional identity system</p>
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Verification Clearance Status</label>
-                            <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center space-x-3">
-                              <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-                                <Check className="w-4 h-4 stroke-[3px]" />
-                              </div>
-                              <div className="text-left">
-                                <p className="text-xs font-bold text-slate-800">Clearance Node Confirmed</p>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Guide signatures & institutional directory synchronization complete.</p>
-                              </div>
-                            </div>
-                          </div>
+                        <div>
+                          <p className="text-xs font-extrabold text-[#17233D]">Verified Researcher Record</p>
+                          <p className="text-[11px] text-[#92400E] font-semibold">Institutional directory synchronization and guide authorization active.</p>
                         </div>
-                      </motion.div>
-                    )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                  </AnimatePresence>
-                </div>
-
-                {/* Footer Save Row */}
-                <div className="flex justify-end gap-2 pt-6 mt-6 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-[10px] font-bold uppercase tracking-wider rounded-lg transition cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 bg-primary text-white hover:bg-primary/95 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Save Settings</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-              </form>
+            {/* Footer Buttons */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-[#E4E9F2]">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-5 py-2.5 border border-[#E4E9F2] hover:bg-[#EEF4FF] text-[#4A5568] text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 bg-[#0B4EA2] hover:bg-[#073B7A] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Settings</span>
+                  </>
+                )}
+              </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+          </form>
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -10,16 +10,18 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@curiousbees/types';
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  RESEARCH_SUPERVISOR:   'Supervisor',
-  RESEARCH_SCHOLAR:      'Scholar',
-  INSTITUTE_ADMIN:       'Admin',
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN:                 'Admin',
+  INSTITUTE_ADMIN:       'Institute Admin',
+  RESEARCH_SUPERVISOR:   'Research Supervisor',
+  RESEARCH_SCHOLAR:      'Research Scholar',
 };
 
-const ROLE_STYLES: Record<UserRole, string> = {
-  INSTITUTE_ADMIN:       'bg-error-container text-on-error-container border-error/20',
-  RESEARCH_SUPERVISOR:   'bg-primary-container text-on-primary-container border-primary/20',
-  RESEARCH_SCHOLAR:      'bg-success-container text-on-success-container border-success/20',
+const ROLE_STYLES: Record<string, string> = {
+  ADMIN:                 'bg-slate-100 text-slate-800 border-slate-300',
+  INSTITUTE_ADMIN:       'bg-slate-100 text-slate-800 border-slate-300',
+  RESEARCH_SUPERVISOR:   'bg-[#FFF9E6] text-[#92400E] border-[#F5B800]/40',
+  RESEARCH_SCHOLAR:      'bg-[#EEF4FF] text-[#0B4EA2] border-[#0B4EA2]/20',
 };
 
 interface RoleBadgeProps {

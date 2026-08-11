@@ -2,12 +2,14 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus, RequestStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../users/mail.service';
 
 @Injectable()
 export class OnboardingService {
   constructor(
     private prisma: PrismaService,
-    private notifications: NotificationsService
+    private notifications: NotificationsService,
+    private mailService: MailService,
   ) {}
 
   async onboardSupervisor(
@@ -17,6 +19,7 @@ export class OnboardingService {
       departmentId: string;
       designation: string;
       employeeId: string;
+      researchArea: string;
       maxScholars?: number;
     }
   ) {
@@ -59,6 +62,7 @@ export class OnboardingService {
           departmentId: data.departmentId,
           designation: data.designation,
           employeeId: data.employeeId,
+          researchArea: data.researchArea,
           maxScholars: data.maxScholars ?? 5,
         },
       });
@@ -99,8 +103,8 @@ export class OnboardingService {
     if (user.role !== Role.RESEARCH_SCHOLAR) {
       throw new BadRequestException('User role is not RESEARCH_SCHOLAR.');
     }
-    if (user.onboardingCompleted) {
-      throw new BadRequestException('User has already completed onboarding.');
+    if (user.onboardingCompleted && user.supervisorId) {
+      throw new BadRequestException('User has already completed onboarding and has a supervisor assigned.');
     }
 
     // Verify faculty and department
@@ -142,13 +146,19 @@ export class OnboardingService {
 
     // Start transaction to create profile, update user, and create request
     return this.prisma.$transaction(async (tx) => {
-      await tx.scholarProfile.create({
-        data: {
+      await tx.scholarProfile.upsert({
+        where: { userId },
+        create: {
           userId,
           facultyId: data.facultyId,
           departmentId: data.departmentId,
           researchArea: data.researchArea,
         },
+        update: {
+          facultyId: data.facultyId,
+          departmentId: data.departmentId,
+          researchArea: data.researchArea,
+        }
       });
 
       await tx.scholarSupervisorRequest.create({
@@ -175,13 +185,38 @@ export class OnboardingService {
       });
 
       // Trigger supervisor notification asynchronously (after tx resolves, but we can launch it here)
-      // Wait, let's trigger it using notifications service
       try {
         await this.notifications.notifyScholarRegistrationSubmitted(userId, data.supervisorId);
       } catch (err) {
         // Log notification error but do not fail onboarding transaction
         console.error('Failed to notify supervisor on onboarding:', err);
       }
+
+      // Send Resend email notification to supervisor (async, non-blocking)
+      const request = await tx.scholarSupervisorRequest.findFirst({
+        where: { scholarId: userId, supervisorId: data.supervisorId, status: RequestStatus.PENDING },
+      });
+      if (request) {
+        this.mailService.sendScholarSupervisionRequestAlert({
+          supervisorEmail: supervisor.email,
+          supervisorName: supervisor.name || 'Supervisor',
+          scholarName: user.name || user.email,
+          scholarEmail: user.email,
+          department: dept.name,
+          researchArea: data.researchArea,
+          requestId: request.id,
+          createdAt: request.createdAt,
+        }).catch(() => {});
+      }
+
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: 'SCHOLAR_SUPERVISION_REQUEST_CREATED',
+          details: JSON.stringify({ supervisorId: data.supervisorId, requestId: request?.id }),
+        }
+      });
 
       return updatedUser;
     });

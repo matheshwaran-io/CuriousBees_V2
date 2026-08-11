@@ -38,7 +38,7 @@ export default function MarketingNavbar() {
           </Show>
           <Show when="signed-in">
             <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              <Link href="/sign-in" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
                 Dashboard
               </Link>
               <UserButton />

@@ -672,9 +672,6 @@ export default function ThreadsFeedPage() {
               <Link href="/help" className="hover:text-slate-600 transition-colors">Help Center</Link>
               <Link href="/privacy-policy" className="hover:text-slate-600 transition-colors">Privacy</Link>
             </div>
-            <p className="text-[9px] font-semibold text-slate-400 leading-none mt-1 lowercase select-none">
-              © 2025 CuriousBees Academic Inc.
-            </p>
           </div>
 
         </div>

@@ -8,10 +8,11 @@ import type { UserRole } from '@curiousbees/types';
 
 // ─── Role Labels (human-readable) ────────────────────────────────────────────
 
-export const ROLE_LABELS: Record<UserRole, string> = {
-  RESEARCH_SUPERVISOR: 'Supervisor',
-  RESEARCH_SCHOLAR: 'Scholar',
-  INSTITUTE_ADMIN: 'Admin',
+export const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Admin',
+  INSTITUTE_ADMIN: 'Institute Admin',
+  RESEARCH_SUPERVISOR: 'Research Supervisor',
+  RESEARCH_SCHOLAR: 'Research Scholar',
 };
 
 // ─── Core resolver ───────────────────────────────────────────────────────────

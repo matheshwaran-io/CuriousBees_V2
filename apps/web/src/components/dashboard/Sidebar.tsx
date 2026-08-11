@@ -79,8 +79,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
       {
         label: 'RESEARCH',
         items: [
-          { name: 'Research Feed', href: '/threads', icon: MessageSquare },
-          { name: 'Dashboard', href: '/supervisor', icon: LayoutDashboard },
+          { name: 'Research Feed', href: '/supervisor/feed', icon: MessageSquare },
           { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
           { name: 'Events', href: '/events', icon: CalendarIcon },
         ],
@@ -115,7 +114,6 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
       label: 'RESEARCH',
       items: [
         { name: 'Research Feed', href: '/scholar/feed', icon: MessageSquare },
-        { name: 'Dashboard', href: '/scholar/dashboard', icon: LayoutDashboard },
         { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
         { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
       ],

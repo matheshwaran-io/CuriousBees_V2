@@ -293,7 +293,6 @@ export default async function PublicPostPage({ params }: { params: Promise<{ id:
 
         {/* Footer */}
         <footer className="mt-8 text-center text-[10px] text-slate-400 font-semibold">
-          © 2025 CuriousBees Academic Inc. · 
           <Link href="/privacy-policy" className="hover:text-slate-600 ml-1">Privacy</Link>
         </footer>
       </main>
