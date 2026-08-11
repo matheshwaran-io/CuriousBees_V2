@@ -29,10 +29,10 @@ export class OnboardingService {
     if (!user) {
       throw new BadRequestException('User not found.');
     }
-    if (user.role !== Role.RESEARCH_SUPERVISOR) {
-      throw new BadRequestException('User role is not RESEARCH_SUPERVISOR.');
+    if (user.role && user.role !== Role.RESEARCH_SUPERVISOR && user.role !== Role.INSTITUTE_ADMIN) {
+      throw new BadRequestException('User already has a different role assigned.');
     }
-    if (user.onboardingCompleted) {
+    if (user.onboardingCompleted && user.departmentId) {
       throw new BadRequestException('User has already completed onboarding.');
     }
 
@@ -55,9 +55,18 @@ export class OnboardingService {
 
     // Start transaction to create profile and update user
     return this.prisma.$transaction(async (tx) => {
-      const profile = await tx.supervisorProfile.create({
-        data: {
+      const profile = await tx.supervisorProfile.upsert({
+        where: { userId },
+        create: {
           userId,
+          facultyId: data.facultyId,
+          departmentId: data.departmentId,
+          designation: data.designation,
+          employeeId: data.employeeId,
+          researchArea: data.researchArea,
+          maxScholars: data.maxScholars ?? 5,
+        },
+        update: {
           facultyId: data.facultyId,
           departmentId: data.departmentId,
           designation: data.designation,
@@ -70,6 +79,7 @@ export class OnboardingService {
       return tx.user.update({
         where: { id: userId },
         data: {
+          role: Role.RESEARCH_SUPERVISOR,
           onboardingCompleted: true,
           status: UserStatus.ACTIVE,
           approved: true,
@@ -100,8 +110,8 @@ export class OnboardingService {
     if (!user) {
       throw new BadRequestException('User not found.');
     }
-    if (user.role !== Role.RESEARCH_SCHOLAR) {
-      throw new BadRequestException('User role is not RESEARCH_SCHOLAR.');
+    if (user.role && user.role !== Role.RESEARCH_SCHOLAR && user.role !== Role.INSTITUTE_ADMIN) {
+      throw new BadRequestException('User already has a different role assigned.');
     }
     if (user.onboardingCompleted && user.supervisorId) {
       throw new BadRequestException('User has already completed onboarding and has a supervisor assigned.');
@@ -172,6 +182,7 @@ export class OnboardingService {
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
+          role: Role.RESEARCH_SCHOLAR,
           onboardingCompleted: true,
           status: UserStatus.PENDING_SUPERVISOR_APPROVAL,
           approved: false,

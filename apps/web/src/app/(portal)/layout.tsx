@@ -103,7 +103,7 @@ export default function PortalLayout({
       return;
     }
 
-    if (!activeUser.onboardingCompleted) {
+    if (!activeUser.onboardingCompleted || (activeUser.role === 'RESEARCH_SUPERVISOR' && !activeUser.departmentId)) {
       console.warn('[PortalLayout] User has not completed onboarding. Redirecting to /onboarding.');
       router.push('/onboarding');
       return;

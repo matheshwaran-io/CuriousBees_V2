@@ -1,9 +1,20 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useStore } from '@/store/useStore';
+import { getDashboardRoute } from '@/lib/auth/route-protection';
 
 export default function UnauthorizedPage() {
   const router = useRouter();
+  const currentUser = useStore((s) => s.currentUser);
+
+  const handleReturn = () => {
+    if (currentUser) {
+      router.push(getDashboardRoute(currentUser));
+    } else {
+      router.push('/');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#070b14] flex flex-col items-center justify-center p-4 text-center">
@@ -13,12 +24,10 @@ export default function UnauthorizedPage() {
           You do not have permission to view this page. If you believe this is a mistake, please contact support.
         </p>
         <button
-          onClick={() => {
-            router.back();
-          }}
-          className="bg-red-600/80 hover:bg-red-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+          onClick={handleReturn}
+          className="bg-red-600/80 hover:bg-red-600 text-white font-medium py-2 px-6 rounded-lg transition-colors cursor-pointer"
         >
-          Go Back
+          Return to Dashboard
         </button>
       </div>
     </div>

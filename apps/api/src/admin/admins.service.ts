@@ -76,13 +76,33 @@ export class AdminAdminsService {
   }
 
   async deleteAdmin(adminId: string, id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new BadRequestException('Admin not found.');
-    if (user.email.toLowerCase() === SUPERADMIN_EMAIL) {
-      throw new ForbiddenException('The protected superadmin account cannot be deleted.');
+    if (adminId === id) {
+      throw new BadRequestException('You cannot delete your own account.');
     }
 
-    await this.prisma.user.delete({ where: { id } });
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new BadRequestException('Admin user not found.');
+
+    await this.prisma.user.updateMany({
+      where: { supervisorId: id },
+      data: { supervisorId: null },
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.scholarSupervisorRequest.deleteMany({ where: { OR: [{ scholarId: id }, { supervisorId: id }] } }),
+      this.prisma.report.deleteMany({ where: { OR: [{ scholarId: id }, { supervisorId: id }] } }),
+      this.prisma.researchConnection.deleteMany({ where: { OR: [{ requesterId: id }, { receiverId: id }] } }),
+      this.prisma.comment.deleteMany({ where: { authorId: id } }),
+      this.prisma.thread.deleteMany({ where: { authorId: id } }),
+      this.prisma.supervisorProfile.deleteMany({ where: { userId: id } }),
+      this.prisma.scholarProfile.deleteMany({ where: { userId: id } }),
+      this.prisma.userInterest.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationToken.deleteMany({ where: { userId: id } }),
+      this.prisma.notification.deleteMany({ where: { userId: id } }),
+      this.prisma.workspaceMember.deleteMany({ where: { userId: id } }),
+      this.prisma.user.delete({ where: { id } }),
+    ]);
+
     await this.logAudit(adminId, 'DELETE_ADMIN', `Deleted admin ${user.email}`);
     return { success: true };
   }

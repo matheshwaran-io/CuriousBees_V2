@@ -16,7 +16,8 @@ import {
   Building,
   Hash,
   Award,
-  BookOpen
+  BookOpen,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
@@ -79,24 +80,34 @@ export default function OnboardingPage() {
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingSupervisors, setLoadingSupervisors] = useState(false);
 
+  // Derived: Check if role is pre-assigned by admin
+  const userRoleStr = String(currentUser?.role || '');
+  const hasAssignedRole = Boolean(currentUser?.role);
+  const assignedRoleLabel = 
+    userRoleStr.includes('SUPERVISOR')
+      ? 'Research Supervisor'
+      : userRoleStr.includes('SCHOLAR')
+      ? 'Research Scholar'
+      : null;
+
   // Check if they are already onboarded and pre-select role
   useEffect(() => {
     if (currentUser) {
+      const r = String(currentUser.role || '');
       // Pre-select role if already assigned in DB
-      if (currentUser.role === 'RESEARCH_SCHOLAR') {
+      if (r.includes('SCHOLAR')) {
         setRole('SCHOLAR');
-      } else if (currentUser.role === 'RESEARCH_SUPERVISOR') {
+      } else if (r.includes('SUPERVISOR')) {
         setRole('SUPERVISOR');
       }
 
       if (currentUser.onboardingCompleted) {
+        // If supervisor has no department assigned, keep them on this page to select one
+        if (r.includes('SUPERVISOR') && !currentUser.departmentId) {
+          return;
+        }
         // If scholar has no supervisor assigned, keep them on this page to select one
-        if (currentUser.role === 'RESEARCH_SCHOLAR' && !currentUser.supervisorId) {
-          if (currentUser.departmentId) {
-            // If they have department, try to pre-fill it. Note: faculty might require an API call to resolve if not in user object, 
-            // but we can try to rely on their backend scholarProfile if available. Since it's complex, they can just re-select it
-            // to trigger the cascade loading properly.
-          }
+        if (r.includes('SCHOLAR') && !currentUser.supervisorId) {
           return;
         }
         
@@ -115,13 +126,16 @@ export default function OnboardingPage() {
       setLoadingFaculties(true);
       try {
         const { apiFetch } = await import('@/lib/api-client');
-        const res = await apiFetch('/api/faculties');
+        const res = await apiFetch('/api/faculties', { skipAuth: true });
         if (res.ok) {
           const data = await res.json();
           setFaculties(data);
+        } else {
+          setErrorMsg('Failed to fetch faculties from the server.');
         }
       } catch (e) {
         console.error('Failed to load faculties:', e);
+        setErrorMsg('Network error while fetching faculties.');
       } finally {
         setLoadingFaculties(false);
       }
@@ -140,13 +154,16 @@ export default function OnboardingPage() {
       setLoadingDepartments(true);
       try {
         const { apiFetch } = await import('@/lib/api-client');
-        const res = await apiFetch(`/api/departments?facultyId=${selectedFacultyId}`);
+        const res = await apiFetch(`/api/departments?facultyId=${selectedFacultyId}`, { skipAuth: true });
         if (res.ok) {
           const data = await res.json();
           setDepartments(data);
+        } else {
+          setErrorMsg('Failed to fetch departments from the server.');
         }
       } catch (e) {
         console.error('Failed to load departments:', e);
+        setErrorMsg('Network error while fetching departments.');
       } finally {
         setLoadingDepartments(false);
       }
@@ -165,7 +182,7 @@ export default function OnboardingPage() {
       setLoadingSupervisors(true);
       try {
         const { apiFetch } = await import('@/lib/api-client');
-        const res = await apiFetch(`/api/supervisors?facultyId=${selectedFacultyId}&departmentId=${selectedDepartmentId}`);
+        const res = await apiFetch(`/api/supervisors?facultyId=${selectedFacultyId}&departmentId=${selectedDepartmentId}`, { skipAuth: true });
         if (res.ok) {
           const data = await res.json();
           setSupervisors(data);
@@ -320,53 +337,68 @@ export default function OnboardingPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="w-full space-y-6 text-left">
-            {/* Step 1: Role Selection */}
-            {(!currentUser?.onboardingCompleted && !currentUser?.role) && (
-              <div className="space-y-2">
+            {/* Step 1: Role Selection or Locked Admin Banner */}
+            {hasAssignedRole ? (
+              <div className="p-3.5 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between w-full">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-primary text-white rounded-lg shrink-0">
+                    {role === 'SUPERVISOR' ? <Briefcase className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-textSecondary block">Assigned Institutional Role</span>
+                    <span className="text-xs font-extrabold text-primary">{assignedRoleLabel}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 shrink-0">
+                  Admin Provisioned
+                </span>
+              </div>
+            ) : !currentUser?.onboardingCompleted ? (
+              <div className="space-y-2 w-full">
                 <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
                   Select Your Role
                 </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setRole('SCHOLAR'); setErrorMsg(''); }}
-                  className={cn(
-                    "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
-                    role === 'SCHOLAR' 
-                      ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
-                      : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
-                  )}
-                >
-                  <div className={cn("p-2 rounded-full", role === 'SCHOLAR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
-                    <GraduationCap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className={cn("text-xs font-bold", role === 'SCHOLAR' ? "text-primary" : "text-black")}>Research Scholar</h3>
-                    <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I am pursuing my PhD</p>
-                  </div>
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setRole('SCHOLAR'); setErrorMsg(''); }}
+                    className={cn(
+                      "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
+                      role === 'SCHOLAR' 
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
+                        : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
+                    )}
+                  >
+                    <div className={cn("p-2 rounded-full", role === 'SCHOLAR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className={cn("text-xs font-bold", role === 'SCHOLAR' ? "text-primary" : "text-black")}>Research Scholar</h3>
+                      <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I am pursuing my PhD</p>
+                    </div>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => { setRole('SUPERVISOR'); setErrorMsg(''); }}
-                  className={cn(
-                    "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
-                    role === 'SUPERVISOR' 
-                      ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
-                      : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
-                  )}
-                >
-                  <div className={cn("p-2 rounded-full", role === 'SUPERVISOR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
-                    <Briefcase className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className={cn("text-xs font-bold", role === 'SUPERVISOR' ? "text-primary" : "text-black")}>Research Supervisor</h3>
-                    <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I supervise scholars</p>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => { setRole('SUPERVISOR'); setErrorMsg(''); }}
+                    className={cn(
+                      "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
+                      role === 'SUPERVISOR' 
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
+                        : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
+                    )}
+                  >
+                    <div className={cn("p-2 rounded-full", role === 'SUPERVISOR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className={cn("text-xs font-bold", role === 'SUPERVISOR' ? "text-primary" : "text-black")}>Research Supervisor</h3>
+                      <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I supervise scholars</p>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </div>
-            )}
+            ) : null}
 
             {role && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -388,9 +420,13 @@ export default function OnboardingPage() {
                           <option key={f.id} value={f.id}>{f.name}</option>
                         ))}
                       </select>
-                      {loadingFaculties && (
-                        <span className="absolute right-2.5 top-2.5">
+                      {loadingFaculties ? (
+                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                        </span>
+                      ) : (
+                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </span>
                       )}
                     </div>
@@ -413,9 +449,13 @@ export default function OnboardingPage() {
                           <option key={d.id} value={d.id}>{d.name}</option>
                         ))}
                       </select>
-                      {loadingDepartments && (
-                        <span className="absolute right-2.5 top-2.5">
+                      {loadingDepartments ? (
+                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                        </span>
+                      ) : (
+                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </span>
                       )}
                     </div>

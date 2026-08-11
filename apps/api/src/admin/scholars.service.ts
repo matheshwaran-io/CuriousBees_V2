@@ -135,10 +135,28 @@ export class AdminScholarsService {
   }
 
   async deleteScholar(adminId: string, id: string) {
+    if (adminId === id) {
+      throw new BadRequestException('You cannot delete your own account.');
+    }
+
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new BadRequestException('Scholar not found.');
 
-    await this.prisma.user.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.scholarSupervisorRequest.deleteMany({ where: { OR: [{ scholarId: id }, { supervisorId: id }] } }),
+      this.prisma.report.deleteMany({ where: { OR: [{ scholarId: id }, { supervisorId: id }] } }),
+      this.prisma.researchConnection.deleteMany({ where: { OR: [{ requesterId: id }, { receiverId: id }] } }),
+      this.prisma.comment.deleteMany({ where: { authorId: id } }),
+      this.prisma.thread.deleteMany({ where: { authorId: id } }),
+      this.prisma.supervisorProfile.deleteMany({ where: { userId: id } }),
+      this.prisma.scholarProfile.deleteMany({ where: { userId: id } }),
+      this.prisma.userInterest.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationToken.deleteMany({ where: { userId: id } }),
+      this.prisma.notification.deleteMany({ where: { userId: id } }),
+      this.prisma.workspaceMember.deleteMany({ where: { userId: id } }),
+      this.prisma.user.delete({ where: { id } }),
+    ]);
+
     await this.logAudit(adminId, 'DELETE_SCHOLAR', `Deleted scholar ${user.email}`);
     return { success: true };
   }

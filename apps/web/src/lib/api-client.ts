@@ -43,13 +43,13 @@ function getActiveClerkSession(): { getToken: () => Promise<string | null> } | n
 async function getClerkToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
-  // Wait up to 4s total for both Clerk to load AND a session to exist
+  // Wait up to 1.5s total for both Clerk to load AND a session to exist
   await new Promise<void>((resolve) => {
     let attempts = 0;
     const interval = setInterval(() => {
       attempts++;
       const ready = !!(window as any).Clerk && !!getActiveClerkSession();
-      if (ready || attempts > 40) {
+      if (ready || attempts > 15) {
         clearInterval(interval);
         resolve();
       }
@@ -63,9 +63,9 @@ async function getClerkToken(): Promise<string | null> {
   }
 
   try {
-    // Race getToken() against a 5s timeout to prevent hanging on JWT refresh
+    // Race getToken() against a 2s timeout to prevent hanging on JWT refresh
     const tokenPromise = session.getToken();
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000));
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
     const token = await Promise.race([tokenPromise, timeoutPromise]);
     if (!token) {
       console.warn('[APIClient] getToken() timed out or returned null.');
@@ -161,12 +161,9 @@ export async function apiFetch(
 
   const authHeaders = skipAuth ? {} : await getAuthHeaders();
 
-  const isServer = typeof window === 'undefined';
   const url = path.startsWith('http')
     ? path
-    : isServer
-    ? `${API_URL}${path}`
-    : path;
+    : `${API_URL}${path}`;
 
   const mergedHeaders: Record<string, string> = {
     ...authHeaders,

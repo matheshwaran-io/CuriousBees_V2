@@ -14,6 +14,8 @@ export default function SupervisorsTab() {
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [deletingSupervisor, setDeletingSupervisor] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Add Supervisor logic
   const [addName, setAddName] = useState('');
@@ -67,14 +69,17 @@ export default function SupervisorsTab() {
     } catch (e: any) { addToast(e.message, 'error'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this supervisor?')) return;
+  const confirmDelete = async () => {
+    if (!deletingSupervisor) return;
+    setDeleting(true);
     try {
       const { apiMutate } = await import('@/lib/api-client');
-      await apiMutate(`/api/admin/supervisors/${id}`, 'DELETE');
-      addToast('Supervisor deleted', 'success');
+      await apiMutate(`/api/admin/supervisors/${deletingSupervisor.id}`, 'DELETE');
+      addToast('Supervisor deleted successfully', 'success');
+      setDeletingSupervisor(null);
       fetchSupervisors();
     } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setDeleting(false); }
   };
 
   const filtered = supervisors.filter(s => 
@@ -193,7 +198,7 @@ export default function SupervisorsTab() {
                       {item.status !== 'SUSPENDED' && (
                         <button onClick={() => handleStatusChange(item.id, 'SUSPENDED')} className="p-1.5 hover:bg-amber-100 text-amber-600 rounded transition-colors cursor-pointer" title="Suspend"><Ban className="w-4 h-4" /></button>
                       )}
-                      <button onClick={() => handleDelete(item.id)} className="p-1.5 hover:bg-red-100 text-red-600 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setDeletingSupervisor(item)} className="p-1.5 hover:bg-red-100 text-red-600 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -204,6 +209,29 @@ export default function SupervisorsTab() {
       </div>
 
       <AnimatePresence>
+        {deletingSupervisor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm cursor-pointer" onClick={() => setDeletingSupervisor(null)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 border border-slate-100 flex flex-col items-center text-center z-10">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-4">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-lg text-slate-900 mb-1">Delete Supervisor?</h3>
+              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                Are you sure you want to delete <strong className="text-slate-800">{deletingSupervisor.name || deletingSupervisor.email}</strong>? This action will remove their account and unassign their scholars.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button type="button" onClick={() => setDeletingSupervisor(null)} disabled={deleting} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50">
+                  Cancel
+                </button>
+                <button type="button" onClick={confirmDelete} disabled={deleting} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-red-500/20">
+                  {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm cursor-pointer" onClick={() => setShowAddModal(false)} />
@@ -222,29 +250,19 @@ export default function SupervisorsTab() {
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email</label>
                     <input type="email" value={addEmail} onChange={e => setAddEmail(e.target.value)} required className="cb-input w-full" placeholder="john@example.com" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Faculty</label>
-                    <select value={addFaculty} onChange={e => { setAddFaculty(e.target.value); setAddDept(''); }} className="cb-input w-full cursor-pointer">
-                      <option value="">Select Faculty...</option>
-                      {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Department</label>
-                    <select value={addDept} onChange={e => setAddDept(e.target.value)} disabled={!addFaculty} className="cb-input w-full cursor-pointer disabled:opacity-50">
-                      <option value="">Select Department...</option>
-                      {departments.filter(d => d.facultyId === addFaculty).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Designation</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Designation (Optional)</label>
                       <input type="text" value={addDesignation} onChange={e => setAddDesignation(e.target.value)} className="cb-input w-full" placeholder="e.g. Professor" />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Employee ID</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Employee ID (Optional)</label>
                       <input type="text" value={addEmployeeId} onChange={e => setAddEmployeeId(e.target.value)} className="cb-input w-full" placeholder="e.g. EMP-123" />
                     </div>
+                  </div>
+                  <div className="p-3 bg-blue-50/80 border border-blue-100 rounded-lg text-xs font-semibold text-blue-900 flex items-start gap-2">
+                    <span className="text-base leading-none">ℹ️</span>
+                    <span>Faculty & Department will be selected by the supervisor during their self-onboarding process.</span>
                   </div>
                 </div>
                 <div className="p-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100 shrink-0">

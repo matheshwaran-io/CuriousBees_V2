@@ -15,6 +15,8 @@ export default function ScholarsTab() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState<any | null>(null);
+  const [deletingScholar, setDeletingScholar] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
   
   // Assign Supervisor logic
   const [faculties, setFaculties] = useState<any[]>([]);
@@ -74,14 +76,17 @@ export default function ScholarsTab() {
     } catch (e: any) { addToast(e.message, 'error'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this scholar?')) return;
+  const confirmDelete = async () => {
+    if (!deletingScholar) return;
+    setDeleting(true);
     try {
       const { apiMutate } = await import('@/lib/api-client');
-      await apiMutate(`/api/admin/scholars/${id}`, 'DELETE');
-      addToast('Scholar deleted', 'success');
+      await apiMutate(`/api/admin/scholars/${deletingScholar.id}`, 'DELETE');
+      addToast('Scholar deleted successfully', 'success');
+      setDeletingScholar(null);
       fetchScholars();
     } catch (e: any) { addToast(e.message, 'error'); }
+    finally { setDeleting(false); }
   };
 
   const submitAssignSupervisor = async (e: React.FormEvent) => {
@@ -235,7 +240,7 @@ export default function ScholarsTab() {
                         <button onClick={() => handleStatusChange(scholar.id, 'SUSPENDED')} className="p-1.5 hover:bg-amber-100 text-amber-600 rounded transition-colors cursor-pointer" title="Suspend"><Ban className="w-4 h-4" /></button>
                       )}
                       
-                      <button onClick={() => handleDelete(scholar.id)} className="p-1.5 hover:bg-red-100 text-red-600 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setDeletingScholar(scholar)} className="p-1.5 hover:bg-red-100 text-red-600 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -244,6 +249,31 @@ export default function ScholarsTab() {
           </table>
         </div>
       </div>
+
+      <AnimatePresence>
+        {deletingScholar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm cursor-pointer" onClick={() => setDeletingScholar(null)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 border border-slate-100 flex flex-col items-center text-center z-10">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-4">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-lg text-slate-900 mb-1">Delete Scholar?</h3>
+              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                Are you sure you want to delete <strong className="text-slate-800">{deletingScholar.name || deletingScholar.email}</strong>? This action will permanently remove their scholar account.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button type="button" onClick={() => setDeletingScholar(null)} disabled={deleting} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer disabled:opacity-50">
+                  Cancel
+                </button>
+                <button type="button" onClick={confirmDelete} disabled={deleting} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-red-500/20">
+                  {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Assign Supervisor Modal */}
       <AnimatePresence>
@@ -308,26 +338,9 @@ export default function ScholarsTab() {
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email</label>
                     <input type="email" value={addEmail} onChange={e => setAddEmail(e.target.value)} required className="cb-input w-full" placeholder="john@example.com" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Faculty</label>
-                    <select value={addFaculty} onChange={e => { setAddFaculty(e.target.value); setAddDept(''); setAddSupervisor(''); }} className="cb-input w-full cursor-pointer">
-                      <option value="">Select Faculty...</option>
-                      {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Department</label>
-                    <select value={addDept} onChange={e => { setAddDept(e.target.value); setAddSupervisor(''); }} disabled={!addFaculty} className="cb-input w-full cursor-pointer disabled:opacity-50">
-                      <option value="">Select Department...</option>
-                      {departments.filter(d => d.facultyId === addFaculty).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Supervisor</label>
-                    <select value={addSupervisor} onChange={e => setAddSupervisor(e.target.value)} disabled={!addDept} className="cb-input w-full cursor-pointer disabled:opacity-50">
-                      <option value="">Select Supervisor (Optional)...</option>
-                      {supervisors.filter(s => s.departmentId === addDept).map(s => <option key={s.id} value={s.id}>{s.name} ({s.email})</option>)}
-                    </select>
+                  <div className="p-3 bg-blue-50/80 border border-blue-100 rounded-lg text-xs font-semibold text-blue-900 flex items-start gap-2">
+                    <span className="text-base leading-none">ℹ️</span>
+                    <span>Faculty, Department & Supervisor will be selected by the scholar during their self-onboarding process.</span>
                   </div>
                 </div>
                 <div className="p-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100 shrink-0">

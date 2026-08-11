@@ -65,7 +65,7 @@ export class AdminSupervisorsService {
         faculty: facultyName,
         status: UserStatus.ACTIVE,
         approved: true,
-        onboardingCompleted: true,
+        onboardingCompleted: !!(data.departmentId && data.facultyId),
         employeeId: data.employeeId || null,
         supervisorProfile: data.departmentId && data.facultyId ? {
           create: {
@@ -115,10 +115,35 @@ export class AdminSupervisorsService {
   }
 
   async deleteSupervisor(adminId: string, id: string) {
+    if (adminId === id) {
+      throw new BadRequestException('You cannot delete your own account.');
+    }
+
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new BadRequestException('Supervisor not found.');
 
-    await this.prisma.user.delete({ where: { id } });
+    // 1. Unlink any scholars assigned to this supervisor
+    await this.prisma.user.updateMany({
+      where: { supervisorId: id },
+      data: { supervisorId: null },
+    });
+
+    // 2. Delete dependent records cleanly in transaction
+    await this.prisma.$transaction([
+      this.prisma.scholarSupervisorRequest.deleteMany({ where: { OR: [{ scholarId: id }, { supervisorId: id }] } }),
+      this.prisma.report.deleteMany({ where: { OR: [{ scholarId: id }, { supervisorId: id }] } }),
+      this.prisma.researchConnection.deleteMany({ where: { OR: [{ requesterId: id }, { receiverId: id }] } }),
+      this.prisma.comment.deleteMany({ where: { authorId: id } }),
+      this.prisma.thread.deleteMany({ where: { authorId: id } }),
+      this.prisma.supervisorProfile.deleteMany({ where: { userId: id } }),
+      this.prisma.scholarProfile.deleteMany({ where: { userId: id } }),
+      this.prisma.userInterest.deleteMany({ where: { userId: id } }),
+      this.prisma.notificationToken.deleteMany({ where: { userId: id } }),
+      this.prisma.notification.deleteMany({ where: { userId: id } }),
+      this.prisma.workspaceMember.deleteMany({ where: { userId: id } }),
+      this.prisma.user.delete({ where: { id } }),
+    ]);
+
     await this.logAudit(adminId, 'DELETE_SUPERVISOR', `Deleted supervisor ${user.email}`);
     return { success: true };
   }
@@ -177,7 +202,7 @@ export class AdminSupervisorsService {
       try {
         await this.prisma.user.create({
           data: {
-            name, email, role: Role.RESEARCH_SUPERVISOR, status: UserStatus.ACTIVE, approved: true, onboardingCompleted: true,
+            name, email, role: Role.RESEARCH_SUPERVISOR, status: UserStatus.ACTIVE, approved: true, onboardingCompleted: !!(facultyId && departmentId),
             faculty: facultyName, department: departmentName, departmentId, employeeId: employeeIdStr || null,
             supervisorProfile: facultyId && departmentId ? {
               create: { facultyId, departmentId, designation: designationStr, employeeId: employeeIdStr || `EMP-${Date.now()}-${Math.floor(Math.random() * 1000)}` }

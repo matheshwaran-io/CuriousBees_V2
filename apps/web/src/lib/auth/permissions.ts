@@ -21,6 +21,7 @@ import type { UserRole } from '@curiousbees/types';
  */
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   INSTITUTE_ADMIN: [
+    '/',
     '/admin',
     '/dashboard',
     '/events',
@@ -32,8 +33,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/nexus',
     '/notifications',
     '/institute-admin',
+    '/supervisor',
+    '/scholar',
+    '/publications',
+    '/reports',
+    '/my-scholars',
+    '/approval-requests',
+    '/chat',
   ],
   RESEARCH_SUPERVISOR: [
+    '/',
     '/dashboard',
     '/events',
     '/threads',
@@ -48,9 +57,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/notifications',
     '/approval-requests',
     '/supervisor',
+    '/scholar',
     '/chat',
   ],
   RESEARCH_SCHOLAR: [
+    '/',
     '/dashboard',
     '/events',
     '/threads',
@@ -94,6 +105,7 @@ export const PUBLIC_ROUTES: string[] = [
  * @param pathname The Next.js pathname being accessed (e.g. '/admin')
  */
 export function isRouteAllowedForRole(role: UserRole, pathname: string): boolean {
+  if (role === 'INSTITUTE_ADMIN') return true;
   const allowed = ROLE_PERMISSIONS[role] ?? [];
   return allowed.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
 }
