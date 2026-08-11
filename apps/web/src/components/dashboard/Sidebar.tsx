@@ -30,6 +30,7 @@ import {
   GraduationCap,
   Crown,
   Megaphone,
+  Network,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../Logo';
@@ -75,8 +76,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
           { name: 'Dashboard', href: '/supervisor', icon: LayoutDashboard },
           { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
           { name: 'Events', href: '/events', icon: CalendarIcon },
-          { name: 'Workspace', href: '/workspace', icon: FolderOpen },
-          { name: 'Chat & Collaboration', href: '/chat', icon: Users },
+          { name: 'Curious Nexus', href: '/nexus', icon: Network },
         ],
       },
       {
@@ -100,8 +100,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
         { name: 'Dashboard', href: '/scholar/dashboard', icon: LayoutDashboard },
         { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
         { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
-        { name: 'Workspace', href: '/scholar/workspaces', icon: FolderOpen },
-        { name: 'Chat & Collaboration', href: '/scholar/chat', icon: Users },
+        { name: 'Curious Nexus', href: '/nexus', icon: Network },
       ],
     },
   ];

@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { PremiumWorkspaceChat } from '@/components/workspaces/PremiumWorkspaceChat';
+import { CuriousNexusHub } from '@/components/nexus/CuriousNexusHub';
 
-export default function WorkspacesListPage() {
+export default function WorkspacePage() {
   return (
     <div className="w-full h-full">
-      <PremiumWorkspaceChat />
+      <CuriousNexusHub initialView="workspaces" />
     </div>
   );
 }
