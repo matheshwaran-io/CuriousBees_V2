@@ -608,4 +608,190 @@ export class UsersService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  // --- RESEARCHER NETWORK (FOLLOW) ---
+
+  async getResearchers(userId: string, query: { q?: string; role?: string; department?: string; interest?: string; page?: number; limit?: number }) {
+    const { q, role, department, interest, page = 1, limit = 20 } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { department: { contains: q, mode: 'insensitive' } },
+        { bio: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    if (role) {
+      where.role = role;
+    }
+    if (department) {
+      where.department = { equals: department, mode: 'insensitive' };
+    }
+    if (interest) {
+      where.interests = {
+        some: {
+          interest: {
+            name: { equals: interest, mode: 'insensitive' }
+          }
+        }
+      };
+    }
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          department: true,
+          bio: true,
+          image: true,
+          interests: { include: { interest: true } },
+          followers: { where: { followerId: userId }, select: { id: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    // get current user interests to compute shared interests
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { interests: { include: { interest: true } } }
+    });
+    const myInterests = currentUser?.interests.map(i => i.interest.name) || [];
+
+    const items = users.map(user => {
+      const userInterests = user.interests.map(i => i.interest.name);
+      const sharedInterests = userInterests.filter(i => myInterests.includes(i));
+      return {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        department: user.department,
+        bio: user.bio,
+        image: user.image,
+        researchInterests: userInterests,
+        isFollowing: user.followers.length > 0,
+        sharedInterestCount: sharedInterests.length,
+        sharedInterests
+      };
+    });
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total
+      }
+    };
+  }
+
+  async followUser(followerId: string, followingId: string) {
+    if (followerId === followingId) {
+      throw new BadRequestException('Cannot follow yourself');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({ where: { id: followingId } });
+    if (!targetUser) {
+      throw new BadRequestException('User not found');
+    }
+
+    try {
+      await this.prisma.userFollow.create({
+        data: {
+          followerId,
+          followingId
+        }
+      });
+    } catch (e) {
+      // Ignore if already following (Unique constraint violation)
+    }
+
+    return { success: true };
+  }
+
+  async unfollowUser(followerId: string, followingId: string) {
+    await this.prisma.userFollow.deleteMany({
+      where: {
+        followerId,
+        followingId
+      }
+    });
+
+    return { success: true };
+  }
+
+  async getFollowStatus(userId: string, targetId: string) {
+    const [isFollowing, followersCount, followingCount] = await Promise.all([
+      this.prisma.userFollow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: userId,
+            followingId: targetId
+          }
+        }
+      }),
+      this.prisma.userFollow.count({ where: { followingId: targetId } }),
+      this.prisma.userFollow.count({ where: { followerId: targetId } }),
+    ]);
+
+    return {
+      isFollowing: !!isFollowing,
+      followersCount,
+      followingCount
+    };
+  }
+
+  async getFollowers(targetId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [followers, total] = await Promise.all([
+      this.prisma.userFollow.findMany({
+        where: { followingId: targetId },
+        skip,
+        take: limit,
+        include: {
+          follower: {
+            select: { id: true, name: true, role: true, department: true, image: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      this.prisma.userFollow.count({ where: { followingId: targetId } })
+    ]);
+
+    return {
+      items: followers.map(f => f.follower),
+      pagination: { page, limit, total }
+    };
+  }
+
+  async getFollowing(targetId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [following, total] = await Promise.all([
+      this.prisma.userFollow.findMany({
+        where: { followerId: targetId },
+        skip,
+        take: limit,
+        include: {
+          following: {
+            select: { id: true, name: true, role: true, department: true, image: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      this.prisma.userFollow.count({ where: { followerId: targetId } })
+    ]);
+
+    return {
+      items: following.map(f => f.following),
+      pagination: { page, limit, total }
+    };
+  }
 }

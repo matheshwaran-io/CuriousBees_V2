@@ -33,6 +33,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { DashboardShell } from '@/components/shared/dashboard-shell';
 
 // ─── TYPES & INTERFACES ──────────────────────────────────────────────────────
@@ -121,6 +122,8 @@ const SCREENSHOT_THREADS: Thread[] = [
 
 export default function ThreadsFeedPage() {
   const { threads, searchQuery, setSearchQuery, activeTag, setActiveTag, isLoading, fetchData, currentUser, createThread, toggleLikeThread } = useStore();
+
+  const [feedTab, setFeedTab] = useState('For You');
 
   // State controls for input and local state overrides
   const [newPostContent, setNewPostContent] = useState('');
@@ -322,6 +325,24 @@ export default function ThreadsFeedPage() {
         {/* LEFT/CENTER COLUMN: FEED & COMPOSE */}
         <div className="flex flex-col gap-6">
           
+          {/* Feed Types Tab Bar */}
+          <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto">
+            {['For You', 'Following', 'My Department', 'Research Topics'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setFeedTab(tab)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer",
+                  feedTab === tab
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
           {/* Compose update box */}
           <div className="bg-white border border-slate-200/90 p-5 rounded-2xl shadow-sm text-left flex flex-col gap-4">
             <div className="flex items-start gap-4">

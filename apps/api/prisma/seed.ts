@@ -392,32 +392,147 @@ async function main() {
   console.log('✅ Created collaborative workspaces and sub-resources.');
 
   // 9. Create Events
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-  await prisma.event.create({
-    data: {
+  const eventsData = [
+    {
       title: 'PhD Viva Defense: GPGPU Virtualization & LLM Tuning',
-      date: new Date(today),
+      date: new Date(year, month, 11),
       time: '10:00 AM',
       venue: 'ECE Seminar Hall (PG Block)',
       status: 'PUBLISHED',
-      eventType: 'Defense',
-      priority: 'HIGH'
-    }
-  });
-
-  await prisma.event.create({
-    data: {
+      eventType: 'Thesis Presentations',
+      priority: 'HIGH',
+      description: 'PhD candidate presentation on virtualization of GPGPU resources for large language model tuning.'
+    },
+    {
       title: 'Seminar: DNA-functionalized Silicon Photonics Ring Resonators',
-      date: new Date(tomorrow),
+      date: new Date(year, month, 12),
       time: '02:30 PM',
       venue: 'Biotech Conference Room',
       status: 'PUBLISHED',
-      eventType: 'Seminar',
-      priority: 'MEDIUM'
+      eventType: 'Research Seminars',
+      priority: 'MEDIUM',
+      description: 'Keynote seminar detailing biosensor technology using silicon photonics ring resonators.'
+    },
+    {
+      title: 'International Conference on Generative AI & Academic Collaboration',
+      date: new Date(year, month, 14),
+      time: '09:00 AM - 05:00 PM',
+      venue: 'Tech Park Auditorium',
+      status: 'PUBLISHED',
+      eventType: 'Conferences',
+      priority: 'HIGH',
+      description: 'Annual academic conference on generative models and tools for scholarly collaboration.'
+    },
+    {
+      title: 'Hands-on Workshop: Parameter-Efficient Fine-Tuning (PEFT) on GPU Clusters',
+      date: new Date(year, month, 15),
+      time: '11:00 AM - 01:30 PM',
+      venue: 'CSE Department Lab 3',
+      status: 'PUBLISHED',
+      eventType: 'Workshops',
+      priority: 'HIGH',
+      description: 'An interactive session demonstrating Lora and QLora optimizations for open-weight LLMs.'
+    },
+    {
+      title: 'Research Seminar: Waveguide Modulators in Silicon Photonics',
+      date: new Date(year, month, 18),
+      time: '03:00 PM - 04:30 PM',
+      venue: 'Nanotechnology Seminar Hall',
+      status: 'PUBLISHED',
+      eventType: 'Research Seminars',
+      priority: 'MEDIUM',
+      description: 'Dr. Ramesh Kumar presents recent breakthroughs in high-speed optical waveguides.'
+    },
+    {
+      title: 'PhD Thesis Defense: Graph Neural Networks in Bioinformatics',
+      date: new Date(year, month, 20),
+      time: '10:00 AM - 12:00 PM',
+      venue: 'PG Block Conference Hall',
+      status: 'PUBLISHED',
+      eventType: 'Thesis Presentations',
+      priority: 'CRITICAL',
+      description: 'PhD candidate Divya Nambiar defends her dissertation on oncology modeling.'
+    },
+    {
+      title: 'Research Seminar: Smart Grid Optimization using Deep Reinforcement Learning',
+      date: new Date(year, month, 22),
+      time: '02:00 PM - 03:30 PM',
+      venue: 'EEE Seminar Hall',
+      status: 'PUBLISHED',
+      eventType: 'Research Seminars',
+      priority: 'MEDIUM',
+      description: 'Analysis and optimization of energy distribution networks using reinforcement learning techniques.'
+    },
+    {
+      title: 'National Interdisciplinary Hackathon: CuriousBees Hack 2026',
+      date: new Date(year, month, 24),
+      time: '08:00 AM - 08:00 PM',
+      venue: 'University Central Library',
+      status: 'PUBLISHED',
+      eventType: 'Competitions',
+      priority: 'HIGH',
+      description: '24-hour hackathon targeting smart city, bio-sensors, and healthcare challenges.'
+    },
+    {
+      title: 'Workshop: Writing Successful DST-SERB Grant Proposals',
+      date: new Date(year, month, 26),
+      time: '10:00 AM - 01:00 PM',
+      venue: 'SOM Boardroom',
+      status: 'PUBLISHED',
+      eventType: 'Workshops',
+      priority: 'HIGH',
+      description: 'Guided workshop for drafting, structuring, and submitting core research proposals.'
+    },
+    {
+      title: 'Conference: Computational Oncology Modality Summit',
+      date: new Date(year, month, 28),
+      time: '09:30 AM - 04:00 PM',
+      venue: 'Biotech Conference Room',
+      status: 'PUBLISHED',
+      eventType: 'Conferences',
+      priority: 'HIGH',
+      description: 'Exploring molecular models and cancer immunotherapies with top computer scientists.'
+    },
+    {
+      title: 'Thesis Presentations: VLSI System Design & Transceiver Modulators',
+      date: new Date(year, month, 29),
+      time: '11:30 AM - 01:00 PM',
+      venue: 'ECE Seminar Hall (PG Block)',
+      status: 'PUBLISHED',
+      eventType: 'Thesis Presentations',
+      priority: 'MEDIUM',
+      description: 'Academic presentation by ECE scholars on transceiver circuit layouts.'
+    },
+    {
+      title: 'Competitions: Bioinformatics Design Contest',
+      date: new Date(year, month, 30),
+      time: '01:00 PM - 05:00 PM',
+      venue: 'Health Sciences Block',
+      status: 'PUBLISHED',
+      eventType: 'Competitions',
+      priority: 'MEDIUM',
+      description: 'Inter-departmental competition for molecular sequencing algorithms.'
     }
-  });
+  ];
+
+  for (const e of eventsData) {
+    await prisma.event.create({
+      data: {
+        title: e.title,
+        date: e.date,
+        time: e.time,
+        venue: e.venue,
+        status: e.status as any,
+        eventType: e.eventType,
+        priority: e.priority as any,
+        description: e.description
+      }
+    });
+  }
   console.log('✅ Created events.');
 
   // 10. Notifications

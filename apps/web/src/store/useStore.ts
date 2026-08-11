@@ -95,8 +95,8 @@ interface AppState {
   updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
   fetchEvents: (showIndicator?: boolean) => Promise<Event[]>;
 
-  createEvent: (title: string, date: string, time: string, venue: string) => Promise<Event>;
-  updateEvent: (id: string, title: string, date: string, time: string, venue: string) => Promise<Event>;
+  createEvent: (title: string, date: string, time: string, venue: string, description?: string, eventType?: string) => Promise<Event>;
+  updateEvent: (id: string, title: string, date: string, time: string, venue: string, description?: string, eventType?: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
   logout: () => void;
 
@@ -806,13 +806,13 @@ export const useStore = create<AppState>((set, get) => ({
 
 
 
-  createEvent: async (title, date, time, venue) => {
+  createEvent: async (title, date, time, venue, description, eventType) => {
     set({ isLoading: true });
     try {
       const res = await apiFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, date, time, venue }),
+        body: JSON.stringify({ title, date, time, venue, description, eventType }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -825,13 +825,13 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  updateEvent: async (id, title, date, time, venue) => {
+  updateEvent: async (id, title, date, time, venue, description, eventType) => {
     set({ isLoading: true });
     try {
-      const res = await apiFetch('/api/events', {
+      const res = await apiFetch(`/api/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, title, date, time, venue }),
+        body: JSON.stringify({ title, date, time, venue, description, eventType }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -849,10 +849,8 @@ export const useStore = create<AppState>((set, get) => ({
   deleteEvent: async (id) => {
     set({ isLoading: true });
     try {
-      const res = await apiFetch('/api/events', {
+      const res = await apiFetch(`/api/events/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
       });
       if (res.ok) {
         const data = await res.json();

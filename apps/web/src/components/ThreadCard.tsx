@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Thread } from '@curiousbees/types';
-import { MessageSquare, Calendar, ChevronRight } from 'lucide-react';
+import { MessageSquare, Calendar, ChevronRight, Heart, Repeat, Bookmark, Handshake } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ThreadCardProps {
@@ -11,6 +12,11 @@ interface ThreadCardProps {
 }
 
 export default function ThreadCard({ thread }: ThreadCardProps) {
+  const router = useRouter();
+  const [likesCount, setLikesCount] = useState(thread._count?.likes || 0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
   const formatDate = (dateStr: string | Date) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -21,85 +27,110 @@ export default function ThreadCard({ thread }: ThreadCardProps) {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  const handleCollaborate = () => {
+    if (thread.author?.id) {
+      router.push(`/nexus?userId=${thread.author.id}`);
+    }
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="w-full text-left"
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm hover:shadow-md transition-all group"
     >
-      <div className="cb-card-hover p-5 md:p-6 relative group flex flex-col justify-between bg-white/95 backdrop-blur-md">
-        {/* Thread Author Profile & Title */}
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 select-none">
-            <div className="flex items-center space-x-3">
-              {/* Profile Avatar */}
-              {thread.author?.image ? (
-                <img src={thread.author.image} className="w-[34px] h-[34px] rounded-full object-cover border border-slate-200" alt="" />
-              ) : (
-                <div className="w-[34px] h-[34px] rounded-full bg-primary/5 border border-primary/10 flex items-center justify-center font-display font-bold text-primary text-[12px] shrink-0">
-                  {getInitials(thread.author?.name || undefined)}
-                </div>
-              )}
-              
-              <div className="text-left font-sans">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold text-slate-900 leading-none">
-                    {thread.author?.name || 'Academic Scholar'}
-                  </span>
-                  <span className="bg-slate-50 border border-slate-200/60 text-slate-500 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full leading-none">
-                    {thread.author?.role === 'RESEARCH_SUPERVISOR' ? 'Faculty' : 'Scholar'}
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-none">
-                  {thread.author?.department?.split('(')[0].trim() || 'SRMIST'}
-                </p>
-              </div>
+      <div className="flex items-start space-x-4">
+        {/* Author Avatar */}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+          {thread.author?.image ? (
+            <img src={thread.author.image} alt={thread.author.name || ''} className="w-full h-full object-cover" />
+          ) : (
+            <span>{getInitials(thread.author?.name || undefined)}</span>
+          )}
+        </div>
+
+        {/* Content Wrapper */}
+        <div className="flex-1 min-w-0">
+          
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+            <div>
+              <Link href={`/researchers/${thread.author?.id || '#'}`} className="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors">
+                {thread.author?.name || 'Anonymous Researcher'}
+              </Link>
+              <p className="text-[11px] font-medium text-slate-500">
+                {thread.author?.role === 'RESEARCH_SUPERVISOR' ? 'Supervisor' : 'Scholar'} • {thread.author?.department || 'SRMIST'}
+              </p>
             </div>
-            
+
             <div className="flex items-center text-[10px] text-slate-400 font-bold uppercase space-x-1.5 shrink-0 self-start sm:self-center">
-              <Calendar className="w-3.5 h-3.5 text-slate-450 shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>{formatDate(thread.createdAt)}</span>
             </div>
           </div>
- 
+
           {/* Thread Title & Preview */}
-          <Link href={`/threads/${thread.id}`} className="block focus:outline-none mb-4 space-y-1">
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors leading-snug">
+          <Link href={`/threads/${thread.id}`} className="block focus:outline-none mb-3 space-y-1">
+            <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug">
               {thread.title}
             </h3>
-            <p className="text-slate-500 font-sans font-medium text-xs leading-relaxed line-clamp-2">
+            <p className="text-slate-600 font-sans font-normal text-xs leading-relaxed line-clamp-3">
               {thread.content}
             </p>
           </Link>
-        </div>
 
-        {/* Tags and Comments Bottom Row */}
-        <div className="flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 mt-2 gap-3">
-          
           {/* Thread tags */}
-          <div className="flex flex-wrap gap-1.5">
-            {thread.tags.map((tag) => (
-              <span key={tag} className="bg-[#0c4da2]/2 border border-[#0c4da2]/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded">
-                #{tag}
-              </span>
-            ))}
-          </div>
+          {thread.tags && thread.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {thread.tags.map((tag) => (
+                <span key={tag} className="bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
 
-          {/* Comment Count & Link */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center text-[11px] text-slate-400 font-bold space-x-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>{thread.comments?.length || thread._count?.comments || 0} Comments</span>
+          {/* Engagement Bar */}
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => {
+                  setIsLiked(!isLiked);
+                  setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+                }}
+                className={`flex items-center gap-1 hover:text-red-500 transition-colors ${isLiked ? 'text-red-500 font-bold' : ''}`}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                <span>{likesCount}</span>
+              </button>
+
+              <Link href={`/threads/${thread.id}`} className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+                <MessageSquare className="w-4 h-4" />
+                <span>{thread.comments?.length || thread._count?.comments || 0}</span>
+              </Link>
+
+              <button className="flex items-center gap-1 hover:text-indigo-600 transition-colors">
+                <Repeat className="w-4 h-4" />
+                <span>{thread._count?.shares || 0}</span>
+              </button>
             </div>
 
-            <Link 
-              href={`/threads/${thread.id}`} 
-              className="flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-700 hover:text-primary group-hover:translate-x-0.5 transition-all"
-            >
-              <span>View Thread</span>
-              <ChevronRight className="w-3.5 h-3.5 ml-0.5 text-slate-400 group-hover:text-primary transition-colors" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCollaborate}
+                className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100 transition-colors"
+              >
+                <Handshake className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Collaborate</span>
+              </button>
+
+              <button
+                onClick={() => setIsSaved(!isSaved)}
+                className={`p-1.5 rounded-lg hover:bg-slate-100 transition-colors ${isSaved ? 'text-indigo-600' : 'text-slate-400'}`}
+              >
+                <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+              </button>
+            </div>
           </div>
 
         </div>

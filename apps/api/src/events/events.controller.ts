@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
@@ -69,30 +69,36 @@ export class EventsController {
 
   @Post()
   async createEvent(
-    @Body() body: { title: string; date: string; time: string; venue: string; description?: string }
+    @Req() req: any,
+    @Body() body: { title: string; date: string; time: string; venue: string; description?: string, eventType?: string }
   ) {
-    return this.eventsService.createEvent(body);
+    return this.eventsService.createEvent(req.user, body);
   }
 
   @Put(':id')
   async updateEvent(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() body: Prisma.EventUpdateInput
   ) {
-    return this.eventsService.updateEvent(id, body);
+    return this.eventsService.updateEvent(req.user, id, body);
   }
 
   @Patch(':id/status')
   async updateEventStatus(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() body: { status: EventStatus }
   ) {
-    return this.eventsService.updateEventStatus(id, body.status);
+    return this.eventsService.updateEventStatus(req.user, id, body.status);
   }
 
   @Delete(':id')
-  async deleteEvent(@Param('id') id: string) {
-    return this.eventsService.deleteEvent(id);
+  async deleteEvent(
+    @Req() req: any,
+    @Param('id') id: string
+  ) {
+    return this.eventsService.deleteEvent(req.user, id);
   }
 }
 

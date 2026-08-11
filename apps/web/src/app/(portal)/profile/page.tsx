@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
+import { PremiumProfileView } from '@/components/profile/PremiumProfileView';
 import { SRM_DEPARTMENTS } from '@curiousbees/shared-utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -135,6 +136,16 @@ export default function ProfilePage() {
   const publicationsVal = userThreads.length > 0 ? userThreads.length : (isFaculty ? 12 : 3);
   const thirdStatName = isFaculty ? 'Active Grants' : 'Synergy Matches';
   const thirdStatVal = isFaculty ? 8 : '94%';
+
+  if (!isEditing) {
+    return (
+      <PremiumProfileView 
+        user={currentUser} 
+        isOwnProfile={true} 
+        onEditClick={() => setIsEditing(true)} 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto select-none">

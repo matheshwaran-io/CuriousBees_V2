@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, Query, UseGuards, Req, BadRequestException, Param } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, Query, UseGuards, Req, BadRequestException, Param, Delete } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from '@curiousbees/types';
@@ -162,5 +162,60 @@ export class UsersController {
   @Get('pending-supervisors')
   async getPendingSupervisors(@Req() req: any) {
     return this.usersService.getPendingSupervisors(req.user.id);
+  }
+
+  // --- RESEARCHER NETWORK (FOLLOW) ---
+
+  @Get('researchers')
+  async getResearchers(
+    @Req() req: any,
+    @Query('q') q?: string,
+    @Query('role') role?: string,
+    @Query('department') department?: string,
+    @Query('interest') interest?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string
+  ) {
+    return this.usersService.getResearchers(req.user.id, {
+      q,
+      role,
+      department,
+      interest,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20
+    });
+  }
+
+  @Post(':id/follow')
+  async followUser(@Req() req: any, @Param('id') targetId: string) {
+    return this.usersService.followUser(req.user.id, targetId);
+  }
+
+  @Delete(':id/follow')
+  async unfollowUser(@Req() req: any, @Param('id') targetId: string) {
+    return this.usersService.unfollowUser(req.user.id, targetId);
+  }
+
+  @Get(':id/follow-status')
+  async getFollowStatus(@Req() req: any, @Param('id') targetId: string) {
+    return this.usersService.getFollowStatus(req.user.id, targetId);
+  }
+
+  @Get(':id/followers')
+  async getFollowers(
+    @Param('id') targetId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20'
+  ) {
+    return this.usersService.getFollowers(targetId, parseInt(page, 10), parseInt(limit, 10));
+  }
+
+  @Get(':id/following')
+  async getFollowing(
+    @Param('id') targetId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20'
+  ) {
+    return this.usersService.getFollowing(targetId, parseInt(page, 10), parseInt(limit, 10));
   }
 }
