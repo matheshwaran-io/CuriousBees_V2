@@ -231,9 +231,14 @@ export default function SupervisorsTab() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Department</label>
-                    <select value={addDept} onChange={e => setAddDept(e.target.value)} disabled={!addFaculty} className="cb-input w-full cursor-pointer disabled:opacity-50">
+                    <select value={addDept} onChange={e => {
+                      const deptId = e.target.value;
+                      setAddDept(deptId);
+                      const dObj = departments.find(d => d.id === deptId);
+                      if (dObj?.facultyId) setAddFaculty(dObj.facultyId);
+                    }} className="cb-input w-full cursor-pointer">
                       <option value="">Select Department...</option>
-                      {departments.filter(d => d.facultyId === addFaculty).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      {(addFaculty ? departments.filter(d => d.facultyId === addFaculty) : departments).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">

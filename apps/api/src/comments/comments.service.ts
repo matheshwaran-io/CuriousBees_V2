@@ -70,4 +70,66 @@ export class CommentsService {
 
     return newComment;
   }
+
+  async updateComment(commentId: string, userId: string, content: string) {
+    if (!content || !content.trim()) {
+      throw new BadRequestException('Comment content cannot be empty.');
+    }
+
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId }
+    });
+
+    if (!comment) {
+      throw new BadRequestException('Comment not found.');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (comment.authorId !== userId && user?.role !== 'INSTITUTE_ADMIN') {
+      throw new BadRequestException('You do not have permission to edit this comment.');
+    }
+
+    return this.prisma.comment.update({
+      where: { id: commentId },
+      data: { content: content.trim() },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            role: true,
+            department: true
+          }
+        }
+      }
+    });
+  }
+
+  async deleteComment(commentId: string, userId: string) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { thread: true }
+    });
+
+    if (!comment) {
+      throw new BadRequestException('Comment not found.');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const isAuthor = comment.authorId === userId;
+    const isThreadAuthor = comment.thread.authorId === userId;
+    const isAdmin = user?.role === 'INSTITUTE_ADMIN';
+
+    if (!isAuthor && !isThreadAuthor && !isAdmin) {
+      throw new BadRequestException('You do not have permission to delete this comment.');
+    }
+
+    await this.prisma.comment.delete({
+      where: { id: commentId }
+    });
+
+    return { success: true };
+  }
 }

@@ -121,7 +121,7 @@ const SCREENSHOT_THREADS: Thread[] = [
 ];
 
 export default function ThreadsFeedPage() {
-  const { threads, searchQuery, setSearchQuery, activeTag, setActiveTag, isLoading, fetchData, currentUser, createThread } = useStore();
+  const { threads, searchQuery, setSearchQuery, activeTag, setActiveTag, isLoading, fetchData, currentUser, createThread, toggleLikeThread } = useStore();
 
   const [feedTab, setFeedTab] = useState('For You');
 
@@ -144,6 +144,7 @@ export default function ThreadsFeedPage() {
   const getCombinedThreads = (): Thread[] => {
     const dbThreadsMapped: Thread[] = threads.map(t => {
       const isPaperType = t.title.toLowerCase().includes('paper') || t.content.toLowerCase().includes('publication');
+      const isLikedByMe = Array.isArray((t as any).likes) && (t as any).likes.length > 0;
       return {
         id: t.id,
         title: t.title,
@@ -162,7 +163,8 @@ export default function ThreadsFeedPage() {
         },
         tags: t.tags,
         commentsCount: t.comments?.length || t._count?.comments || 0,
-        likesCount: 12,
+        likesCount: (t._count as any)?.likes ?? 0,
+        isLikedByMe,
         collaboratorsCount: 2,
         badge: t.author?.role === 'RESEARCH_SUPERVISOR' ? 'FACULTY ANNOUNCEMENT' : 'COLLABORATION REQUEST',
         isPaper: isPaperType,
@@ -229,18 +231,28 @@ export default function ThreadsFeedPage() {
     }
   };
 
-  // Toggle Like Action locally
-  const toggleLike = (threadId: string, initialLikes: number) => {
-    setLikes(prev => {
-      const current = prev[threadId] || { count: initialLikes, liked: false };
-      return {
+  // Toggle Like Action via API
+  const toggleLike = async (threadId: string, initialLikes: number, initialLiked: boolean) => {
+    const current = likes[threadId] || { count: initialLikes, liked: initialLiked };
+    setLikes(prev => ({
+      ...prev,
+      [threadId]: {
+        count: current.liked ? Math.max(0, current.count - 1) : current.count + 1,
+        liked: !current.liked
+      }
+    }));
+    try {
+      const res = await toggleLikeThread(threadId);
+      setLikes(prev => ({
         ...prev,
         [threadId]: {
-          count: current.liked ? current.count - 1 : current.count + 1,
-          liked: !current.liked
+          count: typeof res.likesCount === 'number' ? res.likesCount : (res.liked ? current.count + 1 : Math.max(0, current.count - 1)),
+          liked: res.liked
         }
-      };
-    });
+      }));
+    } catch (e) {
+      setLikes(prev => ({ ...prev, [threadId]: current }));
+    }
   };
 
   // Toggle Collaborate Action locally
@@ -411,7 +423,8 @@ export default function ThreadsFeedPage() {
                 </div>
               ) : (
                 filteredThreads.map((thread) => {
-                  const likeState = likes[thread.id] || { count: thread.likesCount, liked: false };
+                  const isInitiallyLiked = Boolean((thread as any).isLikedByMe);
+                  const likeState = likes[thread.id] || { count: thread.likesCount, liked: isInitiallyLiked };
                   const isCollab = collaborating[thread.id];
                   const initials = getInitials(thread.author?.name);
                   
@@ -509,7 +522,7 @@ export default function ThreadsFeedPage() {
                       <div className="flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 mt-2 gap-3">
                         <div className="flex items-center gap-4">
                           <button 
-                            onClick={() => toggleLike(thread.id, thread.likesCount)}
+                            onClick={() => toggleLike(thread.id, thread.likesCount, isInitiallyLiked)}
                             className={`flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
                               likeState.liked ? 'text-rose-600' : 'text-slate-450 hover:text-slate-700'
                             }`}

@@ -25,7 +25,8 @@ export function getRoleForEmail(email: string): UserRole {
   const normalized = email.trim().toLowerCase();
   const username = normalized.split('@')[0];
 
-  if (normalized === 'r.matheshwaran.io@gmail.com') {
+  const mainAdmin = (process.env.NEXT_PUBLIC_MAIN_ADMIN_EMAIL || 'lokesh0212004@gmail.com').toLowerCase();
+  if (normalized === mainAdmin || normalized === 'lokesh0212004@gmail.com') {
     return 'INSTITUTE_ADMIN';
   }
 

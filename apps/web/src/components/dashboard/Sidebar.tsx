@@ -18,6 +18,7 @@ import {
   Calendar as CalendarIcon,
   Users,
   FolderOpen,
+  Mail,
   Building,
   Shield,
   UserCog,
@@ -30,7 +31,7 @@ import {
   GraduationCap,
   Crown,
   Megaphone,
-  Network,
+  Bookmark,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../Logo';
@@ -57,6 +58,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
         label: 'ADMIN CONSOLE',
         items: [
           { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+          { name: 'Inbound Email Events', href: '/admin/events', icon: Mail },
           { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
           { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
           { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
@@ -115,6 +117,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
       label: 'RESEARCH',
       items: [
         { name: 'Research Feed', href: '/scholar/feed', icon: MessageSquare },
+        { name: 'Saved Posts', href: '/scholar/saved', icon: Bookmark },
         { name: 'Dashboard', href: '/scholar/dashboard', icon: LayoutDashboard },
         { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
         { name: 'Events', href: '/scholar/events', icon: CalendarIcon },

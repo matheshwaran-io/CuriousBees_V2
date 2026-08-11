@@ -77,7 +77,6 @@ model User {
 
   // Feed/Post relations
   threadLikes          ThreadLike[]
-  threadShares         ThreadShare[]
   threadReports        ThreadReport[]
   savedThreads         SavedThread[]
   connectionsRequested ResearchConnection[] @relation("ConnectionRequester")
@@ -145,7 +144,6 @@ model Thread {
   comments  Comment[]
   attachments ThreadAttachment[]
   likes       ThreadLike[]
-  shares      ThreadShare[]
   reports     ThreadReport[]
   saves       SavedThread[]
   collaborationRequests CollaborationRequest[]
@@ -569,20 +567,6 @@ model ThreadLike {
   @@index([userId])
 }
 
-model ThreadShare {
-  id        String   @id @default(cuid())
-  threadId  String
-  userId    String
-  platform  String?
-  createdAt DateTime @default(now())
-
-  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([threadId])
-  @@index([userId])
-}
-
 model ThreadReport {
   id          String   @id @default(cuid())
   threadId    String
@@ -633,4 +617,17 @@ model ResearchConnection {
   @@unique([requesterId, receiverId])
   @@index([requesterId])
   @@index([receiverId])
+}
+
+model PendingEmailEvent {
+  id          String   @id @default(cuid())
+  senderEmail String
+  title       String
+  speaker     String?
+  date        DateTime
+  time        String
+  venue       String
+  department  String?
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
 }

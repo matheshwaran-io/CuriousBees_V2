@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Role, UserStatus } from '@prisma/client';
 import * as xlsx from 'xlsx';
 
+import { SUPERADMIN_EMAIL } from './admin.constants';
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -10,7 +12,7 @@ export class AdminService {
   constructor(private prisma: PrismaService) {}
 
   /** Superadmin is permanently protected — no role change, suspension, or deletion */
-  private readonly SUPERADMIN_EMAIL = 'r.matheshwaran.io@gmail.com';
+  private readonly SUPERADMIN_EMAIL = SUPERADMIN_EMAIL;
 
   async getUsers() {
     return this.prisma.user.findMany({

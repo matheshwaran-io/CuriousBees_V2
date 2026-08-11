@@ -26,7 +26,6 @@ interface ShareThread {
   };
   tags?: string[];
   _count?: {
-    shares?: number;
     likes?: number;
     comments?: number;
   };
@@ -182,19 +181,9 @@ export default function ShareModal({ isOpen, onClose, thread, onShareSuccess }: 
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen, onClose]);
 
-  // Track share analytics
-  const trackShare = useCallback(async (platform: string) => {
-    try {
-      await apiFetch(`/api/threads/${thread.id}/share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform }),
-      });
-      onShareSuccess?.(platform);
-    } catch {
-      // Silent fail for analytics
-    }
-  }, [thread.id, onShareSuccess]);
+  const trackShare = useCallback((platform: string) => {
+    onShareSuccess?.(platform);
+  }, [onShareSuccess]);
 
   const handlePlatform = async (platformId: string) => {
     if (platformId === 'COPY_LINK') {

@@ -72,7 +72,9 @@ interface AppState {
   fetchCollaborators: (search?: string, department?: string) => Promise<User[]>;
   createThread: (title: string, content: string, tags: string[], options?: { type?: any; isPaper?: boolean; paperJournal?: string | null; attachments?: any[] }) => Promise<Thread>;
   addComment: (threadId: string, content: string, parentId?: string) => Promise<Comment>;
-  toggleLikeThread: (threadId: string) => Promise<{ liked: boolean }>;
+  updateComment: (commentId: string, threadId: string, content: string) => Promise<Comment>;
+  deleteComment: (commentId: string, threadId: string) => Promise<void>;
+  toggleLikeThread: (threadId: string) => Promise<{ liked: boolean; likesCount?: number }>;
   toggleSaveThread: (threadId: string) => Promise<{ saved: boolean }>;
   shareThread: (threadId: string, platform?: string) => Promise<void>;
   reportThread: (threadId: string, reason: string, description?: string) => Promise<void>;
@@ -80,6 +82,7 @@ interface AppState {
   deleteThread: (threadId: string) => Promise<void>;
   updateThread: (threadId: string, data: Partial<{ title: string; content: string; tags: string[]; type: any; isPaper: boolean }>) => Promise<Thread>;
   getSavedThreads: () => Promise<Thread[]>;
+  getLikedThreads: () => Promise<Thread[]>;
   deleteThreadLocally: (threadId: string) => void;
   updateThreadLocally: (threadId: string, data: Thread) => void;
   toggleSaveThreadLocally: (threadId: string, saved: boolean, userId: string) => void;
@@ -419,6 +422,18 @@ export const useStore = create<AppState>((set, get) => ({
         return;
       }
 
+      if (type === 'LIKED') {
+        const res = await apiFetch('/api/threads/liked');
+        if (res.ok) {
+          const threads = await res.json();
+          set({ threads });
+        } else {
+          const err = await readApiError(res);
+          get().addToast(`Failed to load liked posts: ${err}`, 'error');
+        }
+        return;
+      }
+
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (type && type !== 'ALL') params.append('type', type);
@@ -528,6 +543,51 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  updateComment: async (commentId, threadId, content) => {
+    const res = await apiFetch(`/api/comments/${commentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (res.ok) {
+      const updatedComment = await res.json();
+      set(state => ({
+        threads: state.threads.map(t => {
+          if (t.id === threadId && t.comments) {
+            return {
+              ...t,
+              comments: t.comments.map(c => c.id === commentId ? updatedComment : c)
+            };
+          }
+          return t;
+        })
+      }));
+      return updatedComment;
+    }
+    const err = await readApiError(res);
+    throw new Error(err || 'Failed to update comment');
+  },
+
+  deleteComment: async (commentId, threadId) => {
+    const res = await apiFetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+    if (res.ok) {
+      set(state => ({
+        threads: state.threads.map(t => {
+          if (t.id === threadId && t.comments) {
+            return {
+              ...t,
+              comments: t.comments.filter(c => c.id !== commentId)
+            };
+          }
+          return t;
+        })
+      }));
+      return;
+    }
+    const err = await readApiError(res);
+    throw new Error(err || 'Failed to delete comment');
+  },
+
   toggleLikeThread: async (threadId) => {
     const res = await apiFetch(`/api/threads/${threadId}/like`, { method: 'POST' });
     if (res.ok) return await res.json();
@@ -540,13 +600,9 @@ export const useStore = create<AppState>((set, get) => ({
     throw new Error('Failed to save thread');
   },
 
-  shareThread: async (threadId, platform) => {
-    const res = await apiFetch(`/api/threads/${threadId}/share`, { 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform })
-    });
-    if (!res.ok) throw new Error('Failed to share thread');
+  shareThread: async (_threadId, _platform) => {
+    // Client-side sharing only; no database persistence
+    return;
   },
 
   reportThread: async (threadId, reason, description) => {
@@ -594,6 +650,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   getSavedThreads: async () => {
     const res = await apiFetch('/api/threads/saved');
+    if (res.ok) return await res.json();
+    return [];
+  },
+
+  getLikedThreads: async () => {
+    const res = await apiFetch('/api/threads/liked');
     if (res.ok) return await res.json();
     return [];
   },

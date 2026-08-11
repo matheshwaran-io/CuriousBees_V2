@@ -4,26 +4,26 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/store/useStore';
-import { 
-  Search, 
-  Plus, 
-  MessageSquare, 
-  Tag, 
-  RefreshCcw, 
-  X, 
-  Heart, 
-  Share2, 
-  UserPlus, 
-  Check, 
-  Sparkles, 
-  Paperclip, 
-  Image as ImageIcon, 
-  FileText, 
-  Bookmark, 
-  TrendingUp, 
-  User, 
-  Bell, 
-  Settings, 
+import {
+  Search,
+  Plus,
+  MessageSquare,
+  Tag,
+  RefreshCcw,
+  X,
+  Heart,
+  Share2,
+  UserPlus,
+  Check,
+  Sparkles,
+  Paperclip,
+  Image as ImageIcon,
+  FileText,
+  Bookmark,
+  TrendingUp,
+  User,
+  Bell,
+  Settings,
   ExternalLink,
   ChevronRight,
   Send,
@@ -95,8 +95,8 @@ export default function ScholarFeedPage() {
   const urlSearch = searchParams.get('q') || '';
   const currentSort = (searchParams.get('sort') as 'latest' | 'top') || 'latest';
 
-  const { 
-    threads, feedCounts, searchQuery, setSearchQuery, activeTag, setActiveTag, 
+  const {
+    threads, feedCounts, searchQuery, setSearchQuery, activeTag, setActiveTag,
     isLoading, fetchFeedThreads, fetchFeedCounts, currentUser, createThread,
     toggleLikeThread, requestThreadCollaboration, shareThread, reportThread, connectWithPeer,
     toggleSaveThread, deleteThread, toggleSaveThreadLocally, addToast, fetchSuggestedPeers, fetchTrendingResearch
@@ -106,12 +106,12 @@ export default function ScholarFeedPage() {
   const [postType, setPostType] = useState('RESEARCH_UPDATE');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedAttachment, setSelectedAttachment] = useState<{name: string, size: string, url: string, type: string, rawSize: number, isPaper?: boolean} | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<{ name: string, size: string, url: string, type: string, rawSize: number, isPaper?: boolean } | null>(null);
 
   const [likes, setLikes] = useState<Record<string, { count: number; liked: boolean }>>({});
   const [collaborating, setCollaborating] = useState<Record<string, boolean>>({});
   const [peers, setPeers] = useState<Peer[]>([]);
-  const [trendingTags, setTrendingTags] = useState<Array<{tag: string, count: number}>>([]);
+  const [trendingTags, setTrendingTags] = useState<Array<{ tag: string, count: number }>>([]);
   const [activeFilter, setActiveFilter] = useState('Posts');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
@@ -119,8 +119,6 @@ export default function ScholarFeedPage() {
   const [reportingPost, setReportingPost] = useState<any | null>(null);
   const [deletingPost, setDeletingPost] = useState<any | null>(null);
   const [sharingPost, setSharingPost] = useState<any | null>(null);
-  // track optimistic share counts
-  const [shareCounts, setShareCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const savedDraft = localStorage.getItem('curiousbees_post_draft');
@@ -183,9 +181,9 @@ export default function ScholarFeedPage() {
     router.push(`?${params.toString()}`);
   };
 
-  // Combine database threads with screenshot mock threads
   const getCombinedThreads = (): Thread[] => {
     return threads.map(t => {
+      const isLikedByMe = Array.isArray((t as any).likes) && (t as any).likes.length > 0;
       return {
         id: t.id,
         title: t.title,
@@ -202,7 +200,8 @@ export default function ScholarFeedPage() {
         tags: t.tags,
         commentsCount: t.comments?.length || (t as any)._count?.comments || 0,
         likesCount: (t as any)._count?.likes || 0,
-        collaboratorsCount: (t as any)._count?.shares || 0, // Fallback
+        isLikedByMe,
+        collaboratorsCount: (t as any).collaborationRequests?.length || 0,
         badge: (t as any).type ? (t as any).type.replace('_', ' ') : undefined,
         rawType: (t as any).type,
         isPaper: t.isPaper,
@@ -216,12 +215,12 @@ export default function ScholarFeedPage() {
 
   // Filter threads based on search query or activeTag
   const filteredThreads = getCombinedThreads().filter(t => {
-    const matchesSearch = 
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch =
+      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (t.author?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesTag = activeTag === '' || t.tags.includes(activeTag);
     return matchesSearch && matchesTag;
   });
@@ -267,7 +266,7 @@ export default function ScholarFeedPage() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
       const bucket = 'curiousbees-storage'; // Will fallback to public if not created
-      
+
       const { data, error } = await supabase.storage.from(bucket).upload(fileName, file, { upsert: true });
       if (error) {
         console.error('Upload failed, ensure bucket exists and has correct RLS:', error);
@@ -281,7 +280,7 @@ export default function ScholarFeedPage() {
         });
         return;
       }
-      
+
       const isPaper = e.target.id === 'paper-upload';
       const url = getStoragePublicUrl(bucket, fileName);
       setSelectedAttachment({
@@ -292,7 +291,7 @@ export default function ScholarFeedPage() {
         rawSize: file.size,
         isPaper
       });
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     } finally {
       setIsUploading(false);
@@ -306,7 +305,7 @@ export default function ScholarFeedPage() {
 
   const handlePostUpdate = async () => {
     if (!newPostContent.trim()) return;
-    
+
     const contentText = newPostContent.trim();
     if (contentText.length < 10) {
       alert('Your update must be at least 10 characters long.');
@@ -314,7 +313,7 @@ export default function ScholarFeedPage() {
     }
 
     setIsSubmitting(true);
-    
+
     const hashTags = contentText.match(/#\w+/g)?.map(t => t.replace('#', '')) || ['Research'];
     const textWithoutTags = contentText.replace(/#\w+/g, '').trim();
     const firstLine = textWithoutTags.split('\n')[0];
@@ -342,19 +341,22 @@ export default function ScholarFeedPage() {
     }
   };
 
-  const toggleLike = async (threadId: string, initialLikes: number) => {
-    const currentState = likes[threadId] || { count: initialLikes, liked: false };
+  const toggleLike = async (threadId: string, initialLikes: number, initialLiked: boolean) => {
+    const currentState = likes[threadId] || { count: initialLikes, liked: initialLiked };
     // Optimistic UI update
     setLikes(prev => ({
       ...prev,
-      [threadId]: { count: currentState.liked ? currentState.count - 1 : currentState.count + 1, liked: !currentState.liked }
+      [threadId]: { count: currentState.liked ? Math.max(0, currentState.count - 1) : currentState.count + 1, liked: !currentState.liked }
     }));
     try {
       const res = await toggleLikeThread(threadId);
       // Sync with server state
       setLikes(prev => ({
         ...prev,
-        [threadId]: { count: res.liked ? initialLikes + 1 : initialLikes, liked: res.liked }
+        [threadId]: {
+          count: typeof res.likesCount === 'number' ? res.likesCount : (res.liked ? currentState.count + 1 : Math.max(0, currentState.count - 1)),
+          liked: res.liked
+        }
       }));
     } catch (e) {
       // Revert on error
@@ -394,12 +396,8 @@ export default function ScholarFeedPage() {
     setOpenMenuId(null);
   };
 
-  const handleShareSuccess = (platform: string) => {
-    if (!sharingPost) return;
-    setShareCounts(prev => ({
-      ...prev,
-      [sharingPost.id]: (prev[sharingPost.id] ?? (sharingPost._count?.shares || 0)) + 1
-    }));
+  const handleShareSuccess = (_platform: string) => {
+    // Client-side sharing only; no share count tracking
   };
 
   const getAvatarBg = (initials: string) => {
@@ -419,7 +417,7 @@ export default function ScholarFeedPage() {
 
   return (
     <DashboardShell className="min-h-screen bg-slate-50/30 select-none pb-12">
-      
+
       {/* ─── TOP SEARCH BAR ────────────────────── */}
       <div className="w-full bg-white/70 backdrop-blur-xl border border-white/80 p-4 rounded-3xl shadow-[0_8px_30px_rgb(12,77,162,0.06)] text-left flex items-center justify-between gap-6 mb-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-transparent to-indigo-50/50 pointer-events-none" />
@@ -435,7 +433,7 @@ export default function ScholarFeedPage() {
             <Search className="w-4 h-4 text-slate-400 group-hover:text-[#0C4DA2] transition-colors" />
           </button>
           {searchQuery && (
-            <button 
+            <button
               type="button"
               onClick={() => {
                 setSearchQuery('');
@@ -457,7 +455,7 @@ export default function ScholarFeedPage() {
             <option value="latest">Latest</option>
             <option value="top">Top Posts</option>
           </select>
-          <button 
+          <button
             onClick={() => {
               fetchFeedThreads(urlSearch, currentType, currentSort);
               fetchFeedCounts(urlSearch);
@@ -474,7 +472,6 @@ export default function ScholarFeedPage() {
       <div className="w-full flex flex-wrap items-center gap-2 mb-6">
         {[
           { label: 'All', value: 'ALL' },
-          { label: 'Saved Posts', value: 'SAVED' },
           { label: 'Research Updates', value: 'RESEARCH_UPDATE' },
           { label: 'Publications', value: 'PUBLICATION' },
           { label: 'Questions', value: 'QUESTION' },
@@ -485,13 +482,12 @@ export default function ScholarFeedPage() {
           <button
             key={filter.value}
             onClick={() => handleTypeFilter(filter.value)}
-            className={`px-5 py-2 rounded-2xl text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 ${
-              currentType === filter.value 
-                ? 'bg-gradient-to-r from-[#0C4DA2] to-blue-600 text-white shadow-lg shadow-[#0C4DA2]/25 border border-transparent' 
-                : 'bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-300/80'
-            }`}
+            className={`px-5 py-2 rounded-2xl text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-2 hover:-translate-y-0.5 ${currentType === filter.value
+              ? 'bg-gradient-to-r from-[#0C4DA2] to-blue-600 text-white shadow-lg shadow-[#0C4DA2]/25 border border-transparent'
+              : 'bg-white/80 backdrop-blur-md border border-slate-200/60 text-slate-600 hover:bg-white hover:shadow-md hover:border-slate-300/80'
+              }`}
           >
-            {filter.label} 
+            {filter.label}
             <span className={`opacity-80 text-[10px] bg-black/10 px-1.5 py-0.5 rounded-md ${currentType === filter.value ? 'text-white' : 'text-slate-500 bg-slate-100'}`}>
               {feedCounts[filter.value] || 0}
             </span>
@@ -501,18 +497,18 @@ export default function ScholarFeedPage() {
 
       {/* ─── TWO-COLUMN MAIN GRID ────────────────────────────────────────────── */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start relative">
-        
+
         {/* LEFT/CENTER COLUMN: FEED & COMPOSE */}
         <div className="flex flex-col gap-8">
-          
+
           {/* Compose update box */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white/80 backdrop-blur-2xl border border-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(12,77,162,0.08)] hover:shadow-[0_12px_40px_rgb(12,77,162,0.12)] ring-1 ring-white/50 transition-all text-left flex flex-col gap-4 relative overflow-hidden group"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-[#0C4DA2]/[0.02] to-transparent pointer-events-none" />
-            
+
             <div className="flex items-start gap-4 relative z-10">
               {currentUser?.image ? (
                 <img src={currentUser.image} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-sm ring-2 ring-slate-50" alt="" />
@@ -521,7 +517,7 @@ export default function ScholarFeedPage() {
                   {getInitials(currentUser?.name)}
                 </div>
               )}
-              
+
               <div className="flex-1 bg-slate-50/50 hover:bg-slate-50/80 transition-colors rounded-2xl p-2 border border-slate-100 flex flex-col focus-within:ring-2 focus-within:ring-[#0C4DA2]/20 focus-within:border-[#0C4DA2]/30 focus-within:bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]">
                 <textarea
                   rows={2}
@@ -552,14 +548,14 @@ export default function ScholarFeedPage() {
 
             <div className="flex items-center justify-between pt-4 border-t border-slate-100/80 relative z-10 mt-2">
               <div className="flex items-center gap-1.5 md:gap-3">
-                <input 
-                  type="file" 
-                  id="pdf-upload" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  id="pdf-upload"
+                  className="hidden"
                   accept=".pdf"
-                  onChange={handleFileUpload} 
+                  onChange={handleFileUpload}
                 />
-                <label 
+                <label
                   htmlFor="pdf-upload"
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all cursor-pointer border border-transparent hover:border-blue-100/50 hover:shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : 'text-slate-500 hover:text-[#0C4DA2] text-[11px] font-bold uppercase tracking-widest'}`}
                 >
@@ -567,14 +563,14 @@ export default function ScholarFeedPage() {
                   <span>PDF</span>
                 </label>
 
-                <input 
-                  type="file" 
-                  id="photo-upload" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  id="photo-upload"
+                  className="hidden"
                   accept="image/jpeg, image/png, image/webp"
-                  onChange={handleFileUpload} 
+                  onChange={handleFileUpload}
                 />
-                <label 
+                <label
                   htmlFor="photo-upload"
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all cursor-pointer border border-transparent hover:border-purple-100/50 hover:shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : 'text-slate-500 hover:text-[#0C4DA2] text-[11px] font-bold uppercase tracking-widest'}`}
                 >
@@ -582,14 +578,14 @@ export default function ScholarFeedPage() {
                   <span>Photo</span>
                 </label>
 
-                <input 
-                  type="file" 
-                  id="paper-upload" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  id="paper-upload"
+                  className="hidden"
                   accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload} 
+                  onChange={handleFileUpload}
                 />
-                <label 
+                <label
                   htmlFor="paper-upload"
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-all cursor-pointer border border-transparent hover:border-emerald-100/50 hover:shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : 'text-slate-500 hover:text-[#0C4DA2] text-[11px] font-bold uppercase tracking-widest'}`}
                 >
@@ -597,7 +593,7 @@ export default function ScholarFeedPage() {
                   <span>Paper</span>
                 </label>
 
-                <button 
+                <button
                   onClick={handleAddTag}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 transition-all cursor-pointer border border-transparent hover:border-amber-100/50 hover:shadow-sm text-slate-500 hover:text-[#0C4DA2] text-[11px] font-bold uppercase tracking-widest"
                 >
@@ -619,7 +615,7 @@ export default function ScholarFeedPage() {
             </div>
 
             {selectedAttachment && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-[#0C4DA2]/5 to-transparent border border-[#0C4DA2]/20 rounded-xl px-4 py-2 text-xs text-[#0C4DA2] font-bold self-start mt-2 relative z-10"
@@ -649,7 +645,7 @@ export default function ScholarFeedPage() {
                   <p className="text-slate-500 text-sm max-w-sm mx-auto mt-3 leading-relaxed font-semibold text-center">
                     We couldn't find any threads matching your parameters. Try exploring different tags or be the first to start a collaborative discussion!
                   </p>
-                  <button 
+                  <button
                     onClick={() => {
                       setSearchQuery('');
                       setActiveTag('');
@@ -661,12 +657,13 @@ export default function ScholarFeedPage() {
                 </div>
               ) : (
                 filteredThreads.map((thread) => {
-                  const likeState = likes[thread.id] || { count: thread.likesCount, liked: false };
+                  const isInitiallyLiked = Boolean((thread as any).isLikedByMe);
+                  const likeState = likes[thread.id] || { count: thread.likesCount, liked: isInitiallyLiked };
                   const isCollab = collaborating[thread.id];
                   const initials = getInitials(thread.author?.name);
-                  
+
                   const getBadgeConfig = (type?: string) => {
-                    switch(type) {
+                    switch (type) {
                       case 'RESEARCH_UPDATE': return { text: 'RESEARCH UPDATE', colors: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20 text-blue-600' };
                       case 'PUBLICATION': return { text: 'PUBLICATION', colors: 'from-purple-500/10 to-fuchsia-500/10 border-purple-500/20 text-purple-600' };
                       case 'QUESTION': return { text: 'QUESTION', colors: 'from-amber-500/10 to-orange-500/10 border-amber-500/20 text-amber-600' };
@@ -679,13 +676,13 @@ export default function ScholarFeedPage() {
                   const badge = getBadgeConfig(thread.rawType);
 
                   return (
-                      <motion.div
-                        key={thread.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white/80 backdrop-blur-2xl border border-white p-6 md:p-8 rounded-3xl shadow-[0_8px_30px_rgb(12,77,162,0.05)] hover:shadow-[0_12px_40px_rgb(12,77,162,0.08)] ring-1 ring-white/50 transition-all duration-500 text-left relative overflow-hidden group hover:-translate-y-0.5"
-                      >
+                    <motion.div
+                      key={thread.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-white/80 backdrop-blur-2xl border border-white p-6 md:p-8 rounded-3xl shadow-[0_8px_30px_rgb(12,77,162,0.05)] hover:shadow-[0_12px_40px_rgb(12,77,162,0.08)] ring-1 ring-white/50 transition-all duration-500 text-left relative overflow-hidden group hover:-translate-y-0.5"
+                    >
                       {/* Header: Author info, Affiliate, Time & Badge */}
                       <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
@@ -696,7 +693,7 @@ export default function ScholarFeedPage() {
                               {initials}
                             </div>
                           )}
-                          
+
                           <div className="font-sans">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                               <span className="text-xs font-extrabold text-slate-900 leading-none flex items-center gap-1">
@@ -714,36 +711,36 @@ export default function ScholarFeedPage() {
                               )}
                             </div>
                             <p className="text-[11px] text-slate-450 font-bold mt-1.5 leading-none">
-                              {thread.author?.role?.replace('_', ' ') || 'Researcher'} • {thread.author?.faculty || thread.author?.department || 'SRMIST'} • {typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})}
+                              {thread.author?.role?.replace('_', ' ') || 'Researcher'} • {thread.author?.faculty || thread.author?.department || 'SRMIST'} • {typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                         </div>
 
                         <div className="relative">
-                          <button 
+                          <button
                             onClick={() => setOpenMenuId(openMenuId === thread.id ? null : thread.id)}
                             className="flex items-center text-slate-400 hover:text-[#0C4DA2] transition-colors p-2 rounded-full hover:bg-slate-50 cursor-pointer"
                           >
                             <MoreHorizontal className="w-5 h-5" />
                           </button>
-                          
+
                           {/* 3 dots dropdown */}
                           <AnimatePresence>
                             {openMenuId === thread.id && (
-                              <motion.div 
+                              <motion.div
                                 initial={{ opacity: 0, scale: 0.95, transformOrigin: 'top right' }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 className="absolute right-0 mt-2 w-40 bg-white/90 backdrop-blur-md rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white py-1 z-20"
                               >
-                                <button 
+                                <button
                                   onClick={() => toggleSave(thread)}
                                   className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors flex items-center justify-between"
                                 >
                                   <span>{(thread.saves?.length ?? 0) > 0 ? 'Saved' : 'Save Post'}</span>
                                   {(thread.saves?.length ?? 0) > 0 && <Check className="w-3.5 h-3.5 text-emerald-500" />}
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => {
                                     navigator.clipboard.writeText(`${window.location.origin}/feed/post/${thread.id}`);
                                     addToast('Link copied to clipboard!', 'success');
@@ -753,7 +750,7 @@ export default function ScholarFeedPage() {
                                 >
                                   Copy Link
                                 </button>
-                                <button 
+                                <button
                                   onClick={() => {
                                     reportThread(thread.id, 'Inappropriate content');
                                     addToast('Post reported. Thank you.', 'info');
@@ -765,7 +762,7 @@ export default function ScholarFeedPage() {
                                 </button>
                                 {(currentUser?.id === (thread as any).authorId || currentUser?.role === 'INSTITUTE_ADMIN') && (
                                   <>
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         setEditingPost(thread);
                                         setOpenMenuId(null);
@@ -774,7 +771,7 @@ export default function ScholarFeedPage() {
                                     >
                                       Edit Post
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         setDeletingPost(thread);
                                         setOpenMenuId(null);
@@ -786,7 +783,7 @@ export default function ScholarFeedPage() {
                                   </>
                                 )}
                                 <div className="border-t border-slate-100 my-1"></div>
-                                <button 
+                                <button
                                   onClick={() => {
                                     setReportingPost(thread);
                                     setOpenMenuId(null);
@@ -807,9 +804,9 @@ export default function ScholarFeedPage() {
                           // Nested Document Card View matching Marcus Jensen's Post
                           <div className="space-y-3">
                             <p className="text-slate-500 font-bold">
-                              {thread.author?.name} published a new paper <span className="font-medium text-slate-400 text-[10px] ml-1.5">{typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
+                              {thread.author?.name} published a new paper <span className="font-medium text-slate-400 text-[10px] ml-1.5">{typeof thread.createdAt === 'string' ? 'Active' : thread.createdAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                             </p>
-                            
+
                             <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200/60 rounded-2xl p-5 flex items-start gap-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer group/doc">
                               <div className="w-12 h-12 rounded-xl bg-white border border-slate-200/70 shadow-sm flex items-center justify-center text-slate-400 shrink-0 group-hover/doc:text-[#0C4DA2] group-hover/doc:border-[#0C4DA2]/30 transition-colors">
                                 <FileText className="w-6 h-6" />
@@ -865,17 +862,16 @@ export default function ScholarFeedPage() {
                       {/* Bottom Action buttons */}
                       <div className="flex flex-wrap items-center justify-between border-t border-slate-100/80 pt-5 mt-2 gap-4 relative z-10">
                         <div className="flex items-center gap-2 sm:gap-4">
-                          <button 
-                            onClick={() => toggleLike(thread.id, thread.likesCount)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:bg-rose-50 ${
-                              likeState.liked ? 'text-rose-600 bg-rose-50/50' : 'text-slate-500 hover:text-rose-600'
-                            }`}
+                          <button
+                            onClick={() => toggleLike(thread.id, thread.likesCount, isInitiallyLiked)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:bg-rose-50 ${likeState.liked ? 'text-rose-600 bg-rose-50/50' : 'text-slate-500 hover:text-rose-600'
+                              }`}
                           >
                             <Heart className={`w-4 h-4 transition-transform group-active:scale-75 ${likeState.liked ? 'fill-rose-600 text-rose-600' : ''}`} />
                             <span>Like ({likeState.count})</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => setOpenCommentsId(openCommentsId === thread.id ? null : thread.id)}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-blue-50 hover:text-[#0C4DA2] transition-all cursor-pointer group"
                           >
@@ -883,35 +879,32 @@ export default function ScholarFeedPage() {
                             <span>Comment ({thread.commentsCount})</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => handleShare(thread)}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all cursor-pointer group"
                           >
                             <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            <span>Share ({shareCounts[thread.id] ?? thread.collaboratorsCount})</span>
+                            <span>Share</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => toggleSave(thread)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer group ${
-                              (thread.saves || []).some((s: any) => s.userId === currentUser?.id)
-                                ? 'bg-amber-50 text-amber-600'
-                                : 'text-slate-500 hover:bg-amber-50 hover:text-amber-600'
-                            }`}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer group ${(thread.saves || []).some((s: any) => s.userId === currentUser?.id)
+                              ? 'bg-amber-50 text-amber-600'
+                              : 'text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+                              }`}
                           >
-                            <Bookmark className={`w-4 h-4 group-hover:scale-110 transition-transform ${
-                              (thread.saves || []).some((s: any) => s.userId === currentUser?.id)
-                                ? 'fill-amber-600'
-                                : ''
-                            }`} />
+                            <Bookmark className={`w-4 h-4 group-hover:scale-110 transition-transform ${(thread.saves || []).some((s: any) => s.userId === currentUser?.id)
+                              ? 'fill-amber-600'
+                              : ''
+                              }`} />
                             <span>{(thread.saves || []).some((s: any) => s.userId === currentUser?.id) ? 'Saved' : 'Save'}</span>
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => toggleCollaborate(thread.id)}
-                            className={`flex items-center gap-2 text-xs font-bold transition-all cursor-pointer px-4 py-1.5 rounded-full shadow-sm hover:shadow-md ${
-                              isCollab ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-[#0C4DA2] border border-blue-200/50' : 'bg-white text-slate-600 hover:text-[#0C4DA2] border border-slate-200/80 hover:border-blue-300/50'
-                            }`}
+                            className={`flex items-center gap-2 text-xs font-bold transition-all cursor-pointer px-4 py-1.5 rounded-full shadow-sm hover:shadow-md ${isCollab ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-[#0C4DA2] border border-blue-200/50' : 'bg-white text-slate-600 hover:text-[#0C4DA2] border border-slate-200/80 hover:border-blue-300/50'
+                              }`}
                           >
                             <Users className="w-4 h-4" />
                             <span>Collaborate</span>
@@ -952,7 +945,7 @@ export default function ScholarFeedPage() {
 
         {/* RIGHT COLUMN SIDEBAR */}
         <div className="hidden lg:flex flex-col gap-6 w-full shrink-0 select-none text-left sticky top-6">
-          
+
           {/* SCHOLARS YOU MAY KNOW */}
           <div className="bg-white/70 backdrop-blur-3xl border border-white p-6 md:p-8 rounded-[32px] shadow-[0_8px_30px_rgb(12,77,162,0.04)] hover:shadow-[0_12px_40px_rgb(12,77,162,0.08)] ring-1 ring-white/60 transition-all duration-500 flex flex-col gap-6 group hover:-translate-y-0.5 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-[#0C4DA2]/[0.015] to-transparent pointer-events-none" />
@@ -981,15 +974,14 @@ export default function ScholarFeedPage() {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => handleConnect(peer.id)}
-                    className={`w-[76px] h-7 flex items-center justify-center rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 cursor-pointer active:scale-95 shadow-sm hover:shadow-md relative z-10 ${
-                      peer.connected === 'connected'
-                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 text-emerald-700 hover:border-emerald-300'
-                        : peer.connected === 'pending'
+                    className={`w-[76px] h-7 flex items-center justify-center rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 cursor-pointer active:scale-95 shadow-sm hover:shadow-md relative z-10 ${peer.connected === 'connected'
+                      ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 text-emerald-700 hover:border-emerald-300'
+                      : peer.connected === 'pending'
                         ? 'bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 text-amber-700 animate-pulse'
                         : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 hover:border-blue-300/80 text-[#0C4DA2] hover:-translate-y-0.5'
-                    }`}
+                      }`}
                   >
                     {peer.connected === 'connected' ? 'Connected' : peer.connected === 'pending' ? 'Pending' : 'Connect'}
                   </button>
@@ -1008,7 +1000,7 @@ export default function ScholarFeedPage() {
             <div className="flex flex-col gap-6">
               {trendingTags.length > 0 ? trendingTags.slice(0, 5).map((t, idx) => (
                 <div key={idx} className="group/trending cursor-pointer">
-                  <button 
+                  <button
                     onClick={() => setSearchQuery(t.tag)}
                     className="text-lg font-black text-slate-800 group-hover/trending:text-[#0C4DA2] transition-colors leading-tight block tracking-tight"
                   >
@@ -1028,7 +1020,7 @@ export default function ScholarFeedPage() {
               )}
             </div>
 
-            <button 
+            <button
               onClick={() => setSearchQuery('')}
               className="w-full mt-2 py-3.5 bg-slate-50/50 hover:bg-[#0C4DA2]/5 border border-slate-100 hover:border-[#0C4DA2]/20 text-slate-700 hover:text-[#0C4DA2] text-xs font-black uppercase tracking-widest rounded-full transition-all cursor-pointer active:scale-95 shadow-sm"
             >
@@ -1074,24 +1066,24 @@ export default function ScholarFeedPage() {
 
       {/* Modals */}
       {editingPost && (
-        <EditPostModal 
-          isOpen={!!editingPost} 
-          onClose={() => setEditingPost(null)} 
-          thread={editingPost} 
+        <EditPostModal
+          isOpen={!!editingPost}
+          onClose={() => setEditingPost(null)}
+          thread={editingPost}
         />
       )}
       {reportingPost && (
-        <ReportPostModal 
-          isOpen={!!reportingPost} 
-          onClose={() => setReportingPost(null)} 
-          thread={reportingPost} 
+        <ReportPostModal
+          isOpen={!!reportingPost}
+          onClose={() => setReportingPost(null)}
+          thread={reportingPost}
         />
       )}
       {deletingPost && (
-        <ConfirmDeleteModal 
-          isOpen={!!deletingPost} 
-          onClose={() => setDeletingPost(null)} 
-          thread={deletingPost} 
+        <ConfirmDeleteModal
+          isOpen={!!deletingPost}
+          onClose={() => setDeletingPost(null)}
+          thread={deletingPost}
         />
       )}
       {sharingPost && (
