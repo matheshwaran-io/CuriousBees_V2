@@ -22,7 +22,7 @@ interface User {
 }
 
 const ROLE_BADGE: Record<string, { label: string; class: string; icon: any }> = {
-  SCHOLAR:        { label: 'Scholar',        class: 'bg-purple-50 text-purple-700 border-purple-100', icon: GraduationCap },
+  SCHOLAR:        { label: 'Scholar',        class: 'bg-blue-50 text-[#0C4DA2] border-blue-100', icon: GraduationCap },
   SUPERVISOR:     { label: 'Supervisor',     class: 'bg-blue-50 text-blue-700 border-blue-100',       icon: BookOpen },
   INSTITUTE_ADMIN:{ label: 'Admin',          class: 'bg-amber-50 text-amber-700 border-amber-100',    icon: Crown },
   ADMIN:          { label: 'Admin',          class: 'bg-amber-50 text-amber-700 border-amber-100',    icon: Crown },

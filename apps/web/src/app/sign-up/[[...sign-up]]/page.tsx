@@ -500,16 +500,16 @@ export default function SignUpPage() {
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => handleRoleSelect('SUPERVISOR')}
-                    className="w-full p-5 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-purple-500/10 hover:border-purple-500/30 text-left flex items-center gap-4 transition-all duration-200 cursor-pointer group"
+                    className="w-full p-5 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-amber-500/10 hover:border-amber-500/30 text-left flex items-center gap-4 transition-all duration-200 cursor-pointer group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20 transition-colors shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-400/20 flex items-center justify-center text-amber-400 group-hover:bg-amber-500/20 transition-colors shrink-0">
                       <Users className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white">Research Supervisor</p>
                       <p className="text-xs text-white/40 mt-0.5">Faculty member / Research guide</p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-purple-400 transition-colors shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-amber-400 transition-colors shrink-0" />
                   </motion.button>
                 </div>
 
@@ -524,7 +524,7 @@ export default function SignUpPage() {
             {step === 'details' && role && (
               <motion.div key="details" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${role === 'SCHOLAR' ? 'bg-blue-500/15 text-blue-400' : 'bg-purple-500/15 text-purple-400'}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${role === 'SCHOLAR' ? 'bg-blue-500/15 text-blue-400' : 'bg-amber-500/15 text-amber-400'}`}>
                     {role === 'SCHOLAR' ? <GraduationCap className="w-5 h-5" /> : <Users className="w-5 h-5" />}
                   </div>
                   <div>

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOpportunityInput } from '@curiousbees/types';
 import { CreateOpportunitySchema } from '@curiousbees/shared-utils';
@@ -7,10 +7,50 @@ import { CreateOpportunitySchema } from '@curiousbees/shared-utils';
 export class OpportunitiesService {
   constructor(private prisma: PrismaService) {}
 
-  async getOpportunities(department?: string, researchDomain?: string) {
+  /**
+   * Securely validates if the current user belongs to the same department as the resource.
+   * Bypasses the validation check for INSTITUTE_ADMIN.
+   */
+  private validateDepartmentAccess(currentUser: any, resourceDepartment: string) {
+    if (!currentUser) {
+      throw new ForbiddenException('Authentication required.');
+    }
+    // Admin has global institutional bypass
+    if (currentUser.role === 'INSTITUTE_ADMIN') {
+      return;
+    }
+
+    const userDept = currentUser.department;
+    if (!userDept || !resourceDepartment) {
+      throw new ForbiddenException('Access denied. Department assignment required.');
+    }
+
+    // Normalize department names (e.g. "Computer Applications (FSH)" vs "Computer Applications")
+    const userDeptBase = userDept.split('(')[0].trim().toLowerCase();
+    const resourceDeptBase = resourceDepartment.split('(')[0].trim().toLowerCase();
+
+    if (userDeptBase !== resourceDeptBase && !userDeptBase.includes(resourceDeptBase) && !resourceDeptBase.includes(userDeptBase)) {
+      throw new ForbiddenException('Access denied. You do not have permission to access resources outside your department.');
+    }
+  }
+
+  async getOpportunities(currentUser: any, department?: string, researchDomain?: string) {
+    let deptQuery = department ? department.split('(')[0].trim() : undefined;
+
+    // Enforce strict department boundary on listing for scholars/supervisors
+    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
+      const userDept = currentUser.department;
+      if (!userDept) {
+        return [];
+      }
+      deptQuery = userDept.split('(')[0].trim();
+    }
+
     return this.prisma.opportunity.findMany({
       where: {
-        ...(department && { department }),
+        ...(deptQuery && {
+          department: { contains: deptQuery, mode: 'insensitive' }
+        }),
         ...(researchDomain && {
           researchDomain: { contains: researchDomain, mode: 'insensitive' }
         })
@@ -33,30 +73,61 @@ export class OpportunitiesService {
     });
   }
 
-  async createOpportunity(authorId: string, input: CreateOpportunityInput) {
+  async getOpportunityById(currentUser: any, id: string) {
+    const opportunity = await this.prisma.opportunity.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            role: true,
+            department: true
+          }
+        }
+      }
+    });
+
+    if (!opportunity) {
+      throw new NotFoundException('Opportunity not found.');
+    }
+
+    this.validateDepartmentAccess(currentUser, opportunity.department);
+
+    return opportunity;
+  }
+
+  async createOpportunity(currentUser: any, input: CreateOpportunityInput) {
     const parsed = CreateOpportunitySchema.safeParse(input);
     if (!parsed.success) {
       throw new BadRequestException(parsed.error.errors[0].message);
     }
 
-    const { title, description, department, researchDomain } = parsed.data;
+    const { title, description, researchDomain } = parsed.data;
 
-    // Verify user role is SUPERVISOR (only faculty can post opportunities)
     const author = await this.prisma.user.findUnique({
-      where: { id: authorId }
+      where: { id: currentUser.id }
     });
 
-    if (!author || author.role !== 'RESEARCH_SUPERVISOR') {
-      throw new BadRequestException('Only verified faculty members are authorized to post research opportunities.');
+    if (!author || (author.role !== 'RESEARCH_SUPERVISOR' && (author.role as any) !== 'SUPERVISOR')) {
+      throw new BadRequestException('Only verified Research Supervisors are authorized to post research opportunities.');
+    }
+
+    // Derive department strictly from database and ignore any frontend spoof attempts
+    const departmentToAssign = author.department;
+    if (!departmentToAssign) {
+      throw new BadRequestException('You must have a department assigned to post research opportunities.');
     }
 
     return this.prisma.opportunity.create({
       data: {
         title,
         description,
-        department,
+        department: departmentToAssign,
         researchDomain,
-        authorId
+        authorId: currentUser.id
       },
       include: {
         author: {
@@ -73,15 +144,62 @@ export class OpportunitiesService {
     });
   }
 
-  async createCollaborationRequest(scholarId: string, opportunityId: string, message?: string) {
+  async updateOpportunity(currentUser: any, id: string, data: any) {
+    const opportunity = await this.prisma.opportunity.findUnique({
+      where: { id }
+    });
+
+    if (!opportunity) {
+      throw new NotFoundException('Opportunity not found.');
+    }
+
+    if (opportunity.authorId !== currentUser.id && currentUser.role !== 'INSTITUTE_ADMIN') {
+      throw new ForbiddenException('You are not authorized to update this opportunity.');
+    }
+
+    this.validateDepartmentAccess(currentUser, opportunity.department);
+
+    return this.prisma.opportunity.update({
+      where: { id },
+      data: {
+        title: data.title,
+        description: data.description,
+        researchDomain: data.researchDomain
+      }
+    });
+  }
+
+  async deleteOpportunity(currentUser: any, id: string) {
+    const opportunity = await this.prisma.opportunity.findUnique({
+      where: { id }
+    });
+
+    if (!opportunity) {
+      throw new NotFoundException('Opportunity not found.');
+    }
+
+    if (opportunity.authorId !== currentUser.id && currentUser.role !== 'INSTITUTE_ADMIN') {
+      throw new ForbiddenException('You are not authorized to delete this opportunity.');
+    }
+
+    this.validateDepartmentAccess(currentUser, opportunity.department);
+
+    await this.prisma.opportunity.delete({
+      where: { id }
+    });
+
+    return { success: true };
+  }
+
+  async createCollaborationRequest(currentUser: any, opportunityId: string, message?: string) {
     // 1. Verify scholar is approved
     const scholar = await this.prisma.user.findUnique({
-      where: { id: scholarId }
+      where: { id: currentUser.id }
     });
     if (!scholar) {
       throw new BadRequestException('Scholar not found.');
     }
-    if (scholar.role !== 'RESEARCH_SCHOLAR') {
+    if (scholar.role !== 'RESEARCH_SCHOLAR' && (scholar.role as any) !== 'SCHOLAR') {
       throw new BadRequestException('Only scholars can submit collaboration requests.');
     }
     if (!scholar.approved) {
@@ -96,10 +214,13 @@ export class OpportunitiesService {
       throw new BadRequestException('Opportunity not found.');
     }
 
-    // 3. Prevent duplicate requests
+    // 3. Department boundary check
+    this.validateDepartmentAccess(currentUser, opportunity.department);
+
+    // 4. Prevent duplicate requests
     const existing = await this.prisma.collaborationRequest.findFirst({
       where: {
-        scholarId,
+        scholarId: currentUser.id,
         opportunityId
       }
     });
@@ -109,7 +230,7 @@ export class OpportunitiesService {
 
     return this.prisma.collaborationRequest.create({
       data: {
-        scholarId,
+        scholarId: currentUser.id,
         opportunityId,
         status: 'PENDING',
         message
@@ -120,11 +241,11 @@ export class OpportunitiesService {
     });
   }
 
-  async getRequestsForSupervisor(supervisorId: string) {
+  async getRequestsForSupervisor(currentUser: any) {
     return this.prisma.collaborationRequest.findMany({
       where: {
         opportunity: {
-          authorId: supervisorId
+          authorId: currentUser.id
         }
       },
       include: {
@@ -145,9 +266,9 @@ export class OpportunitiesService {
     });
   }
 
-  async getRequestsForScholar(scholarId: string) {
+  async getRequestsForScholar(currentUser: any) {
     return this.prisma.collaborationRequest.findMany({
-      where: { scholarId },
+      where: { scholarId: currentUser.id },
       include: {
         opportunity: {
           include: {
@@ -169,7 +290,7 @@ export class OpportunitiesService {
     });
   }
 
-  async updateRequestStatus(supervisorId: string, requestId: string, status: 'PUBLISHED' | 'REJECTED' | 'NEEDS_INFO') {
+  async updateRequestStatus(currentUser: any, requestId: string, status: 'PUBLISHED' | 'REJECTED' | 'NEEDS_INFO') {
     const request = await this.prisma.collaborationRequest.findUnique({
       where: { id: requestId },
       include: {
@@ -186,9 +307,12 @@ export class OpportunitiesService {
       throw new BadRequestException('Collaboration request does not have an associated opportunity.');
     }
 
-    if (request.opportunity.authorId !== supervisorId) {
-      throw new BadRequestException('You are not authorized to update requests for this opportunity.');
+    if (request.opportunity.authorId !== currentUser.id && currentUser.role !== 'INSTITUTE_ADMIN') {
+      throw new ForbiddenException('You are not authorized to update requests for this opportunity.');
     }
+
+    // Secure department boundary check
+    this.validateDepartmentAccess(currentUser, request.opportunity.department);
 
     const updated = await this.prisma.collaborationRequest.update({
       where: { id: requestId },
@@ -198,7 +322,7 @@ export class OpportunitiesService {
     // Write audit log
     await this.prisma.auditLog.create({
       data: {
-        userId: supervisorId,
+        userId: currentUser.id,
         action: 'UPDATE_COLLAB_REQUEST',
         details: `Supervisor updated request ${requestId} to status ${status}`
       }
@@ -217,7 +341,7 @@ export class OpportunitiesService {
       await this.prisma.workspaceMember.create({
         data: {
           workspaceId: workspace.id,
-          userId: supervisorId,
+          userId: request.opportunity.authorId,
           role: 'OWNER'
         }
       });
@@ -234,7 +358,7 @@ export class OpportunitiesService {
       // Write audit log for workspace creation
       await this.prisma.auditLog.create({
         data: {
-          userId: supervisorId,
+          userId: currentUser.id,
           action: 'WORKSPACE_CREATE',
           details: `Auto-created workspace ${workspace.id} for opportunity ${request.opportunityId}`
         }

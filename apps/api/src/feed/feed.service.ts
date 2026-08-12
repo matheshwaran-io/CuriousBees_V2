@@ -88,26 +88,69 @@ export class FeedService {
   }
 
   async getTrendingResearch() {
-    // Basic logic: most used tags in recent threads
-    const recentThreads = await this.prisma.thread.findMany({
-      where: {
-        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-      },
-      select: { tags: true, _count: { select: { comments: true, likes: true } } }
+    // 1. Fetch tags & activity metrics from database threads
+    const threads = await this.prisma.thread.findMany({
+      select: { tags: true, _count: { select: { comments: true, likes: true, shares: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 100
     });
 
-    const tagCounts: Record<string, number> = {};
-    for (const thread of recentThreads) {
-      const weight = 1 + thread._count.likes + (thread._count.comments * 2);
+    // 2. Fetch active institutional research interests and scholar/supervisor counts
+    const interests = await this.prisma.researchInterest.findMany({
+      include: {
+        _count: { select: { users: true } }
+      }
+    });
+
+    const tagCounts: Record<string, { display: string; count: number }> = {};
+
+    // Add weights from DB posts
+    for (const thread of threads) {
+      const weight = 1 + thread._count.likes + (thread._count.comments * 2) + (thread._count.shares * 3);
       for (const tag of thread.tags) {
-        tagCounts[tag] = (tagCounts[tag] || 0) + weight;
+        if (tag && tag.trim()) {
+          const key = tag.trim().toLowerCase();
+          if (!tagCounts[key]) {
+            tagCounts[key] = { display: tag.trim(), count: 0 };
+          }
+          tagCounts[key].count += weight;
+        }
       }
     }
 
-    const sortedTags = Object.entries(tagCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([tag, count]) => ({ tag, count: Math.floor(count) }));
+    // Add weights from DB scholar & supervisor interest counts
+    for (const interest of interests) {
+      if (interest.name) {
+        const key = interest.name.trim().toLowerCase();
+        const userWeight = Math.max(1, interest._count.users) * 3;
+        if (!tagCounts[key]) {
+          tagCounts[key] = { display: interest.name.trim(), count: 0 };
+        }
+        tagCounts[key].count += userWeight;
+      }
+    }
+
+    // Dynamic fallbacks if DB is completely fresh
+    if (Object.keys(tagCounts).length === 0) {
+      const defaults = [
+        { key: 'artificial intelligence', display: 'Artificial Intelligence', count: 18 },
+        { key: 'deep learning', display: 'Deep Learning', count: 14 },
+        { key: 'knowledge graphs', display: 'Knowledge Graphs', count: 11 },
+        { key: 'quantum computing', display: 'Quantum Computing', count: 8 },
+        { key: 'bioinformatics', display: 'Bioinformatics', count: 6 },
+      ];
+      for (const item of defaults) {
+        tagCounts[item.key] = { display: item.display, count: item.count };
+      }
+    }
+
+    const sortedTags = Object.values(tagCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+      .map(item => ({
+        tag: item.display,
+        count: Math.floor(item.count)
+      }));
 
     return sortedTags;
   }

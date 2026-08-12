@@ -97,16 +97,16 @@ export class ClerkAuthGuard implements CanActivate {
       }
 
       if (!user) {
-        // Check for Admin Auto-Creation
-        if (normalizedEmail === 'r.matheshwaran.io@gmail.com') {
-          this.logger.log(`Auto-creating admin account for ${normalizedEmail}`);
+        // Auto-create users in development to avoid lockouts after DB resets
+        if (process.env.NODE_ENV !== 'production' || normalizedEmail === 'r.matheshwaran.io@gmail.com') {
+          this.logger.log(`Auto-creating account for ${normalizedEmail}`);
           user = await this.prisma.user.create({
             data: {
               clerkId: decodedToken.sub,
               email: normalizedEmail,
-              name: decodedToken.name || 'Admin',
+              name: decodedToken.name || normalizedEmail.split('@')[0],
               image: decodedToken.picture || null,
-              role: 'INSTITUTE_ADMIN',
+              role: normalizedEmail === 'r.matheshwaran.io@gmail.com' ? 'INSTITUTE_ADMIN' : 'RESEARCH_SUPERVISOR',
               approved: true,
               status: 'ACTIVE',
               onboardingCompleted: true,

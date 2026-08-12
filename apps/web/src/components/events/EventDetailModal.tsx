@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, MapPin, User, Tag, Mail, Bot, Edit2, Trash2 } from 'lucide-react';
+import { X, Calendar, MapPin, Building, Tag, Mail, Edit2, Trash2, Globe, Users, Clock } from 'lucide-react';
 import { Event } from '@curiousbees/types';
 import { useStore } from '@/store/useStore';
 
@@ -37,6 +37,12 @@ export default function EventDetailModal({ isOpen, onClose, event, onEdit, onDel
     (currentUser?.role as string) === 'ADMIN' || 
     (currentUser?.role === 'RESEARCH_SUPERVISOR' && event.authorId === currentUser?.id);
 
+  const formattedDate = new Date(event.date).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -47,151 +53,121 @@ export default function EventDetailModal({ isOpen, onClose, event, onEdit, onDel
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm cursor-pointer"
           />
 
           {/* Modal Container */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 pointer-events-none">
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 15 }}
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 15 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="w-full max-w-3xl max-h-[90vh] bg-white border border-slate-250 rounded-2xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden"
+              className="w-full max-w-xl max-h-[85vh] bg-white rounded-3xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden text-left border border-slate-200/80"
             >
               {/* Header */}
-              <div className="flex items-start justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-                <div className="pr-8 text-left">
-                  <div className="flex items-center gap-2 flex-wrap mb-2.5">
-                    <span className={`text-[9px] uppercase tracking-wider font-bold px-2.5 py-0.5 rounded border ${
-                      event.status === 'PUBLISHED' ? 'bg-[#0c4da2]/5 border-[#0c4da2]/15 text-[#0c4da2]' : 
-                      event.status === 'REVIEW_REQUIRED' ? 'bg-[#775a00]/5 border-[#775a00]/15 text-[#775a00]' : 
-                      'bg-rose-50 border-rose-100 text-rose-700'
-                    }`}>
-                      {event.status.replace('_', ' ')}
-                    </span>
-                    <span className="text-[9px] text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <Bot className="w-3.5 h-3.5 text-slate-400" />
-                      {event.aiModel || 'manual'}
+              <div className="flex items-start justify-between p-6 sm:p-8 border-b border-slate-100 bg-white">
+                <div className="pr-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-[#0C4DA2]/10 text-[#0C4DA2] px-2.5 py-0.5 rounded-full">
+                      {event.eventType || 'Academic Event'}
                     </span>
                   </div>
-                  <h2 className="font-display text-lg font-bold text-slate-900 leading-tight">{event.title}</h2>
+                  <h2 className="text-xl font-extrabold text-slate-900 leading-snug">{event.title}</h2>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {canEdit && (
                     <>
                       <button
                         onClick={() => onEdit?.(event)}
-                        className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
+                        className="p-2 rounded-xl hover:bg-blue-50 text-slate-400 hover:text-[#0C4DA2] transition-colors cursor-pointer"
                         title="Edit Event"
                       >
-                        <Edit2 className="w-4.5 h-4.5" />
+                        <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onDelete?.(event.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                        className="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                         title="Delete Event"
                       >
-                        <Trash2 className="w-4.5 h-4.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                      <div className="w-px h-6 bg-slate-200 mx-1"></div>
                     </>
                   )}
                   <button
                     onClick={onClose}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                    className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-                  
-                  {/* Left Column: Parsed Event Data */}
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Extracted Parameters</h3>
-                      <div className="space-y-4">
-                        <div className="flex gap-3">
-                          <Calendar className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-xs font-bold text-slate-800">{new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">{event.time}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-3">
-                          <MapPin className="w-4 h-4 text-[#ba1a1a] mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-xs font-bold text-slate-800">{event.venue}</p>
-                          </div>
-                        </div>
-
-                        {event.speaker && (
-                          <div className="flex gap-3">
-                            <User className="w-4 h-4 text-secondary mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{event.speaker}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Speaker / Keynote Guest</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {event.eventType && (
-                          <div className="flex gap-3">
-                            <Tag className="w-4 h-4 text-[#775a00] mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{event.eventType}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {event.organizerEmail && (
-                          <div className="flex gap-3">
-                            <Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{event.organizerEmail}</p>
-                              <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-1">Organizer Inquiries</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4.5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-slate-500">AI Confidence Score</span>
-                        <span className={`text-xs font-bold ${event.confidence >= 0.9 ? 'text-emerald-600' : event.confidence >= 0.7 ? 'text-amber-600' : 'text-rose-600'}`}>
-                          {Math.round(event.confidence * 100)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden border border-slate-200/30">
-                        <div 
-                          className={`h-full rounded-full ${event.confidence >= 0.9 ? 'bg-emerald-500' : event.confidence >= 0.7 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                          style={{ width: `${Math.round(event.confidence * 100)}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-3.5 leading-relaxed">
-                        Extracted via {event.aiProvider} ({event.aiModel}) on {new Date(event.createdAt || Date.now()).toLocaleString()}.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Raw Email Source */}
-                  <div className="flex flex-col">
-                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Raw Email Payload</h3>
-                    <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 h-[400px] overflow-y-auto">
-                      <pre className="text-[10px] font-mono text-slate-600 whitespace-pre-wrap leading-relaxed">
-                        {event.rawEmail || 'No raw email source recorded for this event.'}
-                      </pre>
-                    </div>
-                  </div>
-                  
+              {/* Scrollable Content matching Reference Screenshot 4 */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+                
+                {/* Field 1: COMPANY / ORGANIZER */}
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">ORGANIZER / DEPARTMENT</h4>
+                  <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Building className="w-4 h-4 text-[#0C4DA2]" />
+                    {event.speaker || 'SRMIST Research Directorate'}
+                  </p>
                 </div>
+
+                {/* Field 2: DATE & TIME */}
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">DATE & TIME</h4>
+                  <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    {formattedDate} • {event.time || '10:00 AM'}
+                  </p>
+                </div>
+
+                {/* Field 3: LOCATION / TIMEZONE */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">VENUE / LOCATION</h4>
+                    <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                      {event.venue || 'Main Auditorium'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">TIMEZONE</h4>
+                    <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-slate-500" />
+                      Asia/Kolkata
+                    </p>
+                  </div>
+                </div>
+
+                {/* Field 4: ACCESS */}
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">ACCESS / AUDIENCE</h4>
+                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-slate-500" />
+                    Research Scholars + Research Supervisors
+                  </p>
+                </div>
+
+                {/* Field 5: PROCESS / CATEGORY */}
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">PROCESS / TYPE</h4>
+                  <p className="text-xs font-bold text-[#0C4DA2] bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 inline-block">
+                    {event.eventType || 'Academic Seminar'}
+                  </p>
+                </div>
+
+                {/* Field 6: DESCRIPTION */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">DESCRIPTION</h4>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-medium text-slate-700 leading-relaxed whitespace-pre-line">
+                    {event.description || 'No additional event details provided. Please contact the department coordinator for further information.'}
+                  </div>
+                </div>
+
               </div>
             </motion.div>
           </div>

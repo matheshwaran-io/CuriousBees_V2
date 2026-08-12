@@ -333,16 +333,46 @@ async function main() {
   console.log('✅ Created comments.');
 
   // 7. Create Opportunities
-  await prisma.opportunity.create({
-    data: {
-      title: 'PhD Position: Reinforcement Learning for Smart Grid Optimization',
-      description: 'We are seeking an outstanding PhD candidate to join the EEE department. Funding is ₹38,000/month.',
-      department: 'EEE',
-      researchDomain: 'Reinforcement Learning',
-      authorId: anand.id
-    }
+  await prisma.opportunity.createMany({
+    data: [
+      {
+        title: 'PhD Position: Reinforcement Learning for Smart Grid Optimization',
+        description: 'We are seeking an outstanding PhD candidate to join the EEE department. Funding is ₹38,000/month stipend + contingency grant.',
+        department: 'Electrical & Electronics Engineering (EEE)',
+        researchDomain: 'Reinforcement Learning',
+        authorId: anand.id
+      },
+      {
+        title: 'Research Assistant: LLM Fine-Tuning & RAG Systems for Medical Diagnostics',
+        description: 'Open position for Research Scholars in Computer Applications. Focus on domain adaptation of transformer models for clinical record processing.',
+        department: 'Computer Applications',
+        researchDomain: 'Artificial Intelligence',
+        authorId: createdUsers['dr.ramesh@srmist.edu.in'].id
+      },
+      {
+        title: 'JRF Slot: Quantum Key Distribution over Fiber Networks',
+        description: 'DST-SERB funded project looking for dedicated researchers. Hands-on work with single photon detectors and quantum optics instrumentation.',
+        department: 'Computer Applications',
+        researchDomain: 'Quantum Computing',
+        authorId: createdUsers['dr.ramesh@srmist.edu.in'].id
+      },
+      {
+        title: 'Postdoc Fellow: Silicon Photonics & Waveguide Biosensors',
+        description: 'Interdisciplinary research project on integrated optical sensor chips for point-of-care disease detection. Lab facilities fully funded.',
+        department: 'Electronics & Communication Engineering (ECE)',
+        researchDomain: 'Photonics & VLSI',
+        authorId: anand.id
+      },
+      {
+        title: 'PhD Slot: CRISPR Gene Editing & Bio-Nanomaterials',
+        description: 'Fully funded research position focusing on targeted nanocarriers for cancer gene therapy in collaboration with ICMR.',
+        department: 'Biotechnology',
+        researchDomain: 'Nanotechnology',
+        authorId: createdUsers['dr.ramesh@srmist.edu.in'].id
+      }
+    ]
   });
-  console.log('✅ Created research opportunities.');
+  console.log('✅ Created research opportunities across departments.');
 
   // 8. Create Workspaces
   const ws1 = await prisma.workspace.create({

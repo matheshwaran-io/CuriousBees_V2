@@ -258,8 +258,8 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
                   <div className="flex items-center justify-between border-b border-slate-100 pb-1">
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold text-slate-800">{comment.author?.name}</span>
-                      <span className={`inline-flex px-1.5 py-0.2 rounded-full text-[8px] font-bold uppercase border leading-none ${getRoleBadge(comment.author?.role || '')}`}>
-                        {comment.author?.role === 'RESEARCH_SUPERVISOR' ? 'Faculty' : 'Scholar'}
+                      <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase border leading-none ${getRoleBadge(comment.author?.role || '')}`}>
+                        {comment.author?.role === 'RESEARCH_SUPERVISOR' || comment.author?.role === 'SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar'}
                       </span>
                     </div>
                     <span className="text-[9px] text-slate-400 font-bold uppercase">

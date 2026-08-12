@@ -59,7 +59,7 @@ export default function ThreadCard({ thread }: ThreadCardProps) {
                 {thread.author?.name || 'Anonymous Researcher'}
               </Link>
               <p className="text-[11px] font-medium text-slate-500">
-                {thread.author?.role === 'RESEARCH_SUPERVISOR' ? 'Supervisor' : 'Scholar'} • {thread.author?.department || 'SRMIST'}
+                {thread.author?.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar'} • {thread.author?.department || 'SRMIST'}
               </p>
             </div>
 

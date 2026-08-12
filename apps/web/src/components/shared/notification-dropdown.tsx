@@ -143,8 +143,8 @@ export function NotificationDropdown() {
   const getIcon = (type: NotificationItem['type']) => {
     switch(type) {
       case 'POST': return <FileText className="w-4 h-4 text-blue-600" />;
-      case 'OPPORTUNITY': return <Briefcase className="w-4 h-4 text-purple-600" />;
-      case 'COLLABORATION': return <Users className="w-4 h-4 text-emerald-600" />;
+      case 'OPPORTUNITY': return <Briefcase className="w-4 h-4 text-[#0C4DA2]" />;
+      case 'COLLABORATION': return <Users className="w-4 h-4 text-blue-700" />;
       case 'SUPERVISION': return <Award className="w-4 h-4 text-amber-600" />;
       default: return <Sparkles className="w-4 h-4 text-[#0C4DA2]" />;
     }
@@ -210,8 +210,8 @@ export function NotificationDropdown() {
                   >
                     <div className={`p-2 rounded-xl shrink-0 mt-0.5 shadow-2xs border ${
                       n.type === 'POST' ? 'bg-blue-50 border-blue-100' :
-                      n.type === 'OPPORTUNITY' ? 'bg-purple-50 border-purple-100' :
-                      n.type === 'COLLABORATION' ? 'bg-emerald-50 border-emerald-100' :
+                      n.type === 'OPPORTUNITY' ? 'bg-blue-50/80 border-blue-100' :
+                      n.type === 'COLLABORATION' ? 'bg-blue-50/50 border-blue-100' :
                       n.type === 'SUPERVISION' ? 'bg-amber-50 border-amber-100' :
                       'bg-slate-50 border-slate-100'
                     }`}>

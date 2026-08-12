@@ -77,6 +77,7 @@ model User {
 
   // Feed/Post relations
   threadLikes          ThreadLike[]
+  commentLikes         CommentLike[]
   threadShares         ThreadShare[]
   threadReports        ThreadReport[]
   savedThreads         SavedThread[]
@@ -165,12 +166,26 @@ model Comment {
   parentId  String?
   parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentReplies")
+  likes     CommentLike[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([threadId])
   @@index([authorId])
   @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
 }
 
 model Opportunity {

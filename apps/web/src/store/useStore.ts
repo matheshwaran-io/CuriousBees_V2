@@ -73,6 +73,9 @@ interface AppState {
   fetchCollaborators: (search?: string, department?: string) => Promise<User[]>;
   createThread: (title: string, content: string, tags: string[], options?: { type?: any; isPaper?: boolean; paperJournal?: string | null; attachments?: any[] }) => Promise<Thread>;
   addComment: (threadId: string, content: string, parentId?: string) => Promise<Comment>;
+  updateComment: (commentId: string, content: string) => Promise<Comment>;
+  deleteComment: (commentId: string) => Promise<void>;
+  toggleCommentLike: (commentId: string) => Promise<{ liked: boolean }>;
   toggleLikeThread: (threadId: string) => Promise<{ liked: boolean }>;
   toggleSaveThread: (threadId: string) => Promise<{ saved: boolean }>;
   shareThread: (threadId: string, platform?: string) => Promise<void>;
@@ -499,7 +502,6 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // 5. Comment on an active thread
   addComment: async (threadId, content, parentId) => {
     set({ isLoading: true });
     try {
@@ -528,6 +530,77 @@ export const useStore = create<AppState>((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  updateComment: async (commentId, content) => {
+    const res = await apiFetch(`/api/comments/${commentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (res.ok) {
+      const updatedComment = await res.json();
+      set(state => {
+        const updater = (c: any) => c.id === commentId ? { ...c, content: updatedComment.content } : c;
+        const traverse = (comments: any[]): any[] => comments.map(c => ({ ...updater(c), replies: c.replies ? traverse(c.replies) : [] }));
+        return {
+          threads: state.threads.map(t => ({
+            ...t,
+            comments: t.comments ? traverse(t.comments) : []
+          }))
+        };
+      });
+      return updatedComment;
+    }
+    throw new Error('Failed to update comment.');
+  },
+
+  deleteComment: async (commentId) => {
+    const res = await apiFetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+    if (res.ok) {
+      set(state => {
+        const traverse = (comments: any[]): any[] => comments.filter(c => c.id !== commentId).map(c => ({ ...c, replies: c.replies ? traverse(c.replies) : [] }));
+        return {
+          threads: state.threads.map(t => ({
+            ...t,
+            comments: t.comments ? traverse(t.comments) : []
+          }))
+        };
+      });
+    } else {
+      throw new Error('Failed to delete comment.');
+    }
+  },
+
+  toggleCommentLike: async (commentId) => {
+    let resultLiked = false;
+    set(state => {
+      const traverse = (comments: any[]): any[] => comments.map(c => {
+        if (c.id === commentId) {
+          const currentLiked = c.likes && c.likes.length > 0;
+          const newCount = currentLiked ? Math.max(0, (c._count?.likes || 0) - 1) : (c._count?.likes || 0) + 1;
+          resultLiked = !currentLiked;
+          return {
+            ...c,
+            _count: { ...c._count, likes: newCount },
+            likes: resultLiked ? [{ userId: state.currentUser?.id }] : []
+          };
+        }
+        return { ...c, replies: c.replies ? traverse(c.replies) : [] };
+      });
+      return {
+        threads: state.threads.map(t => ({
+          ...t,
+          comments: t.comments ? traverse(t.comments) : []
+        }))
+      };
+    });
+
+    const res = await apiFetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+    if (res.ok) {
+      return await res.json();
+    }
+    throw new Error('Failed to toggle comment like');
   },
 
   toggleLikeThread: async (threadId) => {

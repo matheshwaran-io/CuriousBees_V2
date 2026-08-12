@@ -73,11 +73,17 @@ export default function ScholarOverview({
               <div>
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <img
-                      alt="Scholar Profile"
-                      className="w-10 h-10 rounded-full border border-borderStroke object-cover shrink-0"
-                      src={scholarImage}
-                    />
+                    {scholar.image ? (
+                      <img
+                        alt="Scholar Profile"
+                        className="w-10 h-10 rounded-full border border-borderStroke object-cover shrink-0"
+                        src={scholar.image}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-[#0C4DA2] text-white font-extrabold text-xs uppercase flex items-center justify-center border border-borderStroke shrink-0 shadow-sm">
+                        {(scholar.name || 'S').charAt(0)}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <h4 className="text-xs font-bold text-black truncate max-w-[130px] leading-tight">
                         {scholar.name || 'Research Scholar'}

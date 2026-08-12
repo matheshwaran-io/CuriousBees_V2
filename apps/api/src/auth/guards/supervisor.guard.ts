@@ -6,7 +6,7 @@ export class SupervisorGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user || user.role !== 'SUPERVISOR') {
+    if (!user || (user.role !== 'SUPERVISOR' && user.role !== 'RESEARCH_SUPERVISOR')) {
       throw new ForbiddenException('Access denied. Supervisor role required.');
     }
 

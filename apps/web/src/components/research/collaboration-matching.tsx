@@ -67,11 +67,17 @@ export default function CollaborationMatching({
             className="border border-borderStroke/60 rounded-xl p-4 flex items-start gap-3.5 hover:border-primary/40 hover:bg-slate-50/20 transition-all text-left"
           >
             <div className="relative shrink-0">
-              <img
-                alt="Researcher"
-                className="w-10 h-10 rounded-full object-cover border border-borderStroke"
-                src={collab.image}
-              />
+              {collab.image ? (
+                <img
+                  alt="Researcher"
+                  className="w-10 h-10 rounded-full object-cover border border-borderStroke"
+                  src={collab.image}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#0C4DA2] text-white font-extrabold text-xs uppercase flex items-center justify-center border border-borderStroke shrink-0 shadow-sm">
+                  {(collab.name || 'R').charAt(0)}
+                </div>
+              )}
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
 

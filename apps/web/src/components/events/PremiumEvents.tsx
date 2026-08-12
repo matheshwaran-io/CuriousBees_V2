@@ -51,7 +51,7 @@ export function PremiumEvents() {
   
   // Views & Filter states
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day' | 'list'>('list');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'agenda'>('month');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [rsvpList, setRsvpList] = useState<string[]>([]);
@@ -92,126 +92,98 @@ export function PremiumEvents() {
     }
   };
 
-  // Categories list based on screenshot
-  const categoriesList = ['All', 'Conferences', 'Workshops', 'Research Seminars', 'Thesis Presentations', 'Competitions'];
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  // Filtered Events for grid & list
+  // Filtered Events for calendar view
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = !q || e.title.toLowerCase().includes(q) || e.venue.toLowerCase().includes(q);
-      
       const matchesCategory = activeCategory === 'All' || 
         (e.eventType && e.eventType.toLowerCase().includes(activeCategory.toLowerCase().split(' ')[0]));
-      
       return matchesSearch && matchesCategory;
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [events, searchQuery, activeCategory]);
 
-  // Announcements List (Sidebar Notices)
-  const announcementsList = useMemo(() => {
-    return events
-      .filter(e => e.eventType?.toLowerCase().includes('notice') || e.eventType?.toLowerCase().includes('announcement') || e.priority === 'HIGH')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [events]);
-
-  // Event Reminders (Sidebar)
-  const remindersList = useMemo(() => {
-    const now = new Date().getTime();
-    return events
-      .filter(e => new Date(e.date).getTime() > now)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 4);
-  }, [events]);
-
-  const toggleRsvp = (id: string) => {
-    if (rsvpList.includes(id)) {
-      setRsvpList(rsvpList.filter(eid => eid !== id));
+  const handlePrevDate = () => {
+    const nextD = new Date(selectedDate);
+    if (calendarView === 'month' || calendarView === 'agenda') {
+      nextD.setMonth(nextD.getMonth() - 1);
+    } else if (calendarView === 'week') {
+      nextD.setDate(nextD.getDate() - 7);
     } else {
-      setRsvpList([...rsvpList, id]);
+      nextD.setDate(nextD.getDate() - 1);
     }
+    setSelectedDate(nextD);
   };
 
-  const formatMonth = (dateStr: string | Date) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-  };
-
-  const formatDay = (dateStr: string | Date) => {
-    const d = new Date(dateStr);
-    return d.getDate().toString().padStart(2, '0');
-  };
-
-  const getUrgencyBadge = (dateStr: string | Date) => {
-    const daysLeft = Math.ceil((new Date(dateStr).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    if (daysLeft <= 0) return { text: 'Now', style: 'bg-red-50 text-red-600 border border-red-200' };
-    if (daysLeft === 1) return { text: 'in 1 day', style: 'bg-red-50 text-red-600 border border-red-200 animate-pulse' };
-    return { text: `${daysLeft} days left`, style: 'bg-amber-50 text-amber-700 border border-amber-200' };
+  const handleNextDate = () => {
+    const nextD = new Date(selectedDate);
+    if (calendarView === 'month' || calendarView === 'agenda') {
+      nextD.setMonth(nextD.getMonth() + 1);
+    } else if (calendarView === 'week') {
+      nextD.setDate(nextD.getDate() + 7);
+    } else {
+      nextD.setDate(nextD.getDate() + 1);
+    }
+    setSelectedDate(nextD);
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFBFC] pb-12 select-none text-left">
-      <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-6">
+    <div className="min-h-screen bg-slate-50/50 pb-16 select-none text-left">
+      <div className="max-w-[1500px] mx-auto p-4 md:p-8 space-y-6">
         
-        {/* 🚀 TOP HEADER BAR */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* ─── 1. HEADER BAR ─── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 backdrop-blur-xl p-6 md:p-8 rounded-[32px] border border-slate-200/80 shadow-[0_8px_30px_rgb(12,77,162,0.04)]">
+          {/* Month & Year Title */}
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight font-display">Event Calendar</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Conferences, workshops, seminars, thesis presentations and competitions.
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+            </h1>
+            <p className="text-xs md:text-sm font-medium text-slate-500 mt-1">
+              SRMIST Academic Conferences, Seminars, Competitions & Defense Timelines
             </p>
           </div>
           
+          {/* Controls: View Switcher & Date Prev/Next */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search events..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#004495] focus:ring-1 focus:ring-[#004495] shadow-sm transition-all placeholder:text-slate-400"
-              />
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            
+            {/* View Mode Switcher Pills */}
+            <div className="flex items-center bg-slate-100/80 backdrop-blur-md border border-slate-200/60 rounded-2xl p-1 shadow-inner">
+              {(['day', 'week', 'month', 'agenda'] as const).map((mode) => (
+                <button 
+                  key={mode}
+                  onClick={() => setCalendarView(mode)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold capitalize transition-all cursor-pointer ${
+                    calendarView === mode 
+                      ? 'bg-[#0C4DA2] text-white shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
             </div>
 
-            {/* View Switchers */}
-            <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-              <button 
-                onClick={() => setCalendarView('list')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'list' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
+            {/* Date Nav Buttons < > */}
+            <div className="flex items-center gap-1 bg-white border border-slate-200/80 rounded-2xl p-1 shadow-2xs">
+              <button
+                onClick={handlePrevDate}
+                className="w-8 h-8 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-extrabold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                title="Previous"
               >
-                List
+                &lt;
               </button>
-              <button 
-                onClick={() => setCalendarView('month')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'month' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
+              <button
+                onClick={handleNextDate}
+                className="w-8 h-8 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-extrabold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                title="Next"
               >
-                Month
-              </button>
-              <button 
-                onClick={() => setCalendarView('week')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'week' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Week
-              </button>
-              <button 
-                onClick={() => setCalendarView('day')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                  calendarView === 'day' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Day
+                &gt;
               </button>
             </div>
 
+            {/* Host Event Action */}
             {(currentUser?.role === 'RESEARCH_SUPERVISOR' || (currentUser?.role as string) === 'INSTITUTE_ADMIN' || (currentUser?.role as string) === 'ADMIN') && (
               <button 
                 onClick={() => {
@@ -226,25 +198,25 @@ export function PremiumEvents() {
                   });
                   setIsDrawerOpen(true);
                 }}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#004495] hover:bg-[#003370] text-white rounded-full text-xs font-bold uppercase tracking-wider shadow-md shadow-blue-900/20 transition-all duration-300 active:scale-95 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-3 bg-[#0C4DA2] hover:bg-[#042654] text-white rounded-2xl text-xs font-extrabold uppercase tracking-wider shadow-md shadow-blue-900/20 transition-all cursor-pointer active:scale-95"
               >
-                <Plus className="w-4.5 h-4.5 shrink-0" />
-                <span>Host event</span>
+                <Plus className="w-4 h-4" />
+                <span>Post Event</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* 🚀 CATEGORY FILTER BAR */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] p-4 flex flex-wrap items-center gap-2.5">
-          {categoriesList.map(cat => (
+        {/* ─── 2. CATEGORY FILTER BAR ─── */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 p-3.5 flex flex-wrap items-center gap-2">
+          {['All', 'Conferences', 'Workshops', 'Research Seminars', 'Thesis Presentations', 'Competitions'].map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                 activeCategory === cat 
-                  ? 'bg-[#004495] text-white border-[#004495] shadow-sm shadow-blue-500/10 scale-102 font-extrabold' 
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100/50'
+                  ? 'bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-2xs font-extrabold' 
+                  : 'bg-white text-slate-700 border-slate-200/80 hover:bg-slate-50'
               }`}
             >
               {cat}
@@ -252,174 +224,17 @@ export function PremiumEvents() {
           ))}
         </div>
 
-        {/* 🚀 MAIN CONTENT GRID (2-COLUMN) */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          
-          {/* LEFT: CALENDAR VIEW OR EVENT LIST FEED */}
-          <div className="flex-1 min-w-0 w-full">
-            {calendarView === 'list' ? (
-              <div className="space-y-4">
-                {filteredEvents.length === 0 ? (
-                  <div className="bg-white border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] p-12 text-center rounded-2xl">
-                    <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-                    <h4 className="text-slate-900 font-bold text-base">No Scheduled Events</h4>
-                    <p className="text-slate-500 text-sm max-w-sm mx-auto mt-2 leading-relaxed">
-                      Try selecting another filter category or adjusting your search queries.
-                    </p>
-                  </div>
-                ) : (
-                  filteredEvents.map(event => {
-                    const isRsvpd = rsvpList.includes(event.id);
-                    return (
-                      <div 
-                        key={event.id}
-                        onClick={() => setSelectedEvent(event as PrismaEvent)}
-                        className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_-5px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-6 cursor-pointer group"
-                      >
-                        <div className="flex items-center gap-5">
-                          {/* Date circle */}
-                          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#004495] to-[#0c4da2] text-white flex flex-col items-center justify-center shrink-0 shadow-md">
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-90 leading-tight">
-                              {formatMonth(event.date)}
-                            </span>
-                            <span className="text-xl font-black leading-none mt-0.5">
-                              {formatDay(event.date)}
-                            </span>
-                          </div>
-
-                          {/* Detail block */}
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-base font-extrabold text-slate-800 group-hover:text-[#004495] transition-colors leading-snug">
-                                {event.title}
-                              </h3>
-                              <span className="inline-flex items-center px-2.5 py-0.5 bg-blue-50 text-[#004495] rounded-lg text-[9px] font-black uppercase tracking-wider">
-                                {event.eventType || 'Event'}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-bold text-slate-400">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-slate-300" />
-                                {event.time}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5 text-slate-300" />
-                                {event.venue}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* RSVP button */}
-                        <div className="shrink-0 sm:self-center" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => toggleRsvp(event.id)}
-                            className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all w-full sm:w-auto ${
-                              isRsvpd 
-                               ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
-                               : 'bg-white border border-[#004495] text-[#004495] hover:bg-blue-50'
-                            }`}
-                          >
-                            {isRsvpd ? '✓ RSVP\'d' : 'RSVP'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
-              <PremiumCalendarWidget 
-                events={filteredEvents} 
-                onEventClick={(evt) => setSelectedEvent(evt as PrismaEvent)} 
-                view={calendarView}
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
-            )}
-          </div>
-
-          {/* RIGHT SIDEBAR: UPCOMING NOTICES & REMINDERS */}
-          <aside className="w-full lg:w-[350px] shrink-0 space-y-6">
-            
-            {/* Announcements Section */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_12px_40px_rgba(0,0,0,0.03)] p-5">
-              <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-slate-50">
-                <Megaphone className="w-4.5 h-4.5 text-[#FFC107]" />
-                <h3 className="text-sm font-extrabold text-slate-800 tracking-tight uppercase">Announcements</h3>
-              </div>
-              
-              <div className="space-y-4">
-                {announcementsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No recent notices.</p>
-                ) : (
-                  announcementsList.map(ann => {
-                    const daysLeft = Math.ceil((new Date(ann.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                    let badgeText = 'University Notice';
-                    if (ann.eventType?.toLowerCase().includes('competition')) badgeText = 'Competition';
-                    if (ann.eventType?.toLowerCase().includes('seminar')) badgeText = 'Department';
-
-                    return (
-                      <div key={ann.id} className="pb-4 border-b border-slate-50 last:border-0 last:pb-0 flex flex-col gap-1 text-left">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-[9px] font-black uppercase tracking-wider text-[#004495] bg-blue-50 px-2 py-0.5 rounded">
-                            {badgeText}
-                          </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
-                            {daysLeft <= 0 ? 'Today' : `${daysLeft}d ago`}
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-slate-700 leading-normal hover:text-[#004495] transition-colors cursor-pointer" onClick={() => setSelectedEvent(ann as PrismaEvent)}>
-                          {ann.title}
-                        </p>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Event Reminders Section */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_12px_40px_rgba(0,0,0,0.03)] p-5">
-              <div className="flex items-center gap-2.5 mb-5 pb-4 border-b border-slate-50">
-                <Bell className="w-4.5 h-4.5 text-[#004495]" />
-                <h3 className="text-sm font-extrabold text-slate-800 tracking-tight uppercase">Event Reminders</h3>
-              </div>
-              
-              <div className="space-y-3.5">
-                {remindersList.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No upcoming reminders.</p>
-                ) : (
-                  remindersList.map(rem => {
-                    const badge = getUrgencyBadge(rem.date);
-                    return (
-                      <div 
-                        key={rem.id} 
-                        onClick={() => setSelectedEvent(rem as PrismaEvent)}
-                        className="flex gap-3 bg-slate-50/50 p-3 rounded-2xl border border-slate-100 hover:border-[#004495]/20 hover:bg-slate-50 transition-all duration-300 cursor-pointer"
-                      >
-                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                          <Bell className="w-4.5 h-4.5 text-[#004495]" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-extrabold text-slate-800 line-clamp-1 uppercase tracking-wide">{rem.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-1 font-semibold">
-                            Tomorrow • {rem.time}
-                          </p>
-                          <span className={`inline-block mt-2 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${badge.style}`}>
-                            {badge.text}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-          </aside>
-
+        {/* ─── 3. FULL-WIDTH CALENDAR CONTENT ─── */}
+        <div className="w-full">
+          <PremiumCalendarWidget 
+            events={filteredEvents} 
+            onEventClick={(evt) => setSelectedEvent(evt as PrismaEvent)} 
+            view={calendarView}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
         </div>
+
       </div>
 
       {/* 🔎 Event Detail Modal */}

@@ -114,7 +114,7 @@ export default function ResearchersDiscoveryPage() {
                 
                 <div className="space-y-4 relative z-10">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 text-white font-bold flex items-center justify-center text-sm shadow-md overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#0C4DA2] to-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-md overflow-hidden flex-shrink-0">
                       {peer.image ? (
                         <img src={peer.image} alt={peer.name} className="w-full h-full object-cover" />
                       ) : (
@@ -126,7 +126,7 @@ export default function ResearchersDiscoveryPage() {
                         {peer.name}
                       </h3>
                       <p className="text-xs font-semibold text-indigo-600">
-                        {peer.role === 'RESEARCH_SUPERVISOR' ? 'Supervisor' : 'Scholar'}
+                        {peer.role === 'RESEARCH_SUPERVISOR' || peer.role === 'SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar'}
                       </p>
                       <p className="text-xs text-slate-500 truncate">{peer.department || 'SRMIST'}</p>
                     </div>
@@ -237,7 +237,7 @@ export default function ResearchersDiscoveryPage() {
                             ? "bg-amber-50 text-amber-700 border border-amber-200" 
                             : "bg-indigo-50 text-indigo-700 border border-indigo-100"
                         )}>
-                          {researcher.role === 'RESEARCH_SUPERVISOR' ? 'Supervisor' : 'Scholar'}
+                          {researcher.role === 'RESEARCH_SUPERVISOR' || researcher.role === 'SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar'}
                         </span>
                         <div className="flex items-center gap-1 text-xs text-slate-500 truncate">
                           <MapPin className="w-3 h-3 flex-shrink-0 text-slate-400" />

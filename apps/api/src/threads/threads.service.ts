@@ -56,7 +56,9 @@ export class ThreadsService {
                 role: true,
                 department: true
               }
-            }
+            },
+            _count: { select: { likes: true } },
+            likes: userId ? { where: { userId } } : false
           }
         },
         _count: {
@@ -159,6 +161,7 @@ export class ThreadsService {
                 department: true
               }
             },
+            _count: { select: { likes: true } },
             replies: {
               include: {
                 author: {
@@ -171,7 +174,8 @@ export class ThreadsService {
                     faculty: true,
                     department: true
                   }
-                }
+                },
+                _count: { select: { likes: true } }
               },
               orderBy: { createdAt: 'asc' }
             }
@@ -219,7 +223,8 @@ export class ThreadsService {
                 role: true,
                 department: true
               }
-            }
+            },
+            _count: { select: { likes: true } }
           },
           orderBy: { createdAt: 'asc' }
         }

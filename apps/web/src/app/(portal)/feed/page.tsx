@@ -442,14 +442,12 @@ export default function ScholarFeedPage() {
   const getAvatarBg = (initials: string) => {
     const code = initials.charCodeAt(0) + (initials.charCodeAt(1) || 0);
     const colors = [
+      'bg-[#0C4DA2]',
       'bg-blue-600',
-      'bg-emerald-600',
-      'bg-rose-500',
-      'bg-purple-600',
       'bg-amber-500',
-      'bg-blue-600',
-      'bg-teal-600',
-      'bg-cyan-600'
+      'bg-blue-700',
+      'bg-yellow-600',
+      'bg-[#001E4C]'
     ];
     return colors[code % colors.length];
   };
@@ -617,9 +615,9 @@ export default function ScholarFeedPage() {
                 />
                 <label 
                   htmlFor="pdf-upload"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-rose-50 hover:border-rose-200/80 transition-all cursor-pointer border border-slate-200/60 text-slate-600 hover:text-rose-700 text-[11px] font-bold shadow-2xs ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-blue-50 hover:border-blue-200/80 transition-all cursor-pointer border border-slate-200/60 text-slate-600 hover:text-[#0C4DA2] text-[11px] font-bold shadow-2xs ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <FileText className="w-3.5 h-3.5 text-rose-500" />
+                  <FileText className="w-3.5 h-3.5 text-[#0C4DA2]" />
                   <span>PDF</span>
                 </label>
 
@@ -632,9 +630,9 @@ export default function ScholarFeedPage() {
                 />
                 <label 
                   htmlFor="photo-upload"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-purple-50 hover:border-purple-200/80 transition-all cursor-pointer border border-slate-200/60 text-slate-600 hover:text-purple-700 text-[11px] font-bold shadow-2xs ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-amber-50 hover:border-amber-200/80 transition-all cursor-pointer border border-slate-200/60 text-slate-600 hover:text-amber-700 text-[11px] font-bold shadow-2xs ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
+                  <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
                   <span>Photo</span>
                 </label>
 
@@ -647,9 +645,9 @@ export default function ScholarFeedPage() {
                 />
                 <label 
                   htmlFor="paper-upload"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-emerald-50 hover:border-emerald-200/80 transition-all cursor-pointer border border-slate-200/60 text-slate-600 hover:text-emerald-700 text-[11px] font-bold shadow-2xs ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-blue-50 hover:border-blue-200/80 transition-all cursor-pointer border border-slate-200/60 text-slate-600 hover:text-[#0C4DA2] text-[11px] font-bold shadow-2xs ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
+                  <BookOpen className="w-3.5 h-3.5 text-[#0C4DA2]" />
                   <span>Paper</span>
                 </label>
 
@@ -829,13 +827,13 @@ export default function ScholarFeedPage() {
                   
                   const getBadgeConfig = (type?: string) => {
                     switch(type) {
-                      case 'RESEARCH_UPDATE': return { text: 'RESEARCH UPDATE', colors: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20 text-blue-600' };
-                      case 'PUBLICATION': return { text: 'PUBLICATION', colors: 'from-purple-500/10 to-fuchsia-500/10 border-purple-500/20 text-purple-600' };
-                      case 'QUESTION': return { text: 'QUESTION', colors: 'from-amber-500/10 to-orange-500/10 border-amber-500/20 text-amber-600' };
-                      case 'COLLABORATION_REQUEST': return { text: 'COLLAB REQUEST', colors: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/20 text-emerald-600' };
-                      case 'ACHIEVEMENT': return { text: 'ACHIEVEMENT', colors: 'from-yellow-500/10 to-amber-500/10 border-yellow-500/20 text-yellow-600' };
-                      case 'ANNOUNCEMENT': return { text: 'ANNOUNCEMENT', colors: 'from-rose-500/10 to-pink-500/10 border-rose-500/20 text-rose-600' };
-                      default: return { text: 'RESEARCH UPDATE', colors: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20 text-blue-600' };
+                      case 'RESEARCH_UPDATE': return { text: 'RESEARCH UPDATE', colors: 'from-blue-500/10 to-indigo-500/10 border-blue-500/20 text-[#0C4DA2]' };
+                      case 'PUBLICATION': return { text: 'PUBLICATION', colors: 'from-[#0C4DA2]/10 to-blue-600/10 border-blue-600/20 text-[#0C4DA2]' };
+                      case 'QUESTION': return { text: 'QUESTION', colors: 'from-amber-500/10 to-yellow-500/10 border-amber-500/20 text-amber-700' };
+                      case 'COLLABORATION_REQUEST': return { text: 'COLLAB REQUEST', colors: 'from-blue-600/10 to-amber-500/10 border-blue-500/20 text-[#0C4DA2]' };
+                      case 'ACHIEVEMENT': return { text: 'ACHIEVEMENT', colors: 'from-amber-400/10 to-yellow-500/10 border-amber-500/30 text-amber-800' };
+                      case 'ANNOUNCEMENT': return { text: 'ANNOUNCEMENT', colors: 'from-[#0C4DA2]/15 to-amber-400/15 border-[#0C4DA2]/30 text-[#0C4DA2]' };
+                      default: return { text: 'RESEARCH UPDATE', colors: 'from-blue-500/10 to-indigo-500/10 border-blue-500/20 text-[#0C4DA2]' };
                     }
                   };
                   const badge = getBadgeConfig(thread.rawType);
@@ -1029,11 +1027,11 @@ export default function ScholarFeedPage() {
                         <div className="flex items-center gap-2 sm:gap-4">
                           <button 
                             onClick={() => toggleLike(thread.id, thread.likesCount)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:bg-rose-50 ${
-                              likeState.liked ? 'text-rose-600 bg-rose-50/50' : 'text-slate-500 hover:text-rose-600'
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer hover:bg-blue-50 ${
+                              likeState.liked ? 'text-[#0C4DA2] bg-blue-50' : 'text-slate-500 hover:text-[#0C4DA2]'
                             }`}
                           >
-                            <Heart className={`w-4 h-4 transition-transform group-active:scale-75 ${likeState.liked ? 'fill-rose-600 text-rose-600' : ''}`} />
+                            <Heart className={`w-4 h-4 transition-transform group-active:scale-75 ${likeState.liked ? 'fill-[#0C4DA2] text-[#0C4DA2]' : ''}`} />
                             <span>Like ({likeState.count})</span>
                           </button>
 
@@ -1084,11 +1082,11 @@ export default function ScholarFeedPage() {
                         {thread.interestedCount && thread.interestedCount > 0 ? (
                           <div className="flex items-center gap-2">
                             <div className="flex -space-x-1.5 overflow-hidden">
-                              <div className="inline-block h-5.5 w-5.5 rounded-full ring-2 ring-white bg-slate-200 overflow-hidden">
-                                <div className="w-full h-full bg-pink-500 text-white font-extrabold text-[8px] flex items-center justify-center">SR</div>
+                              <div className="inline-block h-5.5 w-5.5 rounded-full ring-2 ring-white bg-[#0C4DA2] overflow-hidden">
+                                <div className="w-full h-full text-white font-extrabold text-[8px] flex items-center justify-center">SR</div>
                               </div>
-                              <div className="inline-block h-5.5 w-5.5 rounded-full ring-2 ring-white bg-slate-200 overflow-hidden">
-                                <div className="w-full h-full bg-blue-500 text-white font-extrabold text-[8px] flex items-center justify-center">MJ</div>
+                              <div className="inline-block h-5.5 w-5.5 rounded-full ring-2 ring-white bg-[#FEC727] overflow-hidden">
+                                <div className="w-full h-full text-[#17233D] font-extrabold text-[8px] flex items-center justify-center">MJ</div>
                               </div>
                             </div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
