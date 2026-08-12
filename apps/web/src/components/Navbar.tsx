@@ -82,7 +82,7 @@ export default function Navbar() {
 
           {/* Discussions */}
           <Link
-            href="/threads"
+            href="/feed"
             className="p-2.5 rounded-xl hover:bg-[#EEF4FF] hover:text-[#0B4EA2] transition-colors flex items-center justify-center text-[#4A5568]"
             title="Research Feed"
           >

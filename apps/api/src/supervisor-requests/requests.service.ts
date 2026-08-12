@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, ForbiddenException, NotFoundException 
 import { PrismaService } from '../prisma/prisma.service';
 import { RequestStatus, UserStatus, Role } from '@prisma/client';
 import { MailService } from '../users/mail.service';
+import { MAX_SCHOLARS_PER_SUPERVISOR } from '@curiousbees/constants';
 
 @Injectable()
 export class RequestsService {
@@ -47,9 +48,9 @@ export class RequestsService {
     }
 
     const currentScholars = supervisor._count.scholars;
-    const maxScholars = supervisor.supervisorProfile?.maxScholars ?? 5;
+    const maxScholars = supervisor.supervisorProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
     if (currentScholars >= maxScholars) {
-      throw new BadRequestException('Selected supervisor is at full capacity.');
+      throw new BadRequestException(`Selected supervisor has reached maximum scholar capacity of ${maxScholars}.`);
     }
 
     // Check for existing pending request
@@ -228,6 +229,22 @@ export class RequestsService {
     });
 
     const updatedReq = await this.prisma.$transaction(async (tx) => {
+      // 0. Server-side transaction check: Ensure supervisor capacity is not exceeded
+      const activeScholarCount = await tx.user.count({
+        where: {
+          supervisorId,
+          role: Role.RESEARCH_SCHOLAR,
+          status: UserStatus.ACTIVE,
+        }
+      });
+      const supProfile = await tx.supervisorProfile.findUnique({
+        where: { userId: supervisorId }
+      });
+      const maxScholars = supProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
+      if (activeScholarCount >= maxScholars) {
+        throw new BadRequestException(`Supervisor has reached maximum scholar capacity of ${maxScholars}.`);
+      }
+
       // 1. Update request status
       const req = await tx.scholarSupervisorRequest.update({
         where: { id: requestId },

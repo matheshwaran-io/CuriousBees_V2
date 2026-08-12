@@ -42,7 +42,7 @@ export default function ScholarCreateThreadPage() {
   const onSubmit = async (data: any) => {
     try {
       await createThread(data.title, data.content, tags);
-      router.push('/supervisor/feed');
+      router.push('/feed');
     } catch (e: any) {
       alert(`Error creating proposal: ${e.message}`);
     }
@@ -89,7 +89,7 @@ export default function ScholarCreateThreadPage() {
       {/* Back to threads navigation row */}
       <div className="text-left">
         <Link 
-          href="/supervisor/feed" 
+          href="/feed" 
           className="inline-flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" />
@@ -233,7 +233,7 @@ export default function ScholarCreateThreadPage() {
         {/* Action Submission Buttons */}
         <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
           <Link
-            href="/supervisor/feed"
+            href="/feed"
             className="px-4 py-2.5 border border-slate-200 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors text-xs font-bold uppercase tracking-wider flex items-center justify-center"
           >
             Discard

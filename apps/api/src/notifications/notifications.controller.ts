@@ -15,6 +15,11 @@ export class NotificationsController {
     return this.notificationsService.getNotifications(req.user.id);
   }
 
+  @Put('read-all')
+  async markAllAsRead(@Req() req: any) {
+    return this.notificationsService.markAllAsRead(req.user.id);
+  }
+
   @Get('preferences')
   async getPreferences(@Req() req: any) {
     return await this.notificationsService.getPreferences(req.user.id);

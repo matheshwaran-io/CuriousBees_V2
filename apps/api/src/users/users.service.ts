@@ -85,19 +85,25 @@ export class UsersService {
   }
 
   async getCollaborators(userId: string, search?: string, department?: string) {
-    const requester = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    const requester = await this.prisma.user.findUnique({ 
+      where: { id: userId }, 
+      include: { interests: true } 
+    });
     if (!requester) throw new BadRequestException('User not found');
 
-    let roleFilter: Role | undefined;
-    if (requester.role === 'RESEARCH_SCHOLAR') roleFilter = 'RESEARCH_SCHOLAR';
-    else if (requester.role === 'RESEARCH_SUPERVISOR') roleFilter = 'RESEARCH_SUPERVISOR';
-    // If admin, they might not see any peers, or maybe they see other admins. We'll restrict to exact role.
-    else roleFilter = requester.role;
+    const requesterInterestIds = requester.interests.map((i: any) => i.interestId);
 
     const users = await this.prisma.user.findMany({
       where: {
         id: { not: userId },
-        role: roleFilter,
+        role: { in: ['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR'] },
+        ...(requesterInterestIds.length > 0 && {
+          interests: {
+            some: {
+              interestId: { in: requesterInterestIds }
+            }
+          }
+        }),
         ...(department && { department }),
         ...(search && {
           OR: [

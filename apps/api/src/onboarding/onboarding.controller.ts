@@ -11,16 +11,16 @@ export class OnboardingController {
   async onboardSupervisor(
     @Req() req: any,
     @Body() body: {
-      facultyId: string;
-      departmentId: string;
-      designation: string;
-      employeeId: string;
+      facultyId?: string;
+      departmentId?: string;
+      designation?: string;
+      employeeId?: string;
       researchArea: string;
       maxScholars?: number;
     }
   ) {
-    if (!body.facultyId || !body.departmentId || !body.designation || !body.employeeId || !body.researchArea) {
-      throw new BadRequestException('All fields (facultyId, departmentId, designation, employeeId, researchArea) are required.');
+    if (!body.researchArea || !body.researchArea.trim()) {
+      throw new BadRequestException('Research Area is required.');
     }
     return this.onboardingService.onboardSupervisor(req.user.id, body);
   }

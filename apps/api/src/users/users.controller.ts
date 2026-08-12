@@ -10,8 +10,13 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('profile')
-  async getProfile(@Req() req: any) {
+  async getMyProfile(@Req() req: any) {
     return this.usersService.getProfile(req.user.id);
+  }
+
+  @Get(':id/profile')
+  async getUserProfile(@Param('id') id: string) {
+    return this.usersService.getProfile(id);
   }
 
   @Put('profile')

@@ -64,10 +64,15 @@ export default function Navbar() {
       
       if (!name) {
         // Fallback for UUID/dynamic parameters
-        if (segments[index - 1]?.toLowerCase() === 'workspace') {
+        const prevSegment = segments[index - 1]?.toLowerCase();
+        if (prevSegment === 'workspace') {
           name = 'Workspace Details';
-        } else if (segments[index - 1]?.toLowerCase() === 'threads') {
-          name = 'Thread Details';
+        } else if (prevSegment === 'threads' || prevSegment === 'feed') {
+          name = 'Publication';
+        } else if (prevSegment === 'researchers') {
+          name = 'Researcher Profile';
+        } else if (prevSegment === 'profile') {
+          name = 'Profile View';
         } else {
           name = segment.charAt(0).toUpperCase() + segment.slice(1);
         }
@@ -96,24 +101,6 @@ export default function Navbar() {
           >
             <Menu className="w-5 h-5" />
           </button>
-
-          {/* Breadcrumb Trail */}
-          <nav className="hidden sm:flex items-center gap-1.5 text-[12px] font-semibold text-textSecondary min-w-0">
-            {breadcrumbs.map((crumb, idx) => (
-              <React.Fragment key={`${crumb.href}-${idx}`}>
-                {idx > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0 text-textSecondary/40" />}
-                <Link
-                  href={crumb.href}
-                  className={cn(
-                    'truncate transition-colors hover:text-black',
-                    idx === breadcrumbs.length - 1 ? 'text-black font-bold' : ''
-                  )}
-                >
-                  {crumb.name}
-                </Link>
-              </React.Fragment>
-            ))}
-          </nav>
         </div>
 
         {/* Trailing actions */}
@@ -133,7 +120,7 @@ export default function Navbar() {
 
           {/* Discussions feed shortcut */}
           <Link
-            href="/threads"
+            href="/feed"
             className="p-2 rounded-full hover:bg-slate-50 hover:text-primary transition-colors flex items-center justify-center"
             title="Research Feed"
           >

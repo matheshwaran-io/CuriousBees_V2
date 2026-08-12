@@ -10,6 +10,8 @@ export interface User {
   department: string | null;
   departmentId: string | null;
   departmentRef?: Department | null;
+  faculty?: string | null;
+  supervisorProfile?: any;
   bio: string | null;
   onboardingCompleted: boolean;
   approved: boolean;

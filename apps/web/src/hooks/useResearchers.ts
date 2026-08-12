@@ -26,3 +26,13 @@ export function useResearchers(query: ResearcherQuery) {
     }
   });
 }
+
+export function useResearcherProfile(id: string) {
+  return useQuery({
+    queryKey: ['researcher', id],
+    queryFn: async () => {
+      return apiFetch(`/api/users/${id}/profile`);
+    },
+    enabled: !!id,
+  });
+}

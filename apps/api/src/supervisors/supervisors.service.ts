@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus, RequestStatus } from '@prisma/client';
+import { MAX_SCHOLARS_PER_SUPERVISOR } from '@curiousbees/constants';
 
 @Injectable()
 export class SupervisorsService {
@@ -44,7 +45,7 @@ export class SupervisorsService {
 
     return supervisors.map(sup => {
       const currentScholars = sup._count.scholars;
-      const maxScholars = sup.supervisorProfile?.maxScholars ?? 5;
+      const maxScholars = sup.supervisorProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
       return {
         id: sup.id,
         name: sup.name,
@@ -107,21 +108,38 @@ export class SupervisorsService {
       where: { id: supervisorId }
     });
 
-    // 1. Update the request status
-    await this.prisma.scholarSupervisorRequest.update({
-      where: { id: requestId },
-      data: { status: 'APPROVED' },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const activeScholarCount = await tx.user.count({
+        where: {
+          supervisorId,
+          role: 'RESEARCH_SCHOLAR',
+          status: 'ACTIVE',
+        }
+      });
+      const supProfile = await tx.supervisorProfile.findUnique({
+        where: { userId: supervisorId }
+      });
+      const maxScholars = supProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
+      if (activeScholarCount >= maxScholars) {
+        throw new BadRequestException(`Supervisor has reached maximum scholar capacity of ${maxScholars}.`);
+      }
 
-    // 2. Update scholar status to ACTIVE and approved = true, and link supervisorId
-    return this.prisma.user.update({
-      where: { id: request.scholarId },
-      data: {
-        status: 'ACTIVE',
-        approved: true,
-        supervisorId,
-        supervisorEmail: supervisor?.email || null,
-      },
+      // 1. Update the request status
+      await tx.scholarSupervisorRequest.update({
+        where: { id: requestId },
+        data: { status: 'APPROVED' },
+      });
+
+      // 2. Update scholar status to ACTIVE and approved = true, and link supervisorId
+      return tx.user.update({
+        where: { id: request.scholarId },
+        data: {
+          status: 'ACTIVE',
+          approved: true,
+          supervisorId,
+          supervisorEmail: supervisor?.email || null,
+        },
+      });
     });
   }
 

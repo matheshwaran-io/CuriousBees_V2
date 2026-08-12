@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useResearchers } from '@/hooks/useResearchers';
+import { useResearcherProfile } from '@/hooks/useResearchers';
 import { useFollowStatus, useFollowUser, useUnfollowUser } from '@/hooks/useFollow';
 import { useStore } from '@/store/useStore';
 import { 
@@ -27,13 +27,12 @@ export default function ResearcherProfilePage() {
   const { currentUser } = useStore();
   const id = params.id as string;
 
-  const { data: directoryData, isLoading: isLoadingProfile } = useResearchers({ limit: 100 });
+  const { data: researcher, isLoading: isLoadingProfile } = useResearcherProfile(id);
   const { data: followStatus, isLoading: isLoadingFollow } = useFollowStatus(id);
   
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
 
-  const researcher = (directoryData as any)?.items?.find((r: any) => r.id === id);
   const status = followStatus as any;
 
   const getInitials = (name: string) => {

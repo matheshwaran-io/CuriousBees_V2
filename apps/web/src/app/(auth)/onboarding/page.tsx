@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { 
@@ -17,32 +17,93 @@ import {
   Hash,
   Award,
   BookOpen,
-  ChevronDown
+  ChevronDown,
+  ArrowRight,
+  Sparkles,
+  X,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
+import { MAX_SCHOLARS_PER_SUPERVISOR } from '@curiousbees/constants';
+
 
 const RESEARCH_DOMAINS = [
-  "Artificial Intelligence & Machine Learning",
-  "Data Science & Big Data Analytics",
-  "Cybersecurity & Cryptography",
-  "Internet of Things (IoT) & Sensor Networks",
-  "Cloud & Edge Computing",
-  "Bioinformatics & Computational Biology",
-  "Robotics & Automation",
-  "Computer Vision & Image Processing",
-  "Natural Language Processing (NLP)",
-  "Blockchain & Distributed Ledgers",
-  "Software Engineering & Architecture",
-  "Human-Computer Interaction (HCI)",
+  "AI Hallucination",
+  "AI Injection",
+  "AI-Assisted Coding",
+  "Additive Manufacturing (3D Printing)",
+  "Agriculture and Precision Farming",
+  "Analytical Intelligence and Machine Learning",
+  "Applied Mathematics and Modeling",
+  "Astrophysics and Cosmology",
+  "Augmented and Virtual Reality",
+  "Autonomous Vehicles and Drones",
+  "Behavioral Economics",
+  "Big Data Mining",
+  "Bioinformatics and Systems Biology",
+  "Biomedical Engineering",
+  "Biometrics",
+  "Biomimicry and Bio-inspired Design",
+  "Blockchain",
+  "Brain-Computer Interfaces (BCI)",
+  "Climate Change and Environmental Modeling",
+  "Cloud Computing and Virtualization",
+  "Cognitive Computing",
+  "Computational Linguistics",
+  "Computer Vision",
+  "Conversational AI and Chatbot",
+  "Cryptography and Network Security",
+  "Cybersecurity and Crypto",
+  "Cybersecurity and Privacy",
+  "Data Science and Statistics",
+  "Deep Learning",
+  "DevSecOps and Automated Engineering",
+  "Digital Humanities",
+  "E-commerce and Digital Marketing",
+  "Edge AI",
+  "Edge Computing",
+  "Embedded Systems and VLSI",
+  "Epidemiology and Public Health",
+  "Ethics of Technology",
+  "Explainable AI (XAI)",
+  "Financial Technology (FinTech)",
+  "Fluid Dynamics and Heat Transfer",
+  "Game Development and Design",
+  "Gen AI",
+  "Genomics and Biotechnology",
+  "Geoinformatics and Remote Sensing",
+  "Health Information",
+  "High-Performance Computing (HPC)",
+  "Human Computer Interaction",
+  "ILP",
+  "Internet of Things",
+  "LLM",
+  "Mixed Reality (MR)",
+  "Mobile and Web App",
+  "Multi-Agent Systems",
+  "NLP",
+  "Nanotechnology and Advanced Materials",
+  "Neuromorphic Computing",
+  "Neuroscience",
+  "Operations Research and Supply Chain",
+  "Pharmacology and Oncology",
+  "Power Systems and Smart Grids",
+  "Precision Medicine",
+  "Privacy-Preserving Machine Learning",
+  "Prompt Engineering and Optimization",
   "Quantum Computing",
-  "Wireless Communications & 5G/6G",
-  "Power Electronics & Renewable Energy",
-  "VLSI Design & Embedded Systems",
-  "Materials Science & Nanotechnology",
-  "Structural Engineering",
-  "Environmental Engineering",
-  "Biomedical Engineering"
+  "Reinforcement Learning",
+  "Robotics and Autonomous Systems",
+  "Sociology and Urban Planning",
+  "Software Engineering and DevOps",
+  "Space Systems Engineering",
+  "Statistical Thermodynamics",
+  "Structural Engineering and Materials",
+  "Sustainable Energy and Cleantech",
+  "Synthetic Biology",
+  "Telecommunications and 5G/6G Networks",
+  "Water Resources Engineering"
 ];
 
 export default function OnboardingPage() {
@@ -53,6 +114,7 @@ export default function OnboardingPage() {
     logout 
   } = useStore();
 
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<'SCHOLAR' | 'SUPERVISOR' | null>(null);
   
   // Academic selections
@@ -63,13 +125,12 @@ export default function OnboardingPage() {
   
   // Role-specific fields
   // Supervisor
-  const [designation, setDesignation] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
-  const [maxScholars, setMaxScholars] = useState(5);
   
   // Scholar / Research Area
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
-  const [customDomain, setCustomDomain] = useState('');
+  const [domainSearch, setDomainSearch] = useState('');
+  const domainListRef = useRef<HTMLDivElement>(null);
+
   
   const [supervisors, setSupervisors] = useState<any[]>([]);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState('');
@@ -130,6 +191,13 @@ export default function OnboardingPage() {
         if (res.ok) {
           const data = await res.json();
           setFaculties(data);
+          if (currentUser?.faculty) {
+            const fac = currentUser.faculty;
+            const match = data.find((f: any) => f.name.toLowerCase().includes(fac.toLowerCase()) || fac.toLowerCase().includes(f.name.toLowerCase()));
+            if (match) {
+              setSelectedFacultyId(match.id);
+            }
+          }
         } else {
           setErrorMsg('Failed to fetch faculties from the server.');
         }
@@ -141,7 +209,7 @@ export default function OnboardingPage() {
       }
     };
     fetchFaculties();
-  }, []);
+  }, [currentUser]);
 
   // Fetch departments when faculty changes
   useEffect(() => {
@@ -158,6 +226,13 @@ export default function OnboardingPage() {
         if (res.ok) {
           const data = await res.json();
           setDepartments(data);
+          if (currentUser?.department) {
+            const deptName = currentUser.department;
+            const match = data.find((d: any) => d.name.toLowerCase().includes(deptName.toLowerCase()) || deptName.toLowerCase().includes(d.name.toLowerCase()));
+            if (match) {
+              setSelectedDepartmentId(match.id);
+            }
+          }
         } else {
           setErrorMsg('Failed to fetch departments from the server.');
         }
@@ -169,7 +244,7 @@ export default function OnboardingPage() {
       }
     };
     fetchDepartments();
-  }, [selectedFacultyId]);
+  }, [selectedFacultyId, currentUser]);
 
   // Fetch supervisors when department/faculty is selected (for scholars)
   useEffect(() => {
@@ -207,14 +282,22 @@ export default function OnboardingPage() {
       return;
     }
 
-    const finalResearchArea = [...selectedDomains, customDomain.trim()].filter(Boolean).join(', ');
+    const finalResearchArea = selectedDomains.join(', ');
 
     if (role === 'SUPERVISOR') {
-      if (!designation || !employeeId || !finalResearchArea) {
-        setErrorMsg('Please provide your Designation, Employee ID, and select at least one Research Area.');
+      if (!finalResearchArea) {
+        setErrorMsg('Please select at least one Research Area.');
+        return;
+      }
+      if (!currentUser?.departmentId && (!selectedFacultyId || !selectedDepartmentId)) {
+        setErrorMsg('Please select your Faculty and Department.');
         return;
       }
     } else {
+      if (!selectedFacultyId || !selectedDepartmentId) {
+        setErrorMsg('Please select your Faculty and Department.');
+        return;
+      }
       if (!finalResearchArea || !selectedSupervisorId) {
         setErrorMsg('Please select at least one Research Area and select a supervisor.');
         return;
@@ -230,14 +313,12 @@ export default function OnboardingPage() {
         ? '/api/users/onboarding/supervisor' 
         : '/api/users/onboarding/scholar';
 
-          const body = role === 'SUPERVISOR' 
+      const body = role === 'SUPERVISOR' 
         ? {
-            facultyId: selectedFacultyId,
-            departmentId: selectedDepartmentId,
-            designation,
-            employeeId,
+            ...(selectedFacultyId && { facultyId: selectedFacultyId }),
+            ...(selectedDepartmentId && { departmentId: selectedDepartmentId }),
             researchArea: finalResearchArea,
-            maxScholars: Number(maxScholars),
+            maxScholars: MAX_SCHOLARS_PER_SUPERVISOR,
           }
         : {
             facultyId: selectedFacultyId,
@@ -248,6 +329,7 @@ export default function OnboardingPage() {
 
       const res = await apiFetch(endpoint, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
@@ -264,379 +346,533 @@ export default function OnboardingPage() {
     }
   };
 
-  const toggleDomain = (domain: string) => {
+  const toggleDomain = useCallback((domain: string) => {
+    const currentScroll = domainListRef.current?.scrollTop;
     setSelectedDomains(prev => 
       prev.includes(domain) ? prev.filter(d => d !== domain) : [...prev, domain]
     );
-  };
+    if (currentScroll !== undefined && domainListRef.current) {
+      requestAnimationFrame(() => {
+        if (domainListRef.current) {
+          domainListRef.current.scrollTop = currentScroll;
+        }
+      });
+    }
+  }, []);
+
+  const filteredDomains = useMemo(() => 
+    RESEARCH_DOMAINS.filter(d => d.toLowerCase().includes(domainSearch.toLowerCase())),
+    [domainSearch]
+  );
 
   const researchAreaSelectionBlock = (
-    <div className="space-y-3">
-      <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
+    <div className="space-y-3 text-left">
+      <label className="block text-[11px] font-extrabold text-blue-950/70 uppercase tracking-wider">
         Research Area / Domain (Select Multiple)
       </label>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 rounded-lg bg-slate-50 shadow-inner">
-        {RESEARCH_DOMAINS.map(domain => (
-          <label key={domain} className="flex items-start gap-2 cursor-pointer p-1.5 hover:bg-white rounded transition-colors text-xs font-semibold text-slate-700">
-            <input 
-              type="checkbox" 
-              checked={selectedDomains.includes(domain)} 
-              onChange={() => toggleDomain(domain)}
-              className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary/20 bg-white"
-            />
-            <span className="leading-tight">{domain}</span>
-          </label>
-        ))}
-      </div>
-      <div className="space-y-1.5">
-        <label className="block text-[10px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="custom-domain">
-          Other (Custom Domain)
-        </label>
+      <div className="relative group">
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-blue-400 group-focus-within:text-yellow-500 transition-colors" />
+        </div>
         <input
-          id="custom-domain"
           type="text"
-          placeholder="Type your own research area if not listed..."
-          value={customDomain}
-          onChange={(e) => setCustomDomain(e.target.value)}
-          className="w-full cb-input py-2 px-3 text-xs border border-borderStroke rounded-lg focus:ring-2 focus:ring-primary/20"
+          placeholder="Search research areas..."
+          value={domainSearch}
+          onChange={(e) => setDomainSearch(e.target.value)}
+          className="w-full cb-input py-2.5 pl-10 pr-4 text-xs border border-blue-200/60 rounded-xl focus:ring-4 focus:ring-yellow-400/20 focus:border-yellow-400/50 bg-white/50 font-semibold text-blue-950 transition-all placeholder:text-blue-300 hover:border-blue-300"
         />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2.5 border border-blue-100 rounded-xl bg-blue-50/30 shadow-inner custom-scrollbar">
+        {filteredDomains.length > 0 ? (
+          filteredDomains.map(domain => (
+            <label key={domain} className="flex items-start gap-2.5 cursor-pointer p-2 hover:bg-white rounded-lg transition-all duration-200 hover:shadow-sm text-xs font-bold text-blue-900/80 hover:text-blue-950 group">
+              <input 
+                type="checkbox" 
+                checked={selectedDomains.includes(domain)} 
+                onChange={() => toggleDomain(domain)}
+                className="mt-0.5 w-3.5 h-3.5 rounded-sm border-blue-300 text-blue-600 focus:ring-yellow-400/40 focus:ring-offset-0 bg-white transition-all cursor-pointer"
+              />
+              <span className="leading-tight pt-[1px]">{domain}</span>
+            </label>
+          ))
+        ) : (
+          <div className="col-span-full py-8 text-center text-xs font-semibold text-blue-400">
+            No research areas found matching "{domainSearch}"
+          </div>
+        )}
       </div>
     </div>
   );
 
   return (
-    <div className="bg-slate-50 min-h-screen flex items-center justify-center p-6 relative overflow-hidden font-sans w-full">
+    <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 min-h-screen flex items-start justify-center p-6 pt-12 pb-12 relative overflow-y-auto font-sans w-full">
       {/* Decorative background grid pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
       {/* Floating Sign Out Trigger */}
       <button 
         onClick={() => { logout(); router.push('/sign-in'); }}
-        className="absolute top-6 right-6 flex items-center space-x-1.5 px-3 py-1.5 border border-borderStroke rounded-lg text-xs font-bold text-textSecondary hover:text-primary hover:bg-slate-50 transition-all cursor-pointer z-20"
+        className="fixed top-6 right-6 flex items-center space-x-1.5 px-4 py-2 border border-white/10 rounded-full text-xs font-bold text-white/70 hover:text-yellow-400 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-300 cursor-pointer z-30 backdrop-blur-sm"
       >
         <LogOut className="w-3.5 h-3.5" />
         <span>Sign Out</span>
       </button>
 
       {/* Centered Glass Container Card */}
-      <main className="w-full max-w-lg relative z-10 my-8">
-        <div className="bg-white border border-borderStroke rounded-xl p-8 shadow-xl flex flex-col items-center text-center space-y-6">
+      <main className="w-full max-w-lg relative z-10">
+        <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl p-8 shadow-[0_0_80px_rgba(250,204,21,0.15)] flex flex-col items-center text-center space-y-5">
           
           {/* Logo container box */}
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-borderStroke shadow-sm bg-slate-50 flex items-center justify-center">
-            <Logo showText={false} size={42} />
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-blue-100 shadow-md bg-white flex items-center justify-center">
+            <Logo showText={false} size={38} />
           </div>
 
           <div className="space-y-2">
-            <h1 className="font-display font-extrabold text-2xl text-black tracking-tight leading-tight">
-              Complete Your Profile
+            <h1 className="font-display font-extrabold text-2xl text-blue-950 tracking-tight leading-tight">
+              {role === 'SUPERVISOR' && currentUser?.name ? (
+                `Welcome, ${/^(Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.)/i.test(currentUser.name.trim()) ? currentUser.name.trim() : `Dr. ${currentUser.name.trim()}`}`
+              ) : (
+                'Complete Your Profile'
+              )}
             </h1>
-            <p className="text-xs text-textSecondary font-semibold max-w-sm">
-              Setup your institutional profile to start collaborating.
+            <p className="text-xs text-blue-600/70 font-semibold max-w-sm">
+              {role === 'SUPERVISOR'
+                ? 'Complete your research profile to start collaborating.'
+                : 'Setup your institutional profile to start collaborating.'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="w-full space-y-6 text-left">
-            {/* Step 1: Role Selection or Locked Admin Banner */}
-            {hasAssignedRole ? (
-              <div className="p-3.5 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between w-full">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-primary text-white rounded-lg shrink-0">
-                    {role === 'SUPERVISOR' ? <Briefcase className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-textSecondary block">Assigned Institutional Role</span>
-                    <span className="text-xs font-extrabold text-primary">{assignedRoleLabel}</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-extrabold bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 shrink-0">
-                  Admin Provisioned
-                </span>
-              </div>
-            ) : !currentUser?.onboardingCompleted ? (
-              <div className="space-y-2 w-full">
-                <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
-                  Select Your Role
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setRole('SCHOLAR'); setErrorMsg(''); }}
-                    className={cn(
-                      "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
-                      role === 'SCHOLAR' 
-                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
-                        : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
-                    )}
-                  >
-                    <div className={cn("p-2 rounded-full", role === 'SCHOLAR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
-                      <GraduationCap className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className={cn("text-xs font-bold", role === 'SCHOLAR' ? "text-primary" : "text-black")}>Research Scholar</h3>
-                      <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I am pursuing my PhD</p>
-                    </div>
-                  </button>
+          {/* Step Progress Indicator */}
+          <div className="w-full flex items-center justify-between px-2 pt-1 pb-2 border-b border-blue-100/60">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(1)}
+              className="flex items-center gap-2 group cursor-pointer"
+            >
+              <span className={cn(
+                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold transition-all duration-300",
+                currentStep === 1 ? "bg-yellow-400 text-blue-950 shadow-md scale-105" : "bg-blue-600 text-white"
+              )}>
+                {selectedDomains.length > 0 && currentStep === 2 ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : "1"}
+              </span>
+              <span className={cn(
+                "text-xs font-bold transition-colors",
+                currentStep === 1 ? "text-blue-950 font-extrabold" : "text-blue-900/60 group-hover:text-blue-950"
+              )}>
+                Research Areas
+              </span>
+            </button>
 
-                  <button
-                    type="button"
-                    onClick={() => { setRole('SUPERVISOR'); setErrorMsg(''); }}
-                    className={cn(
-                      "p-4 rounded-xl border flex flex-col items-center text-center gap-3 transition-all",
-                      role === 'SUPERVISOR' 
-                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/50" 
-                        : "border-borderStroke hover:border-primary/50 hover:bg-slate-50 bg-white"
-                    )}
-                  >
-                    <div className={cn("p-2 rounded-full", role === 'SUPERVISOR' ? "bg-primary text-white" : "bg-slate-100 text-textSecondary")}>
-                      <Briefcase className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className={cn("text-xs font-bold", role === 'SUPERVISOR' ? "text-primary" : "text-black")}>Research Supervisor</h3>
-                      <p className="text-[9px] text-textSecondary mt-0.5 leading-tight">I supervise scholars</p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {role && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                {/* Step 2: Academic Registry */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="faculty-select">
-                      Faculty
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="faculty-select"
-                        value={selectedFacultyId}
-                        onChange={(e) => setSelectedFacultyId(e.target.value)}
-                        className="w-full cb-input py-2 pl-3 pr-8 text-xs border border-borderStroke rounded-lg bg-white font-semibold focus:ring-2 focus:ring-primary/20 appearance-none"
-                      >
-                        <option value="">Select Faculty...</option>
-                        {faculties.map((f) => (
-                          <option key={f.id} value={f.id}>{f.name}</option>
-                        ))}
-                      </select>
-                      {loadingFaculties ? (
-                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
-                        </span>
-                      ) : (
-                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
-                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="department-select">
-                      Department
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="department-select"
-                        value={selectedDepartmentId}
-                        onChange={(e) => setSelectedDepartmentId(e.target.value)}
-                        disabled={!selectedFacultyId}
-                        className="w-full cb-input py-2 pl-3 pr-8 text-xs border border-borderStroke rounded-lg bg-white font-semibold focus:ring-2 focus:ring-primary/20 appearance-none disabled:bg-slate-50 disabled:text-slate-400"
-                      >
-                        <option value="">Select Department...</option>
-                        {departments.map((d) => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                      {loadingDepartments ? (
-                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
-                        </span>
-                      ) : (
-                        <span className="absolute right-2.5 top-2.5 pointer-events-none">
-                          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 3: Supervisor Details */}
-                {role === 'SUPERVISOR' && (
-                  <div className="space-y-4 border-t border-slate-100 pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="designation">
-                          Designation
-                        </label>
-                        <input
-                          id="designation"
-                          type="text"
-                          placeholder="e.g. Professor"
-                          value={designation}
-                          onChange={(e) => setDesignation(e.target.value)}
-                          className="w-full cb-input py-2 px-3 text-xs border border-borderStroke rounded-lg focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="employee-id">
-                          Employee ID / Code
-                        </label>
-                        <input
-                          id="employee-id"
-                          type="text"
-                          placeholder="e.g. EMP12345"
-                          value={employeeId}
-                          onChange={(e) => setEmployeeId(e.target.value)}
-                          className="w-full cb-input py-2 px-3 text-xs border border-borderStroke rounded-lg focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider" htmlFor="max-scholars">
-                        Max Scholars Capacity
-                      </label>
-                      <input
-                        id="max-scholars"
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={maxScholars}
-                        onChange={(e) => setMaxScholars(Number(e.target.value))}
-                        className="w-40 cb-input py-2 px-3 text-xs border border-borderStroke rounded-lg focus:ring-2 focus:ring-primary/20"
-                      />
-                      <p className="text-[10px] text-textSecondary font-semibold">Maximum scholars you can guide at full capacity.</p>
-                    </div>
-
-                    <div className="col-span-1 md:col-span-2">
-                      {researchAreaSelectionBlock}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Scholar Details */}
-                {role === 'SCHOLAR' && (
-                  <div className="space-y-4 border-t border-slate-100 pt-4">
-                    {researchAreaSelectionBlock}
-
-                    <div className="space-y-2">
-                      <label className="block text-[11px] font-bold text-textSecondary uppercase tracking-wider">
-                        Select Research Supervisor
-                      </label>
-                      {(!selectedFacultyId || !selectedDepartmentId) ? (
-                        <div className="border border-borderStroke rounded-lg p-6 bg-slate-50 text-center flex flex-col items-center gap-2">
-                          <Users className="w-6 h-6 text-slate-300" />
-                          <p className="text-xs text-textSecondary font-semibold">Please select your Faculty and Department above to view available supervisors.</p>
-                        </div>
-                      ) : (
-                        <div className="border border-borderStroke rounded-lg max-h-[160px] overflow-y-auto bg-white p-1 divide-y divide-slate-100 shadow-inner">
-                          {loadingSupervisors ? (
-                            <div className="p-6 text-center text-xs text-textSecondary font-semibold flex flex-col items-center gap-2">
-                              <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                              <span>Loading supervisors...</span>
-                            </div>
-                          ) : supervisors.length > 0 ? (
-                            supervisors.map((sup) => {
-                              const atCapacity = sup.currentScholars >= sup.maxScholars;
-                              return (
-                                <div
-                                  key={sup.id}
-                                  onClick={() => !atCapacity && setSelectedSupervisorId(sup.id)}
-                                  className={cn(
-                                    "flex items-center justify-between p-2.5 rounded-md transition-colors text-xs font-semibold",
-                                    atCapacity 
-                                      ? "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400"
-                                      : selectedSupervisorId === sup.id 
-                                        ? 'bg-primary text-white' 
-                                        : 'hover:bg-slate-50 text-black cursor-pointer'
-                                  )}
-                                >
-                                  <div className="min-w-0">
-                                    <h4 className="font-bold flex items-center gap-1.5">
-                                      <span>{sup.name}</span>
-                                      <span className={cn(
-                                        "text-[9px] px-1.5 py-0.5 rounded-full font-extrabold uppercase border tracking-wider",
-                                        selectedSupervisorId === sup.id 
-                                          ? "bg-white/20 text-white border-transparent"
-                                          : atCapacity 
-                                            ? "bg-red-50 text-red-600 border-red-200" 
-                                            : "bg-slate-100 text-slate-600 border-slate-200"
-                                      )}>
-                                        {sup.designation}
-                                      </span>
-                                    </h4>
-                                    <span className={cn(
-                                      "text-[9px] block mt-1",
-                                      selectedSupervisorId === sup.id ? 'text-primary-foreground/80' : 'text-textSecondary'
-                                    )}>
-                                      Capacity: {sup.currentScholars} / {sup.maxScholars} scholars mapped
-                                    </span>
-                                  </div>
-                                  <div className="shrink-0 flex items-center">
-                                    {selectedSupervisorId === sup.id && (
-                                      <UserCheck className="w-4.5 h-4.5 text-white ml-2" />
-                                    )}
-                                    {atCapacity && (
-                                      <span className="text-[8px] bg-red-100 text-red-700 font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full">
-                                        Full Capacity
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <div className="text-center py-8 text-xs text-textSecondary/40 flex flex-col items-center justify-center space-y-2">
-                              <Users className="w-5 h-5 opacity-45" />
-                              <span>No supervisors registered in this department.</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="p-3 border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold rounded-lg flex items-center space-x-2 animate-in fade-in">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+            <div className="h-0.5 flex-1 mx-4 bg-blue-200/50 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-yellow-400 transition-all duration-500 ease-out" 
+                style={{ width: currentStep === 1 ? '50%' : '100%' }}
+              />
+            </div>
 
             <button
-              type="submit"
-              disabled={
-                isSubmitting || 
-                !role || 
-                !selectedFacultyId || 
-                !selectedDepartmentId || 
-                (selectedDomains.length === 0 && !customDomain.trim()) ||
-                (role === 'SUPERVISOR' && (!designation || !employeeId)) ||
-                (role === 'SCHOLAR' && !selectedSupervisorId)
-              }
-              className="w-full py-3 flex items-center justify-center bg-primary hover:bg-[#0c4da2]/95 text-white font-bold text-xs rounded-lg transition disabled:opacity-40 cursor-pointer border border-primary active:scale-[0.99] shadow"
+              type="button"
+              disabled={selectedDomains.length === 0}
+              onClick={() => setCurrentStep(2)}
+              className="flex items-center gap-2 group disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4.5 h-4.5 animate-spin mr-2" />
-                  <span>Registering Profile...</span>
-                </>
-              ) : (
-                <span>Complete Onboarding Registration</span>
-              )}
+              <span className={cn(
+                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold transition-all duration-300",
+                currentStep === 2 ? "bg-yellow-400 text-blue-950 shadow-md scale-105" : "bg-blue-100 text-blue-900/40"
+              )}>
+                2
+              </span>
+              <span className={cn(
+                "text-xs font-bold transition-colors",
+                currentStep === 2 ? "text-blue-950 font-extrabold" : "text-blue-900/60 group-hover:text-blue-950"
+              )}>
+                Profile & Faculty
+              </span>
             </button>
-          </form>
+          </div>
+
+          {/* STEP 1: Dedicated Research Area Selection */}
+          {currentStep === 1 ? (
+            <div className="w-full space-y-6">
+              <div className="space-y-1.5 text-center">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 text-yellow-600 text-[10px] font-extrabold uppercase tracking-widest mb-1">
+                  <Sparkles className="w-3 h-3 text-yellow-500" />
+                  <span>Step 1 of 2</span>
+                </div>
+                <h2 className="font-display font-extrabold text-xl text-blue-950 tracking-tight">
+                  Select Your Research Domains
+                </h2>
+                <p className="text-xs text-blue-900/60 font-semibold max-w-sm mx-auto">
+                  Choose your primary areas of research interest and expertise to personalize your academic collaboration network.
+                </p>
+              </div>
+
+              {/* Search & Selection Controls */}
+              <div className="space-y-3 text-left">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-extrabold text-blue-950/70 uppercase tracking-wider">
+                    Available Domains ({RESEARCH_DOMAINS.length})
+                  </label>
+                  <span className={cn(
+                    "text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-sm transition-all",
+                    selectedDomains.length > 0 ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-400"
+                  )}>
+                    {selectedDomains.length} Selected
+                  </span>
+                </div>
+
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-blue-400 group-focus-within:text-yellow-500 transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search 75+ research areas..."
+                    value={domainSearch}
+                    onChange={(e) => setDomainSearch(e.target.value)}
+                    className="w-full cb-input py-2.5 pl-10 pr-10 text-xs border border-blue-200/60 rounded-xl focus:ring-4 focus:ring-yellow-400/20 focus:border-yellow-400/50 bg-white/60 font-semibold text-blue-950 transition-all placeholder:text-blue-300 hover:border-blue-300"
+                  />
+                  {domainSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDomainSearch('')}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-blue-400 hover:text-blue-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Selected summary — always rendered, fixed height, no layout shift */}
+                <div className="flex items-center gap-2 p-2 rounded-xl border transition-all h-10" style={{ minHeight: '40px' }}>
+                  {selectedDomains.length > 0 ? (
+                    <>
+                      <span className="text-[10px] font-extrabold text-blue-950/70 shrink-0">
+                        {selectedDomains.length} picked:
+                      </span>
+                      <div className="flex gap-1 flex-1 overflow-hidden">
+                        {selectedDomains.slice(0, 3).map(d => (
+                          <span key={d} className="text-[9px] bg-blue-600 text-white font-bold px-1.5 py-0.5 rounded truncate max-w-[120px]">{d}</span>
+                        ))}
+                        {selectedDomains.length > 3 && (
+                          <span className="text-[9px] bg-blue-200 text-blue-950 font-bold px-1.5 py-0.5 rounded shrink-0">+{selectedDomains.length - 3}</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDomains([])}
+                        className="text-[9px] font-bold text-blue-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                      >
+                        Clear
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-blue-300 mx-auto">Select domains from the list below</span>
+                  )}
+                </div>
+
+                {/* Domain checklist grid with ref and scroll preservation */}
+                <div 
+                  ref={domainListRef}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 h-[280px] overflow-y-auto p-2 border border-blue-100 rounded-xl bg-blue-50/30 shadow-inner custom-scrollbar"
+                >
+                  {filteredDomains.length > 0 ? (
+                    filteredDomains.map(domain => {
+                      const isSelected = selectedDomains.includes(domain);
+                      return (
+                        <button
+                          type="button"
+                          key={domain} 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleDomain(domain);
+                          }}
+                          className={cn(
+                            "flex items-center gap-2 cursor-pointer px-2.5 py-2 rounded-lg transition-colors text-xs font-bold border select-none w-full text-left outline-none focus:ring-2 focus:ring-yellow-400/50",
+                            isSelected
+                              ? "bg-blue-600 text-white border-blue-500 shadow-sm"
+                              : "bg-white/80 hover:bg-white text-blue-900/80 hover:text-blue-950 border-transparent hover:border-blue-200"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-3.5 h-3.5 rounded flex items-center justify-center border transition-colors shrink-0",
+                            isSelected ? "bg-yellow-400 border-yellow-400 text-blue-950" : "border-blue-300 bg-white"
+                          )}>
+                            {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          </div>
+                          <span className="leading-snug truncate">{domain}</span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-full py-8 text-center text-xs font-semibold text-blue-400">
+                      No research areas found matching &quot;{domainSearch}&quot;
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={selectedDomains.length === 0}
+                onClick={() => setCurrentStep(2)}
+                className="w-full py-3.5 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-extrabold text-[13px] uppercase tracking-wide rounded-xl transition-all duration-300 disabled:opacity-40 disabled:hover:bg-yellow-400 cursor-pointer shadow-[0_4px_14px_0_rgba(250,204,21,0.39)] hover:shadow-[0_6px_20px_rgba(250,204,21,0.23)] hover:-translate-y-0.5 active:scale-[0.98]"
+              >
+                <span>Continue to Profile Setup</span>
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </button>
+            </div>
+          ) : (
+            /* STEP 2: Profile & Academic Registration */
+            <form onSubmit={handleSubmit} className="w-full space-y-6 text-left animate-in fade-in slide-in-from-right-4 duration-300">
+
+              {/* Selected Domains Summary Card with Edit Button */}
+              <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-950/60 block mb-1">
+                    Selected Research Domains ({selectedDomains.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1 max-h-12 overflow-hidden text-ellipsis">
+                    {selectedDomains.slice(0, 3).map((d) => (
+                      <span key={d} className="text-[10px] bg-blue-600 text-white font-bold px-2 py-0.5 rounded">
+                        {d}
+                      </span>
+                    ))}
+                    {selectedDomains.length > 3 && (
+                      <span className="text-[10px] bg-blue-200 text-blue-950 font-bold px-1.5 py-0.5 rounded">
+                        +{selectedDomains.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="px-3 py-1.5 text-xs font-extrabold text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all shrink-0 cursor-pointer shadow-sm"
+                >
+                  Edit
+                </button>
+              </div>
+
+              {/* Locked Admin Banner */}
+              {hasAssignedRole && role === 'SCHOLAR' ? (
+                <div className="p-3.5 bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700/50 rounded-xl flex items-center justify-between w-full shadow-inner">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-400 text-blue-950 rounded-lg shrink-0 shadow-sm">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-200/80 block mb-0.5">Assigned Role</span>
+                      <span className="text-xs font-extrabold text-white">Research Scholar</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-extrabold bg-blue-950/50 text-yellow-400 px-2.5 py-1 rounded-full border border-yellow-400/20 shrink-0">
+                    Admin Provisioned
+                  </span>
+                </div>
+              ) : null}
+
+              {role && (
+                <div className="space-y-4">
+                  {/* Academic Registry */}
+                  {role === 'SUPERVISOR' && (currentUser?.faculty || currentUser?.department) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50/50 border border-blue-100 rounded-xl">
+                      <div className="text-left">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 block mb-1">Faculty</span>
+                        <span className="text-xs font-extrabold text-blue-950">{currentUser.faculty || 'School of Computing'}</span>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 block mb-1">Department</span>
+                        <span className="text-xs font-extrabold text-blue-950">{currentUser.department || 'Computer Applications'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5 text-left">
+                        <label className="block text-[11px] font-extrabold text-blue-950/70 uppercase tracking-wider" htmlFor="faculty-select">
+                          Faculty
+                        </label>
+                        <div className="relative group">
+                          <select
+                            id="faculty-select"
+                            value={selectedFacultyId}
+                            onChange={(e) => setSelectedFacultyId(e.target.value)}
+                            className="w-full cb-input py-2.5 pl-4 pr-10 text-xs border border-blue-200/60 rounded-xl bg-white/50 font-bold text-blue-950 focus:ring-4 focus:ring-yellow-400/20 focus:border-yellow-400/50 appearance-none transition-all hover:border-blue-300"
+                          >
+                            <option value="">Select Faculty...</option>
+                            {faculties.map((f) => (
+                              <option key={f.id} value={f.id}>{f.name}</option>
+                            ))}
+                          </select>
+                          {loadingFaculties ? (
+                            <span className="absolute right-3 top-3 pointer-events-none">
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                            </span>
+                          ) : (
+                            <span className="absolute right-3 top-3 pointer-events-none transition-transform group-hover:translate-y-0.5">
+                              <ChevronDown className="w-4 h-4 text-blue-400" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 text-left">
+                        <label className="block text-[11px] font-extrabold text-blue-950/70 uppercase tracking-wider" htmlFor="department-select">
+                          Department
+                        </label>
+                        <div className="relative group">
+                          <select
+                            id="department-select"
+                            value={selectedDepartmentId}
+                            onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                            disabled={!selectedFacultyId}
+                            className="w-full cb-input py-2.5 pl-4 pr-10 text-xs border border-blue-200/60 rounded-xl bg-white/50 font-bold text-blue-950 focus:ring-4 focus:ring-yellow-400/20 focus:border-yellow-400/50 appearance-none disabled:bg-slate-50/50 disabled:text-slate-400 disabled:border-slate-200 transition-all hover:border-blue-300"
+                          >
+                            <option value="">Select Department...</option>
+                            {departments.map((d) => (
+                              <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                          </select>
+                          {loadingDepartments ? (
+                            <span className="absolute right-3 top-3 pointer-events-none">
+                              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                            </span>
+                          ) : (
+                            <span className="absolute right-3 top-3 pointer-events-none transition-transform group-hover:translate-y-0.5">
+                              <ChevronDown className="w-4 h-4 text-blue-400" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scholar Details */}
+                  {role === 'SCHOLAR' && (
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-2 text-left">
+                        <label className="block text-[11px] font-extrabold text-blue-950/70 uppercase tracking-wider">
+                          Select Research Supervisor
+                        </label>
+                        {(!selectedFacultyId || !selectedDepartmentId) ? (
+                          <div className="border border-blue-100 rounded-xl p-6 bg-blue-50/50 text-center flex flex-col items-center gap-2">
+                            <Users className="w-6 h-6 text-blue-300" />
+                            <p className="text-xs text-blue-900/60 font-bold max-w-xs">Select your Faculty and Department above to view available supervisors.</p>
+                          </div>
+                        ) : (
+                          <div className="border border-blue-100 rounded-xl max-h-[160px] overflow-y-auto bg-white/50 p-1.5 shadow-inner custom-scrollbar space-y-1">
+                            {loadingSupervisors ? (
+                              <div className="p-6 text-center text-xs text-blue-900/60 font-bold flex flex-col items-center gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                                <span>Loading supervisors...</span>
+                              </div>
+                            ) : supervisors.length > 0 ? (
+                              supervisors.map((sup) => {
+                                const atCapacity = sup.currentScholars >= sup.maxScholars;
+                                return (
+                                  <div
+                                    key={sup.id}
+                                    onClick={() => !atCapacity && setSelectedSupervisorId(sup.id)}
+                                    className={cn(
+                                      "flex items-center justify-between p-3 rounded-lg transition-all duration-200 text-xs",
+                                      atCapacity 
+                                        ? "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border border-transparent"
+                                        : selectedSupervisorId === sup.id 
+                                          ? 'bg-blue-600 text-white shadow-md transform scale-[1.01] border border-blue-500' 
+                                          : 'hover:bg-white text-blue-950 cursor-pointer border border-transparent hover:border-blue-100 hover:shadow-sm'
+                                    )}
+                                  >
+                                    <div className="min-w-0">
+                                      <h4 className="font-extrabold flex items-center gap-2">
+                                        <span>{sup.name}</span>
+                                        <span className={cn(
+                                          "text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider border",
+                                          selectedSupervisorId === sup.id 
+                                            ? "bg-blue-500/50 text-white border-blue-400/30"
+                                            : atCapacity 
+                                              ? "bg-red-50 text-red-600 border-red-200" 
+                                              : "bg-blue-50 text-blue-600 border-blue-200"
+                                        )}>
+                                          {sup.designation}
+                                        </span>
+                                      </h4>
+                                      <span className={cn(
+                                        "text-[10px] font-bold block mt-1.5",
+                                        selectedSupervisorId === sup.id ? 'text-blue-100' : 'text-blue-900/50'
+                                      )}>
+                                        Capacity: {sup.currentScholars} / {sup.maxScholars} scholars mapped
+                                      </span>
+                                    </div>
+                                    <div className="shrink-0 flex items-center">
+                                      {selectedSupervisorId === sup.id && (
+                                        <UserCheck className="w-5 h-5 text-yellow-400 ml-2" />
+                                      )}
+                                      {atCapacity && (
+                                        <span className="text-[9px] bg-red-100 text-red-700 font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full border border-red-200">
+                                          Full Capacity
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="text-center py-8 text-xs text-blue-900/40 flex flex-col items-center justify-center space-y-2 font-bold">
+                                <Users className="w-5 h-5 opacity-40" />
+                                <span>No supervisors registered in this department.</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="p-3.5 border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold rounded-xl flex items-center space-x-2 animate-in fade-in">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="py-3.5 px-4 bg-white hover:bg-blue-50 border border-blue-200 text-blue-950 font-extrabold text-xs rounded-xl transition-all shadow-sm cursor-pointer"
+                >
+                  ← Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    isSubmitting || 
+                    !role || 
+                    (role === 'SUPERVISOR' && selectedDomains.length === 0) ||
+                    (role === 'SCHOLAR' && (!selectedFacultyId || !selectedDepartmentId || selectedDomains.length === 0 || !selectedSupervisorId))
+                  }
+                  className="flex-1 py-3.5 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-extrabold text-[13px] uppercase tracking-wide rounded-xl transition-all duration-300 disabled:opacity-40 disabled:hover:bg-yellow-400 cursor-pointer shadow-[0_4px_14px_0_rgba(250,204,21,0.39)] hover:shadow-[0_6px_20px_rgba(250,204,21,0.23)] hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4.5 h-4.5 animate-spin mr-2 text-blue-900" />
+                      <span>Registering Profile...</span>
+                    </>
+                  ) : (
+                    <span>Complete Registration</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Intranet notice */}
-          <div className="pt-6 border-t border-borderStroke flex items-center justify-center gap-1.5 text-textSecondary/40 select-none">
-            <Shield className="w-3.5 h-3.5 shrink-0" />
-            <p className="text-[10px] font-bold uppercase tracking-wider">
+          <div className="pt-6 border-t border-blue-100/50 flex items-center justify-center gap-2 text-blue-900/30 select-none">
+            <Shield className="w-4 h-4 shrink-0" />
+            <p className="text-[10px] font-extrabold uppercase tracking-widest">
               SRMIST Institutional Security Standard
             </p>
           </div>

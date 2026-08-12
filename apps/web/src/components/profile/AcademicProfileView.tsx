@@ -245,12 +245,11 @@ export function AcademicProfileView({
 
           {/* Header Content Container */}
           <div className="p-6 md:p-8 pt-0 relative z-20">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 -mt-16 md:-mt-20">
-              
-              {/* Avatar + Dual Verification Ring */}
-              <div className="flex items-end gap-5">
-                <div className="relative">
-                  <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-md overflow-hidden bg-[#001E4C] text-white font-extrabold flex items-center justify-center text-3xl md:text-4xl ring-2 ring-[#FEC727]/80">
+            {/* Avatar section - cleanly pulled up into cover */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-5">
+                <div className="relative -mt-16 md:-mt-20 shrink-0">
+                  <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-br from-[#001E4C] to-[#0C4DA2] text-white font-extrabold flex items-center justify-center text-3xl md:text-4xl ring-4 ring-[#0C4DA2]/20">
                     {user?.avatarUrl || user?.image ? (
                       <img src={user.avatarUrl || user.image} alt={name} className="w-full h-full object-cover" />
                     ) : (
@@ -259,25 +258,25 @@ export function AcademicProfileView({
                   </div>
                   
                   {/* Verified ORCID Badge */}
-                  <div className="absolute bottom-1 right-1 p-1.5 bg-[#FEC727] text-[#17233D] rounded-full border-2 border-white shadow-sm" title="ORCID & Institution Verified">
+                  <div className="absolute bottom-1 right-1 p-1.5 bg-[#FEC727] text-[#17233D] rounded-full border-2 border-white shadow-md" title="ORCID & Institution Verified">
                     <CheckCircle2 className="w-5 h-5 fill-[#17233D] text-[#FEC727]" />
                   </div>
                 </div>
 
-                <div className="space-y-1 pb-2">
+                <div className="space-y-1.5 pt-2 sm:pt-0">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-2xl md:text-4xl font-extrabold text-[#17233D] tracking-tight">{name}</h1>
+                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{name}</h1>
                     
                     {/* Availability Chip */}
                     <span className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs",
+                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs",
                       availabilityStatus.includes('OPEN')
-                        ? "bg-[#FFF9E6] text-[#92400E] border-[#FEC727]/60"
-                        : "bg-slate-100 text-[#4A5568] border-slate-200"
+                        ? "bg-amber-50 text-amber-900 border-amber-300"
+                        : "bg-slate-100 text-slate-700 border-slate-200"
                     )}>
                       <span className={cn(
                         "w-2 h-2 rounded-full",
-                        availabilityStatus.includes('OPEN') ? "bg-[#FEC727] animate-pulse" : "bg-slate-400"
+                        availabilityStatus.includes('OPEN') ? "bg-amber-500 animate-pulse" : "bg-slate-400"
                       )} />
                       {availabilityStatus === 'OPEN_TO_SUPERVISION' && 'Open for PhD Supervision'}
                       {availabilityStatus === 'NOT_ACCEPTING_SCHOLARS' && 'Not Accepting Scholars'}
@@ -286,12 +285,12 @@ export function AcademicProfileView({
                     </span>
                   </div>
 
-                  <p className="text-sm md:text-base font-bold text-[#004495]">
+                  <p className="text-sm md:text-base font-bold text-[#0C4DA2]">
                     {roleLabel} • {department}
                   </p>
                   
-                  <p className="text-xs text-[#6B7890] flex items-center gap-1.5 font-medium">
-                    <MapPin className="w-3.5 h-3.5 text-[#004495]" />
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-[#0C4DA2]" />
                     <span>{campus}</span>
                   </p>
                 </div>
@@ -301,7 +300,7 @@ export function AcademicProfileView({
               <div className="flex flex-wrap items-center gap-3 pt-2 md:pt-0">
                 <button
                   onClick={handlePrimaryAction}
-                  className="px-6 py-3 bg-[#FEC727] hover:bg-[#F5B800] text-[#17233D] font-extrabold text-xs md:text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                  className="px-6 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs md:text-sm rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
                 >
                   {isOwnProfile ? (
                     <><Edit3 className="w-4 h-4" /> Edit Credentials</>
@@ -317,10 +316,10 @@ export function AcademicProfileView({
                     <button
                       onClick={onFollowToggle}
                       className={cn(
-                        "px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-colors border shadow-xs cursor-pointer",
+                        "px-5 py-2.5 rounded-full text-xs md:text-sm font-bold transition-all border shadow-2xs cursor-pointer active:scale-95",
                         isFollowing
-                          ? "bg-slate-100 text-[#4A5568] border-slate-200 hover:bg-slate-200"
-                          : "bg-[#004495] text-white border-transparent hover:bg-[#001E4C]"
+                          ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                          : "bg-slate-900 text-white border-transparent hover:bg-slate-800"
                       )}
                     >
                       {isFollowing ? 'Following' : 'Follow Work'}
@@ -328,17 +327,17 @@ export function AcademicProfileView({
 
                     <button
                       onClick={handleMessageAction}
-                      className="px-4 py-3 bg-white border border-[#E4E9F2] hover:bg-[#EEF4FF] text-[#004495] rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center gap-2 cursor-pointer"
+                      className="px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#0C4DA2] rounded-full text-xs md:text-sm font-bold transition-all shadow-2xs flex items-center gap-2 cursor-pointer active:scale-95"
                     >
-                      <MessageSquare className="w-4 h-4 text-[#004495]" />
+                      <MessageSquare className="w-4 h-4 text-[#0C4DA2]" />
                       <span>Message</span>
                     </button>
                   </>
                 )}
 
                 {isOwnProfile && (
-                  <button className="px-4 py-3 bg-white border border-[#E4E9F2] hover:bg-[#EEF4FF] text-[#004495] rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center gap-2 cursor-pointer">
-                    <Share2 className="w-4 h-4 text-[#004495]" />
+                  <button className="px-5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#0C4DA2] rounded-full text-xs md:text-sm font-bold transition-all shadow-2xs flex items-center gap-2 cursor-pointer active:scale-95">
+                    <Share2 className="w-4 h-4 text-[#0C4DA2]" />
                     <span>Share Record</span>
                   </button>
                 )}

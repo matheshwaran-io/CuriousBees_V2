@@ -85,7 +85,7 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
         </p>
         <div className="text-center mt-5">
           <Link 
-            href="/scholar/feed"
+            href="/feed"
             className="inline-block text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/20 hover:border-primary/40 bg-primary/5 px-4 py-2 rounded-lg transition-all cursor-pointer active:scale-95"
           >
             Return to Feed
@@ -126,7 +126,7 @@ export default function ScholarThreadDetailPage({ params }: ThreadDetailPageProp
       {/* 1. Navigation Header Row */}
       <div className="flex justify-between items-center text-left">
         <Link 
-          href="/scholar/feed" 
+          href="/feed" 
           className="inline-flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" />

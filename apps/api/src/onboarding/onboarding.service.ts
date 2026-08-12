@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserStatus, RequestStatus, Role } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../users/mail.service';
+import { MAX_SCHOLARS_PER_SUPERVISOR } from '@curiousbees/constants';
 
 @Injectable()
 export class OnboardingService {
@@ -15,16 +16,17 @@ export class OnboardingService {
   async onboardSupervisor(
     userId: string,
     data: {
-      facultyId: string;
-      departmentId: string;
-      designation: string;
-      employeeId: string;
+      facultyId?: string;
+      departmentId?: string;
+      designation?: string;
+      employeeId?: string;
       researchArea: string;
       maxScholars?: number;
     }
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { supervisorProfile: true }
     });
     if (!user) {
       throw new BadRequestException('User not found.');
@@ -36,21 +38,51 @@ export class OnboardingService {
       throw new BadRequestException('User has already completed onboarding.');
     }
 
-    // Verify faculty and department exist and are linked
+    // Prioritize admin-provisioned department, faculty, designation, employeeId
+    let effectiveDepartmentId = user.departmentId || user.supervisorProfile?.departmentId || data.departmentId;
+
+    if (!effectiveDepartmentId && user.department) {
+      const foundDept = await this.prisma.department.findFirst({
+        where: { name: { equals: user.department.trim(), mode: 'insensitive' } }
+      });
+      if (foundDept) {
+        effectiveDepartmentId = foundDept.id;
+      }
+    }
+
+    if (!effectiveDepartmentId) {
+      const fallbackDept = await this.prisma.department.findFirst();
+      if (fallbackDept) {
+        effectiveDepartmentId = fallbackDept.id;
+      } else {
+        throw new BadRequestException('Department selection is required.');
+      }
+    }
+
     const dept = await this.prisma.department.findUnique({
-      where: { id: data.departmentId },
+      where: { id: effectiveDepartmentId },
       include: { faculty: true }
     });
-    if (!dept || dept.facultyId !== data.facultyId) {
+    if (!dept) {
+      throw new BadRequestException('Invalid department selection.');
+    }
+
+    const effectiveFacultyId = user.supervisorProfile?.facultyId || data.facultyId || dept.facultyId;
+    if (dept.facultyId !== effectiveFacultyId) {
       throw new BadRequestException('Invalid department/faculty selection.');
     }
 
-    // Verify employeeId is unique
-    const existingProfile = await this.prisma.supervisorProfile.findUnique({
-      where: { employeeId: data.employeeId },
-    });
-    if (existingProfile) {
-      throw new BadRequestException('Employee ID is already in use by another supervisor.');
+    const effectiveDesignation = user.supervisorProfile?.designation || data.designation || 'Supervisor';
+    const effectiveEmployeeId = user.employeeId || user.supervisorProfile?.employeeId || data.employeeId || `EMP-${Date.now()}`;
+
+    // Verify employeeId is unique if not already set for this user
+    if (!user.employeeId && !user.supervisorProfile?.employeeId && effectiveEmployeeId) {
+      const existingProfile = await this.prisma.supervisorProfile.findFirst({
+        where: { employeeId: effectiveEmployeeId, NOT: { userId } },
+      });
+      if (existingProfile) {
+        throw new BadRequestException('Employee ID is already in use by another supervisor.');
+      }
     }
 
     // Start transaction to create profile and update user
@@ -59,20 +91,20 @@ export class OnboardingService {
         where: { userId },
         create: {
           userId,
-          facultyId: data.facultyId,
-          departmentId: data.departmentId,
-          designation: data.designation,
-          employeeId: data.employeeId,
+          facultyId: effectiveFacultyId,
+          departmentId: effectiveDepartmentId,
+          designation: effectiveDesignation,
+          employeeId: effectiveEmployeeId,
           researchArea: data.researchArea,
-          maxScholars: data.maxScholars ?? 5,
+          maxScholars: MAX_SCHOLARS_PER_SUPERVISOR,
         },
         update: {
-          facultyId: data.facultyId,
-          departmentId: data.departmentId,
-          designation: data.designation,
-          employeeId: data.employeeId,
+          facultyId: effectiveFacultyId,
+          departmentId: effectiveDepartmentId,
+          designation: effectiveDesignation,
+          employeeId: effectiveEmployeeId,
           researchArea: data.researchArea,
-          maxScholars: data.maxScholars ?? 5,
+          maxScholars: MAX_SCHOLARS_PER_SUPERVISOR,
         },
       });
 
@@ -83,8 +115,8 @@ export class OnboardingService {
           onboardingCompleted: true,
           status: UserStatus.ACTIVE,
           approved: true,
-          employeeId: data.employeeId,
-          departmentId: data.departmentId,
+          employeeId: effectiveEmployeeId,
+          departmentId: effectiveDepartmentId,
           department: dept.name,
           faculty: dept.faculty.name,
         },
@@ -149,9 +181,9 @@ export class OnboardingService {
     }
 
     const currentScholars = supervisor._count.scholars;
-    const maxScholars = supervisor.supervisorProfile?.maxScholars ?? 5;
+    const maxScholars = supervisor.supervisorProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
     if (currentScholars >= maxScholars) {
-      throw new BadRequestException('Selected supervisor is at full capacity.');
+      throw new BadRequestException(`Selected supervisor has reached maximum scholar capacity of ${maxScholars}.`);
     }
 
     // Start transaction to create profile, update user, and create request

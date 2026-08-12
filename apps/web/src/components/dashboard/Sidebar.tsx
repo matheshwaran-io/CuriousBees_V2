@@ -79,7 +79,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
       {
         label: 'RESEARCH',
         items: [
-          { name: 'Research Feed', href: '/supervisor/feed', icon: MessageSquare },
+          { name: 'Research Feed', href: '/feed', icon: MessageSquare },
           { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
           { name: 'Events', href: '/events', icon: CalendarIcon },
         ],
@@ -113,7 +113,7 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
     {
       label: 'RESEARCH',
       items: [
-        { name: 'Research Feed', href: '/scholar/feed', icon: MessageSquare },
+        { name: 'Research Feed', href: '/feed', icon: MessageSquare },
         { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
         { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
       ],
@@ -196,29 +196,11 @@ function NavItem({
 
 // ─── Collapsible Nav Section ─────────────────────────────────────────────────
 
-function NavSection({ 
-  label, 
-  isOpen, 
-  onToggle 
-}: { 
-  label: string; 
-  isOpen: boolean; 
-  onToggle: () => void 
-}) {
+function NavSection({ label }: { label: string }) {
   return (
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center justify-between px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-textSecondary hover:text-black transition-colors select-none text-left cursor-pointer group"
-    >
-      <span>{label}</span>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-        {isOpen ? (
-          <ChevronDown className="w-3 h-3 text-textSecondary" />
-        ) : (
-          <ChevronRight className="w-3 h-3 text-textSecondary" />
-        )}
-      </span>
-    </button>
+    <div className="w-full px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-textSecondary select-none">
+      {label}
+    </div>
   );
 }
 
@@ -229,19 +211,6 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const { currentUser, logout } = useStore();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   
-  // Collapsible section states
-  const [sectionsOpen, setSectionsOpen] = useState<Record<string, boolean>>({
-    'Research Portal': true,
-    'Scholar Portfolio': true,
-    'Faculty Advisory': true,
-    'Admin Console': true,
-    'Institute Management': true,
-  });
-
-  const toggleSection = (label: string) => {
-    setSectionsOpen((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
-
   const role = currentUser?.role || 'RESEARCH_SCHOLAR';
   const sections = getSidebarSections(role);
 
@@ -269,39 +238,23 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-2">
-        {sections.map((section) => {
-          const isOpen = sectionsOpen[section.label] !== false;
-          return (
-            <div key={section.label}>
-              <NavSection 
-                label={section.label} 
-                isOpen={isOpen} 
-                onToggle={() => toggleSection(section.label)} 
-              />
-              <AnimatePresence initial={false}>
-                {isOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden flex flex-col gap-0.5 mt-1"
-                  >
-                    {section.items.map((item) => (
-                      <NavItem
-                        key={item.href + item.name}
-                        {...item}
-                        active={isActive(item.href)}
-                        onClick={onClose}
-                        hoveredItem={hoveredItem}
-                        setHoveredItem={setHoveredItem}
-                      />
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        {sections.map((section) => (
+          <div key={section.label}>
+            <NavSection label={section.label} />
+            <div className="flex flex-col gap-0.5 mt-1">
+              {section.items.map((item) => (
+                <NavItem
+                  key={item.href + item.name}
+                  {...item}
+                  active={isActive(item.href)}
+                  onClick={onClose}
+                  hoveredItem={hoveredItem}
+                  setHoveredItem={setHoveredItem}
+                />
+              ))}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </nav>
 
       {/* User mini-profile */}

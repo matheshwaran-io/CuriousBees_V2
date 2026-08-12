@@ -35,6 +35,7 @@ interface AppState {
   // Domain states
   threads: Thread[];
   feedCounts: Record<string, number>;
+  feedError: string | null;
   opportunities: Opportunity[];
   events: Event[];
 
@@ -187,7 +188,7 @@ let activeSyncPromise: Promise<User | null> | null = null;
 export const useStore = create<AppState>((set, get) => ({
   currentUser: null, // Default to null for strict live login checking
   roleOverride: 'RESEARCH_SCHOLAR',
-  dashboardRoute: '/scholar/feed',
+  dashboardRoute: '/feed',
   interestsList: MOCK_INTERESTS,
   notProvisioned: false,
   isSuspended: false,
@@ -200,6 +201,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   threads: [],
   feedCounts: { ALL: 0 },
+  feedError: null,
   opportunities: [],
   events: [],
 
@@ -227,7 +229,7 @@ export const useStore = create<AppState>((set, get) => ({
       set({ currentUser: user, roleOverride: user.role, dashboardRoute: route, notProvisioned: false, isSuspended: false });
     } else {
       deleteCookie(ROLE_COOKIE_NAME);
-      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/scholar/feed', notProvisioned: false, isSuspended: false });
+      set({ currentUser: null, roleOverride: 'RESEARCH_SCHOLAR', dashboardRoute: '/feed', notProvisioned: false, isSuspended: false });
     }
   },
   setDashboardRoute: (route) => set({ dashboardRoute: route }),
@@ -405,16 +407,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   fetchFeedThreads: async (search?: string, type?: string, sort?: 'latest' | 'top') => {
-    set({ isLoading: true });
+    set({ isLoading: true, feedError: null });
     try {
       if (type === 'SAVED') {
         const res = await apiFetch('/api/threads/saved');
         if (res.ok) {
           const threads = await res.json();
-          set({ threads });
+          set({ threads, feedError: null });
         } else {
           const err = await readApiError(res);
-          get().addToast(`Failed to load saved posts: ${err}`, 'error');
+          set({ feedError: err || 'Unable to load saved posts' });
         }
         return;
       }
@@ -426,14 +428,14 @@ export const useStore = create<AppState>((set, get) => ({
       const res = await apiFetch(`/api/threads?${params.toString()}`);
       if (res.ok) {
         const threads = await res.json();
-        set({ threads });
+        set({ threads, feedError: null });
       } else {
         const err = await readApiError(res);
-        get().addToast(`Failed to load feed: ${err}`, 'error');
+        set({ feedError: err || 'Something went wrong while retrieving research activity.' });
       }
     } catch (e: any) {
       console.error('Failed to load feed threads:', e);
-      get().addToast(`Network error: ${e.message}`, 'error');
+      set({ feedError: 'Unable to load the research feed' });
     } finally {
       set({ isLoading: false });
     }
@@ -814,7 +816,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (typeof window !== 'undefined' && window.Clerk) {
       window.Clerk.signOut().catch(() => { });
     }
-    set({ currentUser: null, dashboardRoute: '/scholar/feed', roleOverride: 'RESEARCH_SCHOLAR' });
+    set({ currentUser: null, dashboardRoute: '/feed', roleOverride: 'RESEARCH_SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {
