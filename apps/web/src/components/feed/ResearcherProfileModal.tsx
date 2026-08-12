@@ -1,0 +1,141 @@
+'use client';
+
+import React, { useState } from 'react';
+import { 
+  X, 
+  UserPlus, 
+  Check, 
+  Sparkles, 
+  MessageSquare, 
+  Building, 
+  BookOpen, 
+  GraduationCap,
+  Award,
+  Mail
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '@/store/useStore';
+
+interface ResearcherProfileModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  researcher: any | null;
+}
+
+export default function ResearcherProfileModal({
+  isOpen,
+  onClose,
+  researcher
+}: ResearcherProfileModalProps) {
+  const { connectWithPeer, addToast } = useStore();
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  if (!researcher) return null;
+
+  const name = researcher.name || 'Academic Researcher';
+  const department = researcher.department || 'Research Division';
+  const role = researcher.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar';
+  const avatarUrl = researcher.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0C4DA2&color=fff&size=96`;
+
+  const handleFollow = async () => {
+    const nextState = !isFollowing;
+    setIsFollowing(nextState);
+    try {
+      if (researcher.id) {
+        await connectWithPeer(researcher.id);
+      }
+      addToast(nextState ? `Following ${name}` : `Unfollowed ${name}`, 'info');
+    } catch (err: any) {
+      addToast('Failed to update follow status', 'error');
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs cursor-pointer"
+          />
+
+          {/* Modal Box */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden z-10 text-left p-6"
+          >
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="absolute right-4 top-4 p-1.5 rounded-full text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Profile Header */}
+            <div className="flex flex-col items-center text-center pt-2 pb-4">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#0C4DA2] shadow-md mb-3 bg-slate-100">
+                <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+              </div>
+
+              <h3 className="text-lg font-black text-slate-900 leading-tight">{name}</h3>
+              <p className="text-xs font-bold text-[#0C4DA2] mt-1">{role}</p>
+
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mt-1">
+                <Building className="w-3.5 h-3.5 text-slate-400" />
+                <span>{department} · SRMIST</span>
+              </div>
+            </div>
+
+            {/* Academic Bio / Focus */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 mb-5 text-xs text-slate-700 leading-relaxed font-medium">
+              <p className="font-bold text-slate-900 mb-1">Research Focus</p>
+              {researcher.bio || `${name} is actively conducting research in ${department} at SRMIST, focusing on advanced methodology and interdisciplinary collaboration.`}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handleFollow}
+                className={`py-2.5 px-4 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  isFollowing
+                    ? 'bg-slate-100 text-slate-700 border border-slate-300'
+                    : 'bg-[#0C4DA2] hover:bg-[#042654] text-white shadow-md shadow-blue-900/20 active:scale-95'
+                }`}
+              >
+                {isFollowing ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Following</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Follow</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  addToast(`Opening collaboration space with ${name}...`, 'info');
+                  onClose();
+                }}
+                className="py-2.5 px-4 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#FEC727]" />
+                <span>Collaborate</span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

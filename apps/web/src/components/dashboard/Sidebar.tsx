@@ -160,36 +160,35 @@ function NavItem({
       onMouseEnter={() => setHoveredItem(name)}
       onMouseLeave={() => setHoveredItem(null)}
       className={cn(
-        "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 select-none group",
-        active ? "bg-[#EEF4FF] text-[#0B4EA2]" : "text-[#4A5568] hover:bg-[#EEF4FF]/50 hover:text-[#0B4EA2]"
+        "relative flex items-center gap-3.5 px-4 py-3 rounded-full text-sm font-bold transition-all duration-150 select-none group",
+        active 
+          ? "bg-[#0C4DA2]/10 text-[#0C4DA2] font-black" 
+          : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900"
       )}
     >
-      {/* Active Blue Bar Indicator */}
+      {/* Active Blue Left Pillar */}
       {active && (
         <motion.span
           layoutId="sidebar-active-indicator"
-          className="absolute left-0 top-2 bottom-2 w-[3.5px] bg-[#0B4EA2] rounded-r-full z-10"
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="absolute left-1 top-2.5 bottom-2.5 w-[4px] bg-[#0C4DA2] rounded-full z-10"
+          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         />
       )}
 
       <Icon
         className={cn(
-          'w-[18px] h-[18px] shrink-0 transition-colors duration-200 relative z-10',
-          active ? 'text-[#0B4EA2]' : 'text-[#6B7890] group-hover:text-[#0B4EA2]'
+          'w-5 h-5 shrink-0 transition-transform duration-150 relative z-10 group-hover:scale-105',
+          active ? 'text-[#0C4DA2]' : 'text-slate-500 group-hover:text-slate-900'
         )}
       />
       <span
         className={cn(
-          'truncate leading-none relative z-10 transition-colors duration-200',
-          active ? 'text-[#0B4EA2] font-extrabold' : 'text-[#4A5568] group-hover:text-[#17233D]'
+          'truncate leading-none relative z-10 text-[14px]',
+          active ? 'text-[#0C4DA2] font-extrabold tracking-tight' : 'text-slate-700 group-hover:text-slate-900'
         )}
       >
         {name}
       </span>
-      {active && (
-        <ChevronRight className="w-3.5 h-3.5 ml-auto text-[#0B4EA2] relative z-10" />
-      )}
     </Link>
   );
 }
@@ -198,7 +197,7 @@ function NavItem({
 
 function NavSection({ label }: { label: string }) {
   return (
-    <div className="w-full px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-textSecondary select-none">
+    <div className="w-full px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400 select-none">
       {label}
     </div>
   );
@@ -222,14 +221,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full py-5 bg-white">
+    <div className="flex flex-col h-full py-4 bg-white border-r border-slate-200/80">
       {/* Brand + Close (mobile) */}
-      <div className="flex items-center justify-between px-5 mb-6">
+      <div className="flex items-center justify-between px-5 mb-4">
         <Logo showText={true} size={32} />
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-textSecondary hover:bg-surface-container transition-colors cursor-pointer md:hidden"
+            className="p-1.5 rounded-full text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer md:hidden"
           >
             <X className="w-5 h-5" />
           </button>
@@ -237,11 +236,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-2">
+      <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-1.5 scrollbar-thin">
         {sections.map((section) => (
           <div key={section.label}>
             <NavSection label={section.label} />
-            <div className="flex flex-col gap-0.5 mt-1">
+            <div className="flex flex-col gap-0.5 mt-0.5">
               {section.items.map((item) => (
                 <NavItem
                   key={item.href + item.name}
@@ -257,70 +256,34 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      {/* User mini-profile */}
-      <div className="px-3 pt-3 mt-auto border-t border-borderStroke/50">
+      {/* User mini-profile pill */}
+      <div className="px-3 pt-3 mt-auto border-t border-slate-100">
         {currentUser && (
-          <div className="px-3 py-3 rounded-xl bg-surface-container-low/40 mb-3 border border-borderStroke/30 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-borderStroke shrink-0">
+          <Link
+            href={role === 'RESEARCH_SCHOLAR' ? '/scholar/profile' : '/profile'}
+            onClick={onClose}
+            className="p-2.5 rounded-full hover:bg-slate-100/90 transition-all flex items-center gap-3 border border-slate-200/60 mb-2 group cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
               <img
-                src={currentUser.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=004495&color=fff&size=64'}
+                src={currentUser.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=0C4DA2&color=fff&size=64'}
                 alt={currentUser.name || 'User'}
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-bold text-black truncate leading-tight">{currentUser.name || 'Researcher'}</p>
-              {role && <RoleBadge role={role} size="sm" className="mt-1" />}
+              <p className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2]">{currentUser.name || 'Researcher'}</p>
+              <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{currentUser.department || (role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar')}</p>
             </div>
-          </div>
+          </Link>
         )}
-
-        <Link
-          href={role === 'RESEARCH_SCHOLAR' ? '/scholar/profile' : '/profile'}
-          onClick={onClose}
-          onMouseEnter={() => setHoveredItem('profile')}
-          onMouseLeave={() => setHoveredItem(null)}
-          className={cn(
-            'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold transition-colors duration-200 mb-1',
-            (pathname === '/profile' || pathname === '/scholar/profile') ? 'text-primary font-bold' : 'text-textSecondary hover:text-black'
-          )}
-        >
-          {hoveredItem === 'profile' && (
-            <motion.span
-              layoutId="sidebar-backdrop"
-              className="absolute inset-0 bg-primary/5 rounded-lg z-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          )}
-          {(pathname === '/profile' || pathname === '/scholar/profile') && (
-            <motion.span
-              layoutId="sidebar-active-indicator"
-              className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-full z-10"
-            />
-          )}
-          <User className="w-[18px] h-[18px] shrink-0 relative z-10" />
-          <span className="relative z-10">My Profile</span>
-        </Link>
 
         <button
           onClick={() => { logout(); onClose?.(); }}
-          onMouseEnter={() => setHoveredItem('logout')}
-          onMouseLeave={() => setHoveredItem(null)}
-          className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold text-textSecondary hover:text-error transition-colors duration-200 cursor-pointer text-left"
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-extrabold text-slate-500 hover:text-rose-600 hover:bg-rose-50/60 transition-all cursor-pointer text-left"
         >
-          {hoveredItem === 'logout' && (
-            <motion.span
-              layoutId="sidebar-backdrop"
-              className="absolute inset-0 bg-error/5 rounded-lg z-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          )}
-          <LogOut className="w-[18px] h-[18px] shrink-0 relative z-10" />
-          <span className="relative z-10">Exit Portal</span>
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span>Exit Portal</span>
         </button>
       </div>
     </div>
