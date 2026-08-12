@@ -598,14 +598,63 @@ export const useStore = create<AppState>((set, get) => ({
 
     const res = await apiFetch(`/api/comments/${commentId}/like`, { method: 'POST' });
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      set(state => {
+        const traverse = (comments: any[]): any[] => comments.map(c => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              _count: { ...c._count, likes: data.likeCount }
+            };
+          }
+          return { ...c, replies: c.replies ? traverse(c.replies) : [] };
+        });
+        return {
+          threads: state.threads.map(t => ({
+            ...t,
+            comments: t.comments ? traverse(t.comments) : []
+          }))
+        };
+      });
+      return data;
     }
     throw new Error('Failed to toggle comment like');
   },
 
   toggleLikeThread: async (threadId) => {
+    // Optimistic update
+    set(state => {
+      const updatedThreads = state.threads.map(t => {
+        if (t.id === threadId) {
+          const currentLiked = t.likes && t.likes.length > 0;
+          const newLiked = !currentLiked;
+          const currentCount = t._count?.likes || 0;
+          const newCount = newLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+          
+          return {
+            ...t,
+            likes: newLiked ? [{ userId: state.currentUser?.id }] : [],
+            _count: { ...t._count, likes: newCount }
+          };
+        }
+        return t;
+      });
+      return { threads: updatedThreads };
+    });
+
     const res = await apiFetch(`/api/threads/${threadId}/like`, { method: 'POST' });
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      // Sync exact count from server
+      set(state => ({
+        threads: state.threads.map(t => 
+          t.id === threadId 
+            ? { ...t, _count: { ...t._count, likes: data.likeCount } }
+            : t
+        )
+      }));
+      return data;
+    }
     throw new Error('Failed to like thread');
   },
 

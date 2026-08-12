@@ -2,10 +2,14 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateThreadInput } from '@curiousbees/types';
 import { CreateThreadSchema } from '@curiousbees/shared-utils';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ThreadsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async getThreads(search?: string, tag?: string, type?: string, userId?: string, sort?: 'latest' | 'top') {
     const threads = await this.prisma.thread.findMany({
@@ -287,12 +291,39 @@ export class ThreadsService {
 
     if (existing) {
       await this.prisma.threadLike.delete({ where: { id: existing.id } });
-      return { liked: false };
+      const likeCount = await this.prisma.threadLike.count({ where: { threadId } });
+      return { liked: false, likeCount };
     } else {
       await this.prisma.threadLike.create({
         data: { threadId, userId }
       });
-      return { liked: true };
+      const likeCount = await this.prisma.threadLike.count({ where: { threadId } });
+
+      // Send in-app notification to post author (if not self-like)
+      try {
+        const thread = await this.prisma.thread.findUnique({
+          where: { id: threadId },
+          select: { authorId: true, title: true }
+        });
+        if (thread && thread.authorId !== userId) {
+          const liker = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true }
+          });
+          const likerName = liker?.name || 'A researcher';
+          const postSnippet = thread.title?.substring(0, 50) || 'your post';
+          this.notifications.sendNotification(
+            'New Interaction on your post',
+            `${likerName} liked "${postSnippet}"`,
+            thread.authorId
+          ).catch(e => console.error('Like notification failed:', e));
+        }
+      } catch (e) {
+        // Non-blocking — don't fail the like action if notification fails
+        console.error('Like notification error:', e);
+      }
+
+      return { liked: true, likeCount };
     }
   }
 

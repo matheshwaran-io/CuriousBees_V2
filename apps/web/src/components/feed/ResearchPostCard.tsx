@@ -49,12 +49,8 @@ export default function ResearchPostCard({
     addToast 
   } = useStore();
 
-  const [isLiked, setIsLiked] = useState(
-    (post.likes && post.likes.length > 0) || false
-  );
-  const [likesCount, setLikesCount] = useState(
-    post.likesCount ?? post._count?.likes ?? 0
-  );
+  const isLiked = (post.likes && post.likes.length > 0) || false;
+  const likesCount = post.likesCount ?? post._count?.likes ?? 0;
   const [isSaved, setIsSaved] = useState(
     (post.saves || []).some((s: any) => s.userId === currentUser?.id)
   );
@@ -89,16 +85,9 @@ export default function ResearchPostCard({
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount((prev: number) => newLikedState ? prev + 1 : Math.max(0, prev - 1));
-
     try {
       await toggleLikeThread(post.id);
     } catch (err: any) {
-      // rollback
-      setIsLiked(!newLikedState);
-      setLikesCount((prev: number) => !newLikedState ? prev + 1 : Math.max(0, prev - 1));
       addToast('Failed to update like status', 'error');
     }
   };

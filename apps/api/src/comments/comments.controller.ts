@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { CommentsService } from './comments.service';
@@ -8,6 +8,11 @@ import { CreateCommentInput } from '@curiousbees/types';
 @UseGuards(ClerkAuthGuard, ApprovedGuard)
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
+
+  @Get('thread/:threadId')
+  async getCommentsByThread(@Req() req: any, @Param('threadId') threadId: string) {
+    return this.commentsService.getCommentsByThread(threadId, req.user?.id);
+  }
 
   @Post()
   async createComment(@Req() req: any, @Body() body: CreateCommentInput) {

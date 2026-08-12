@@ -11,6 +11,40 @@ export class CommentsService {
     private notifications: NotificationsService
   ) {}
 
+  async getCommentsByThread(threadId: string, userId?: string) {
+    return this.prisma.comment.findMany({
+      where: { threadId, parentId: null },
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, image: true, role: true, department: true }
+        },
+        _count: { select: { likes: true } },
+        likes: userId ? { where: { userId } } : false,
+        replies: {
+          include: {
+            author: {
+              select: { id: true, name: true, email: true, image: true, role: true, department: true }
+            },
+            _count: { select: { likes: true } },
+            likes: userId ? { where: { userId } } : false,
+            replies: {
+              include: {
+                author: {
+                  select: { id: true, name: true, email: true, image: true, role: true, department: true }
+                },
+                _count: { select: { likes: true } },
+                likes: userId ? { where: { userId } } : false,
+              },
+              orderBy: { createdAt: 'asc' }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+  }
+
   async createComment(authorId: string, input: CreateCommentInput) {
     const parsed = CreateCommentSchema.safeParse(input);
     if (!parsed.success) {
@@ -57,10 +91,19 @@ export class CommentsService {
       }
     });
 
-    // Securely dispatch FCM Push Alert to the thread author asynchronously
+    // Notify the thread author (in-app + push)
     if (threadExists.authorId !== authorId) {
       const replierName = newComment.author?.name || 'A research colleague';
       const bodySnippet = content.substring(0, 60) + (content.length > 60 ? '...' : '');
+
+      // In-app notification (persisted to DB — shown in notification bell)
+      this.notifications.sendNotification(
+        'New Interaction on your post',
+        `${replierName} commented: "${bodySnippet}"`,
+        threadExists.authorId
+      ).catch(e => console.error('Comment notification failed:', e));
+
+      // FCM Push Alert (async, non-blocking)
       this.notifications.sendPushToUser(threadExists.authorId, {
         title: 'New Discussion Reply! 💬',
         body: `${replierName} commented: "${bodySnippet}"`,
@@ -130,7 +173,8 @@ export class CommentsService {
       await this.prisma.commentLike.delete({
         where: { id: existingLike.id }
       });
-      return { liked: false };
+      const likeCount = await this.prisma.commentLike.count({ where: { commentId } });
+      return { liked: false, likeCount };
     } else {
       await this.prisma.commentLike.create({
         data: {
@@ -138,7 +182,8 @@ export class CommentsService {
           userId
         }
       });
-      return { liked: true };
+      const likeCount = await this.prisma.commentLike.count({ where: { commentId } });
+      return { liked: true, likeCount };
     }
   }
 }

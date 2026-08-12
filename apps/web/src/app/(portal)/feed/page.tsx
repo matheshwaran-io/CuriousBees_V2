@@ -194,7 +194,18 @@ export default function ScholarFeedPage() {
       (t.author?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesTag = activeTag === '' || t.tags.includes(activeTag);
-    return matchesSearch && matchesTag;
+
+    // Tab Filtering Logic
+    let matchesTab = true;
+    if (activeTab === 'foryou' && currentUser?.interests) {
+      const userInterests = currentUser.interests.map(i => i.interest?.name).filter(Boolean);
+      // If the user has defined interests, only show matching threads
+      if (userInterests.length > 0) {
+        matchesTab = t.tags.some(tag => userInterests.includes(tag));
+      }
+    }
+
+    return matchesSearch && matchesTag && matchesTab;
   });
 
   // ─── ACTIONS ──────────────────────────────────────────────────────────────
@@ -245,15 +256,6 @@ export default function ScholarFeedPage() {
             <div className="flex items-center justify-between px-4 pt-3 pb-1">
               <h1 className="text-base font-black text-slate-900 tracking-tight">Research Feed</h1>
               <div className="flex items-center gap-1.5">
-                <select
-                  value={currentSort}
-                  onChange={(e) => handleSortChange(e.target.value as any)}
-                  className="text-[11px] font-bold text-slate-500 bg-transparent border-none focus:outline-none cursor-pointer pr-4"
-                >
-                  <option value="latest">Latest</option>
-                  <option value="top">Top Posts</option>
-                </select>
-
                 <button
                   onClick={handleRefresh}
                   className="p-2 rounded-full text-slate-400 hover:text-[#0C4DA2] hover:bg-blue-50 transition-all cursor-pointer"

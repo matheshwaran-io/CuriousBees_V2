@@ -3,15 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
-  Users, 
-  UserPlus, 
-  Check, 
-  Calendar, 
   Sparkles, 
-  ChevronRight, 
-  BookOpen,
-  ArrowUpRight,
-  Filter
+  ArrowUpRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
@@ -77,14 +70,7 @@ export default function ResearchDiscoverySidebar({
     }
   };
 
-  const academicDomains = [
-    'Artificial Intelligence',
-    'Bioinformatics',
-    'Cloud Computing',
-    'Cybersecurity',
-    'Data Science',
-    'Robotics & Automation'
-  ];
+
 
   return (
     <aside className="w-full space-y-4 text-left pt-3">
@@ -188,54 +174,7 @@ export default function ResearchDiscoverySidebar({
         </div>
       </div>
 
-      {/* ─── 4. RESEARCH DOMAINS ─── */}
-      <div className="bg-slate-50/70 rounded-3xl border border-slate-200/70 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-            <BookOpen className="w-3.5 h-3.5 text-[#0C4DA2]" />
-            <span>Research Domains</span>
-          </h3>
-        </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {academicDomains.map((domain) => (
-            <button
-              key={domain}
-              onClick={() => onTagClick?.(domain)}
-              className="px-3 py-1 bg-white border border-slate-200/80 text-slate-700 hover:text-[#0C4DA2] hover:border-[#0C4DA2]/40 rounded-full text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
-            >
-              {domain}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ─── 5. UPCOMING EVENTS & SYMPOSIUMS ─── */}
-      <div className="bg-slate-50/70 rounded-3xl border border-slate-200/70 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-amber-500" />
-            <span>Upcoming Symposiums</span>
-          </h3>
-          <Link href="/events" className="text-[10px] font-bold text-[#0C4DA2] hover:underline">
-            View All
-          </Link>
-        </div>
-
-        <div className="space-y-2.5">
-          <div className="bg-white p-3 rounded-2xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[9px] font-black uppercase tracking-wider bg-blue-50 text-[#0C4DA2] px-2 py-0.5 rounded-full">
-              University Conference
-            </span>
-            <p className="text-xs font-bold text-slate-900 mt-1.5 leading-snug">
-              SRMIST Annual Research Day & Innovation Expo
-            </p>
-            <p className="text-[10px] font-semibold text-slate-400 mt-1">
-              Tomorrow · Tech Park Auditorium
-            </p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }
