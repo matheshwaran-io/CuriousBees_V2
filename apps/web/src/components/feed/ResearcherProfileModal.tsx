@@ -1,17 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   X, 
   UserPlus, 
   Check, 
   Sparkles, 
-  MessageSquare, 
-  Building, 
-  BookOpen, 
-  GraduationCap,
-  Award,
-  Mail
+  Building,
+  GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
@@ -27,33 +23,29 @@ export default function ResearcherProfileModal({
   onClose,
   researcher
 }: ResearcherProfileModalProps) {
-  const { connectWithPeer, addToast } = useStore();
-  const [isFollowing, setIsFollowing] = useState(false);
+  const { followedUserIds, toggleFollowUser, addToast } = useStore();
 
   if (!researcher) return null;
 
   const name = researcher.name || 'Academic Researcher';
   const department = researcher.department || 'Research Division';
-  const role = researcher.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar';
+  const role = researcher.role === 'RESEARCH_SUPERVISOR' || researcher.role === 'SUPERVISOR' 
+    ? 'Research Supervisor' 
+    : 'Research Scholar';
   const avatarUrl = researcher.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0C4DA2&color=fff&size=96`;
 
-  const handleFollow = async () => {
-    const nextState = !isFollowing;
-    setIsFollowing(nextState);
-    try {
-      if (researcher.id) {
-        await connectWithPeer(researcher.id);
-      }
-      addToast(nextState ? `Following ${name}` : `Unfollowed ${name}`, 'info');
-    } catch (err: any) {
-      addToast('Failed to update follow status', 'error');
+  const isFollowing = researcher.id ? !!followedUserIds[researcher.id] : false;
+
+  const handleFollow = () => {
+    if (researcher.id) {
+      toggleFollowUser(researcher.id);
     }
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 select-none">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -85,7 +77,7 @@ export default function ResearcherProfileModal({
               </div>
 
               <h3 className="text-lg font-black text-slate-900 leading-tight">{name}</h3>
-              <p className="text-xs font-bold text-[#0C4DA2] mt-1">{role}</p>
+              <p className="text-xs font-extrabold text-[#0C4DA2] mt-1">{role}</p>
 
               <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mt-1">
                 <Building className="w-3.5 h-3.5 text-slate-400" />
@@ -95,7 +87,7 @@ export default function ResearcherProfileModal({
 
             {/* Academic Bio / Focus */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 mb-5 text-xs text-slate-700 leading-relaxed font-medium">
-              <p className="font-bold text-slate-900 mb-1">Research Focus</p>
+              <p className="font-bold text-slate-900 mb-1">Research Focus & Profile</p>
               {researcher.bio || `${name} is actively conducting research in ${department} at SRMIST, focusing on advanced methodology and interdisciplinary collaboration.`}
             </div>
 
@@ -105,13 +97,13 @@ export default function ResearcherProfileModal({
                 onClick={handleFollow}
                 className={`py-2.5 px-4 rounded-full text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   isFollowing
-                    ? 'bg-slate-100 text-slate-700 border border-slate-300'
+                    ? 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
                     : 'bg-[#0C4DA2] hover:bg-[#042654] text-white shadow-md shadow-blue-900/20 active:scale-95'
                 }`}
               >
                 {isFollowing ? (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3.5 h-3.5 text-slate-600" />
                     <span>Following</span>
                   </>
                 ) : (

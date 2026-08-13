@@ -800,4 +800,94 @@ export class UsersService {
       pagination: { page, limit, total }
     };
   }
+
+  // --- DOMAIN FOLLOW ---
+  async followDomain(userId: string, domain: string) {
+    const cleanDomain = domain.trim();
+    if (!cleanDomain) throw new BadRequestException('Invalid domain');
+
+    try {
+      await this.prisma.domainFollow.create({
+        data: { userId, domain: cleanDomain }
+      });
+    } catch (e) {
+      // Ignore unique constraint error if already followed
+    }
+
+    return { success: true, domain: cleanDomain };
+  }
+
+  async unfollowDomain(userId: string, domain: string) {
+    const cleanDomain = domain.trim();
+    await this.prisma.domainFollow.deleteMany({
+      where: { userId, domain: cleanDomain }
+    });
+
+    return { success: true, domain: cleanDomain };
+  }
+
+  async getFollowedDomains(userId: string) {
+    const records = await this.prisma.domainFollow.findMany({
+      where: { userId },
+      select: { domain: true }
+    });
+    return records.map(r => r.domain);
+  }
+
+  // --- TOPIC / HASHTAG FOLLOW ---
+  async followTopic(userId: string, topic: string) {
+    const cleanTopic = topic.trim().replace(/^#/, '');
+    if (!cleanTopic) throw new BadRequestException('Invalid topic');
+
+    try {
+      await this.prisma.topicFollow.create({
+        data: { userId, topic: cleanTopic }
+      });
+    } catch (e) {
+      // Ignore unique constraint error if already followed
+    }
+
+    return { success: true, topic: cleanTopic };
+  }
+
+  async unfollowTopic(userId: string, topic: string) {
+    const cleanTopic = topic.trim().replace(/^#/, '');
+    await this.prisma.topicFollow.deleteMany({
+      where: { userId, topic: cleanTopic }
+    });
+
+    return { success: true, topic: cleanTopic };
+  }
+
+  async getFollowedTopics(userId: string) {
+    const records = await this.prisma.topicFollow.findMany({
+      where: { userId },
+      select: { topic: true }
+    });
+    return records.map(r => r.topic);
+  }
+
+  // --- COMPREHENSIVE USER FOLLOW STATE ---
+  async getUserFollowState(userId: string) {
+    const [userFollows, domainFollows, topicFollows] = await Promise.all([
+      this.prisma.userFollow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true }
+      }),
+      this.prisma.domainFollow.findMany({
+        where: { userId },
+        select: { domain: true }
+      }),
+      this.prisma.topicFollow.findMany({
+        where: { userId },
+        select: { topic: true }
+      })
+    ]);
+
+    return {
+      followedUserIds: userFollows.map(f => f.followingId),
+      followedDomains: domainFollows.map(d => d.domain),
+      followedTopics: topicFollows.map(t => t.topic)
+    };
+  }
 }

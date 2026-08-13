@@ -223,4 +223,41 @@ export class UsersController {
   ) {
     return this.usersService.getFollowing(targetId, parseInt(page, 10), parseInt(limit, 10));
   }
+
+  @Get('me/follow-state')
+  async getMyFollowState(@Req() req: any) {
+    return this.usersService.getUserFollowState(req.user.id);
+  }
+
+  // --- DOMAIN FOLLOW ROUTES ---
+  @Post('follow-domain')
+  async followDomain(@Req() req: any, @Body('domain') domain: string) {
+    return this.usersService.followDomain(req.user.id, domain);
+  }
+
+  @Delete('follow-domain')
+  async unfollowDomain(@Req() req: any, @Body('domain') domain: string) {
+    return this.usersService.unfollowDomain(req.user.id, domain);
+  }
+
+  @Get('followed-domains')
+  async getFollowedDomains(@Req() req: any) {
+    return this.usersService.getFollowedDomains(req.user.id);
+  }
+
+  // --- TOPIC / HASHTAG FOLLOW ROUTES ---
+  @Post('follow-topic')
+  async followTopic(@Req() req: any, @Body('topic') topic: string) {
+    return this.usersService.followTopic(req.user.id, topic);
+  }
+
+  @Delete('follow-topic')
+  async unfollowTopic(@Req() req: any, @Body('topic') topic: string) {
+    return this.usersService.unfollowTopic(req.user.id, topic);
+  }
+
+  @Get('followed-topics')
+  async getFollowedTopics(@Req() req: any) {
+    return this.usersService.getFollowedTopics(req.user.id);
+  }
 }

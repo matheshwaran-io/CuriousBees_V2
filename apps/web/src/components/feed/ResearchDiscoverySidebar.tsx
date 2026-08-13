@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, 
   Sparkles, 
-  ArrowUpRight
+  UserPlus, 
+  Check, 
+  Tag, 
+  ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
@@ -19,23 +21,17 @@ export default function ResearchDiscoverySidebar({
   onTagClick
 }: ResearchDiscoverySidebarProps) {
   const { 
-    searchQuery, 
-    setSearchQuery, 
     currentUser,
     fetchSuggestedPeers, 
     fetchTrendingResearch, 
-    connectWithPeer, 
-    addToast 
+    followedUserIds,
+    followedTopics,
+    toggleFollowUser,
+    toggleFollowTopic
   } = useStore();
-
-  // Extract current user's research interests as string array
-  const currentUserInterests = (currentUser?.interests || []).map(
-    (i: any) => i.interest?.name || i.name || ''
-  ).filter(Boolean);
 
   const [peers, setPeers] = useState<any[]>([]);
   const [trendingTags, setTrendingTags] = useState<Array<{ tag: string; count: number }>>([]);
-  const [followedPeers, setFollowedPeers] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchSuggestedPeers().then(data => {
@@ -46,7 +42,7 @@ export default function ResearchDiscoverySidebar({
       if (tags && tags.length > 0) {
         setTrendingTags(tags);
       } else {
-        // High quality academic defaults if backend initial DB is empty
+        // Default high-quality research topics
         setTrendingTags([
           { tag: 'GenerativeAI', count: 142 },
           { tag: 'Bioinformatics', count: 98 },
@@ -58,85 +54,89 @@ export default function ResearchDiscoverySidebar({
     });
   }, [fetchSuggestedPeers, fetchTrendingResearch]);
 
-  const handleFollowToggle = async (peerId: string, peerName: string) => {
-    const nextState = !followedPeers[peerId];
-    setFollowedPeers(prev => ({ ...prev, [peerId]: nextState }));
-
-    try {
-      await connectWithPeer(peerId);
-      addToast(nextState ? `You are now following ${peerName}` : `Unfollowed ${peerName}`, 'info');
-    } catch (err: any) {
-      addToast(err.message || 'Failed to update follow status', 'error');
-    }
-  };
-
-
-
   return (
-    <aside className="w-full space-y-4 text-left pt-3">
+    <aside className="w-full space-y-6 text-left pt-2 select-none">
 
-      {/* ─── 2. PEOPLE WITH SIMILAR INTERESTS ─── */}
-      <div className="bg-slate-50/70 rounded-3xl border border-slate-200/70 p-4">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#0C4DA2]" />
-            <span>Similar Interests</span>
-          </h3>
-          <Link href="/scholar/connections" className="text-[10px] font-bold text-[#0C4DA2] hover:underline">
+      {/* ─── 1. RESEARCHERS YOU MAY WANT TO FOLLOW ─── */}
+      <div className="bg-white/90 backdrop-blur-xl rounded-[28px] border border-slate-200/80 p-5 shadow-[0_8px_30px_rgb(12,77,162,0.03)]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+              Researchers You May Want to Follow
+            </h3>
+            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+              Based on your research domain & interests
+            </p>
+          </div>
+          <Link href="/scholar/connections" className="text-[11px] font-bold text-[#0C4DA2] hover:underline shrink-0">
             View All
           </Link>
         </div>
-        {currentUserInterests.length > 0 && (
-          <p className="text-[10px] font-medium text-slate-400 mb-3 pl-5.5">
-            Based on your interest in {currentUserInterests.slice(0, 2).join(', ')}
-          </p>
-        )}
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {peers.length === 0 ? (
-            <p className="text-xs font-medium text-slate-400 italic py-2">Discovering researchers with similar interests...</p>
+            <p className="text-xs font-medium text-slate-400 italic py-2">
+              Discovering relevant institutional researchers...
+            </p>
           ) : (
-            peers.slice(0, 4).map((peer) => {
+            peers.slice(0, 5).map((peer) => {
               const name = peer.name || 'Scholar';
               const dept = peer.department || 'SRMIST';
-              const roleLabel = peer.role === 'RESEARCH_SUPERVISOR' ? 'Supervisor' : 'Scholar';
-              const isFollowed = followedPeers[peer.id];
+              const roleLabel = peer.role || (peer.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar');
+              const isFollowed = !!followedUserIds[peer.id] || peer.isFollowing;
               const avatar = peer.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0C4DA2&color=fff&size=64`;
-
-              // Find shared interests between current user and this peer
-              const peerInterests = (peer.interests || []).map((i: any) => i.interest?.name || i.name || '').filter(Boolean);
-              const sharedInterests = peerInterests.filter((pi: string) => 
-                currentUserInterests.some(ui => ui.toLowerCase() === pi.toLowerCase())
-              );
-              const displayInterest = sharedInterests[0] || peerInterests[0] || dept;
+              const domainsList: string[] = peer.domains || peer.researchInterests || [];
+              const reason = peer.reason || 'Active SRMIST Researcher';
 
               return (
-                <div key={peer.id} className="flex items-center justify-between gap-2">
-                  <Link href={`/researchers/${peer.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 group">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0 bg-slate-200 ring-1 ring-slate-200 group-hover:ring-[#0C4DA2]/30 transition-all">
-                      <img src={avatar} alt={name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="truncate min-w-0">
-                      <p className="text-[13px] font-black text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2] transition-colors">{name}</p>
-                      <p className="text-[10px] font-semibold text-slate-400 truncate mt-0.5">{roleLabel} · {dept}</p>
-                      {displayInterest && (
-                        <p className={`text-[10px] font-bold truncate mt-0.5 ${sharedInterests.length > 0 ? 'text-[#0C4DA2]' : 'text-slate-400'}`}>
-                          {sharedInterests.length > 0 ? `🎯 ${displayInterest}` : displayInterest}
+                <div key={peer.id} className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 transition-all flex flex-col gap-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link href={`/researchers/${peer.id}`} className="flex items-center gap-3 min-w-0 flex-1 group">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-white shadow-2xs shrink-0 bg-slate-200 ring-1 ring-slate-200 group-hover:ring-[#0C4DA2]/40 transition-all">
+                        <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="truncate min-w-0">
+                        <h4 className="text-xs font-extrabold text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2] transition-colors">
+                          {name}
+                        </h4>
+                        <p className="text-[10px] font-bold text-slate-500 truncate mt-0.5">
+                          {roleLabel} · {dept}
                         </p>
-                      )}
-                    </div>
-                  </Link>
+                      </div>
+                    </Link>
 
-                  <button
-                    onClick={() => handleFollowToggle(peer.id, name)}
-                    className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all shrink-0 cursor-pointer active:scale-95 ${
-                      isFollowed 
-                        ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300' 
-                        : 'bg-[#0C4DA2] text-white hover:bg-[#042654] shadow-sm'
-                    }`}
-                  >
-                    {isFollowed ? 'Following' : 'Follow'}
-                  </button>
+                    {/* Optimistic Follow / Following Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFollowUser(peer.id);
+                      }}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                        isFollowed 
+                          ? 'bg-slate-200/80 text-slate-700 hover:bg-slate-300' 
+                          : 'bg-[#0C4DA2] text-white hover:bg-[#042654] shadow-sm shadow-blue-900/20 active:scale-95'
+                      }`}
+                    >
+                      {isFollowed ? 'Following' : 'Follow'}
+                    </button>
+                  </div>
+
+                  {/* Domains Pill Tags */}
+                  {domainsList.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {domainsList.slice(0, 3).map((domain, idx) => (
+                        <span key={idx} className="text-[9px] font-bold bg-white text-[#0C4DA2] border border-slate-200 px-2 py-0.5 rounded-md">
+                          {domain}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Recommendation Context Reason */}
+                  <p className="text-[9px] font-bold text-[#0C4DA2] bg-blue-50/60 px-2 py-1 rounded-lg flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                    <span>{reason}</span>
+                  </p>
                 </div>
               );
             })
@@ -144,36 +144,59 @@ export default function ResearchDiscoverySidebar({
         </div>
       </div>
 
-      {/* ─── 3. TRENDING RESEARCH ─── */}
-      <div className="bg-slate-50/70 rounded-3xl border border-slate-200/70 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5 text-[#0C4DA2]" />
-            <span>Trending Research</span>
-          </h3>
+      {/* ─── 2. TRENDING RESEARCH TOPICS (#TAGS) ─── */}
+      <div className="bg-white/90 backdrop-blur-xl rounded-[28px] border border-slate-200/80 p-5 shadow-[0_8px_30px_rgb(12,77,162,0.03)]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+              Trending Research Topics
+            </h3>
+            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+              Follow topics to personalize your feed
+            </p>
+          </div>
         </div>
 
         <div className="space-y-3">
-          {trendingTags.slice(0, 4).map((item) => (
-            <div
-              key={item.tag}
-              onClick={() => onTagClick?.(item.tag)}
-              className="flex items-center justify-between hover:bg-slate-100/80 p-2 rounded-2xl transition-all cursor-pointer group"
-            >
-              <div>
-                <p className="text-xs font-extrabold text-slate-900 group-hover:text-[#0C4DA2]">
-                  #{item.tag}
-                </p>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                  {item.count} research interactions
-                </p>
+          {trendingTags.slice(0, 5).map((item) => {
+            const cleanKey = item.tag.trim().toLowerCase().replace(/^#/, '');
+            const isTopicFollowed = !!followedTopics[cleanKey];
+
+            return (
+              <div
+                key={item.tag}
+                className="flex items-center justify-between hover:bg-slate-50/80 p-2.5 rounded-2xl border border-transparent hover:border-slate-100 transition-all group"
+              >
+                <div 
+                  onClick={() => onTagClick?.(item.tag)}
+                  className="cursor-pointer min-w-0 flex-1 pr-2"
+                >
+                  <p className="text-xs font-black text-slate-900 group-hover:text-[#0C4DA2] truncate transition-colors">
+                    #{item.tag}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                    {item.count} research interactions
+                  </p>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFollowTopic(item.tag);
+                  }}
+                  className={`px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                    isTopicFollowed
+                      ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                      : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-[#0C4DA2] hover:text-white hover:border-[#0C4DA2]'
+                  }`}
+                >
+                  {isTopicFollowed ? 'Following' : '+ Follow'}
+                </button>
               </div>
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#0C4DA2] transition-colors" />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-
 
     </aside>
   );

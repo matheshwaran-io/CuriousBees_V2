@@ -57,34 +57,67 @@ export class FeedService {
   async getSuggestedPeers(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { interests: { include: { interest: true } } }
+      include: {
+        interests: { include: { interest: true } },
+        following: { select: { followingId: true } },
+        followedDomains: { select: { domain: true } }
+      }
     });
 
     if (!user) return [];
 
     const userInterests = user.interests.map(i => i.interest.name);
+    const followedUserIds = user.following.map(f => f.followingId);
+    const followedDomains = user.followedDomains.map(d => d.domain);
 
-    // Basic logic: same department or shared interests, not self
+    // Fetch potential peer recommendations (excluding self and already followed)
     const peers = await this.prisma.user.findMany({
       where: {
-        id: { not: userId },
-        status: 'ACTIVE',
-        OR: [
-          { department: user.department },
-          {
-            interests: {
-              some: {
-                interest: { name: { in: userInterests } }
-              }
-            }
-          }
-        ]
+        id: { notIn: [userId, ...followedUserIds] },
+        status: 'ACTIVE'
       },
-      select: { id: true, name: true, image: true, role: true, department: true },
-      take: 5
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        role: true,
+        department: true,
+        interests: { include: { interest: true } },
+        followers: { where: { followerId: userId }, select: { id: true } }
+      },
+      take: 10
     });
 
-    return peers;
+    // Format & calculate recommendation reasons
+    return peers.map(peer => {
+      const peerDomains = peer.interests.map(i => i.interest.name);
+      const sharedInterests = peerDomains.filter(i => userInterests.includes(i));
+      const matchingFollowedDomain = peerDomains.find(d => followedDomains.includes(d));
+
+      let reason = 'Active SRMIST Researcher';
+      if (matchingFollowedDomain) {
+        reason = `Because you follow ${matchingFollowedDomain}`;
+      } else if (sharedInterests.length > 0) {
+        reason = `${sharedInterests.length} shared research ${sharedInterests.length === 1 ? 'interest' : 'interests'}`;
+      } else if (peer.department && peer.department === user.department) {
+        reason = `Same department (${peer.department.split('(')[0].trim()})`;
+      }
+
+      const formattedRole = peer.role === 'RESEARCH_SUPERVISOR' || (peer.role as any) === 'SUPERVISOR'
+        ? 'Research Supervisor'
+        : 'Research Scholar';
+
+      return {
+        id: peer.id,
+        name: peer.name || 'Scholar',
+        image: peer.image,
+        role: formattedRole,
+        department: peer.department ? peer.department.split('(')[0].trim() : 'SRMIST',
+        domains: peerDomains.slice(0, 3),
+        reason,
+        isFollowing: peer.followers.length > 0
+      };
+    }).slice(0, 5);
   }
 
   async getTrendingResearch() {

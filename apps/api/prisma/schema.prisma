@@ -85,8 +85,10 @@ model User {
   connectionsReceived  ResearchConnection[] @relation("ConnectionReceiver")
   hostedEvents         Event[]
   // Researcher Network Follow Relations
-  following            UserFollow[] @relation("UserFollowing")
-  followers            UserFollow[] @relation("UserFollowers")
+  following            UserFollow[]   @relation("UserFollowing")
+  followers            UserFollow[]   @relation("UserFollowers")
+  followedDomains      DomainFollow[]
+  followedTopics       TopicFollow[]
 
   @@index([departmentId])
   @@index([supervisorId])
@@ -98,12 +100,38 @@ model UserFollow {
   followingId String
   createdAt   DateTime @default(now())
 
-  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model DomainFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  domain    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, domain])
+  @@index([userId])
+  @@index([domain])
+}
+
+model TopicFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  topic     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topic])
+  @@index([userId])
+  @@index([topic])
 }
 
 // SRM_Recollab Custom MVP Models
@@ -189,15 +217,25 @@ model CommentLike {
 }
 
 model Opportunity {
-  id             String   @id @default(cuid())
-  title          String
-  description    String   @db.Text
-  department     String
-  researchDomain String
-  authorId       String
-  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                String    @id @default(cuid())
+  title             String
+  description       String    @db.Text
+  department        String
+  researchDomain    String
+  opportunityType   String    @default("PhD Position")
+  positionsCount    Int       @default(1)
+  funding           String    @default("Fully Funded")
+  fundingDetails    String?
+  eligibility       String[]  @default([])
+  deadline          DateTime?
+  mode              String    @default("On Campus")
+  applicationMethod String    @default("CuriousBees")
+  applicationUrl    String?
+  applicationEmail  String?
+  authorId          String
+  author            User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   collaborationRequests CollaborationRequest[]
 

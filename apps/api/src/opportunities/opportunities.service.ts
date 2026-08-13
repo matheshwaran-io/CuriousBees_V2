@@ -105,20 +105,35 @@ export class OpportunitiesService {
       throw new BadRequestException(parsed.error.errors[0].message);
     }
 
-    const { title, description, researchDomain } = parsed.data;
+    const {
+      title,
+      description,
+      researchDomain,
+      opportunityType,
+      positionsCount,
+      funding,
+      fundingDetails,
+      eligibility,
+      deadline,
+      mode,
+      applicationMethod,
+      applicationUrl,
+      applicationEmail
+    } = parsed.data;
 
     const author = await this.prisma.user.findUnique({
       where: { id: currentUser.id }
     });
 
-    if (!author || (author.role !== 'RESEARCH_SUPERVISOR' && (author.role as any) !== 'SUPERVISOR')) {
-      throw new BadRequestException('Only verified Research Supervisors are authorized to post research opportunities.');
+    const allowedRoles = ['RESEARCH_SUPERVISOR', 'SUPERVISOR', 'RESEARCH_SCHOLAR', 'SCHOLAR', 'INSTITUTE_ADMIN'];
+    if (!author || !allowedRoles.includes(author.role)) {
+      throw new ForbiddenException('Only verified Research Supervisors, Scholars, or Admins are authorized to post research opportunities.');
     }
 
-    // Derive department strictly from database and ignore any frontend spoof attempts
+    // Derive department strictly from database profile and ignore any frontend spoof attempts
     const departmentToAssign = author.department;
     if (!departmentToAssign) {
-      throw new BadRequestException('You must have a department assigned to post research opportunities.');
+      throw new BadRequestException('You must have a department assigned by Institute Administration to post research opportunities.');
     }
 
     return this.prisma.opportunity.create({
@@ -127,6 +142,16 @@ export class OpportunitiesService {
         description,
         department: departmentToAssign,
         researchDomain,
+        opportunityType: opportunityType || 'PhD Position',
+        positionsCount: positionsCount || 1,
+        funding: funding || 'Fully Funded',
+        fundingDetails: fundingDetails || null,
+        eligibility: eligibility || [],
+        deadline: deadline ? new Date(deadline) : null,
+        mode: mode || 'On Campus',
+        applicationMethod: applicationMethod || 'CuriousBees',
+        applicationUrl: applicationUrl || null,
+        applicationEmail: applicationEmail || null,
         authorId: currentUser.id
       },
       include: {
@@ -164,7 +189,17 @@ export class OpportunitiesService {
       data: {
         title: data.title,
         description: data.description,
-        researchDomain: data.researchDomain
+        researchDomain: data.researchDomain,
+        opportunityType: data.opportunityType,
+        positionsCount: data.positionsCount,
+        funding: data.funding,
+        fundingDetails: data.fundingDetails,
+        eligibility: data.eligibility,
+        deadline: data.deadline ? new Date(data.deadline) : undefined,
+        mode: data.mode,
+        applicationMethod: data.applicationMethod,
+        applicationUrl: data.applicationUrl,
+        applicationEmail: data.applicationEmail
       }
     });
   }

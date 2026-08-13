@@ -27,6 +27,11 @@ export class EventsService {
 
       return await this.prisma.event.findMany({
         where,
+        include: {
+          author: {
+            select: { id: true, name: true, role: true, department: true, image: true }
+          }
+        },
         orderBy: { date: 'asc' },
         take: filters?.limit || 100,
         skip: filters?.skip || 0,
@@ -48,7 +53,14 @@ export class EventsService {
    * Retrieves a single event by ID.
    */
   async getEventById(id: string) {
-    const event = await this.prisma.event.findUnique({ where: { id } });
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: { id: true, name: true, role: true, department: true, image: true }
+        }
+      }
+    });
     if (!event) throw new NotFoundException('Event not found.');
     return event;
   }
@@ -67,9 +79,9 @@ export class EventsService {
   /**
    * Creates an event manually (skipping AI).
    */
-  async createEvent(user: any, input: { title: string; date: string; time: string; venue: string; description?: string, eventType?: string }) {
+  async createEvent(user: any, input: { title: string; date: string; time: string; venue: string; description?: string; eventType?: string; registrationLink?: string }) {
     this.checkCreatePermissions(user);
-    const { title, date, time, venue, description, eventType } = input;
+    const { title, date, time, venue, description, eventType, registrationLink } = input;
     if (!title || !date || !time || !venue) {
       throw new BadRequestException('Event details are incomplete.');
     }
@@ -83,6 +95,7 @@ export class EventsService {
           venue, 
           description,
           eventType: eventType || 'Manual Entry',
+          registrationLink: registrationLink ? registrationLink.trim() : null,
           status: EventStatus.PUBLISHED,
           authorId: user.id
         }

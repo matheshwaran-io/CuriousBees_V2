@@ -114,8 +114,8 @@ const getSidebarSections = (role: UserRole): SidebarSection[] => {
       label: 'RESEARCH',
       items: [
         { name: 'Research Feed', href: '/feed', icon: MessageSquare },
-        { name: 'Opportunities', href: '/scholar/opportunities', icon: Briefcase },
-        { name: 'Events', href: '/scholar/events', icon: CalendarIcon },
+        { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
+        { name: 'Events', href: '/events', icon: CalendarIcon },
       ],
     },
     {

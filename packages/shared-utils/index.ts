@@ -62,22 +62,28 @@ export const CreateCommentSchema = z.object({
   parentId: z.string().cuid('Invalid parent identifier').optional()
 });
 
-// 3. Faculty Opportunity Creation Schema
 export const CreateOpportunitySchema = z.object({
   title: z
     .string()
-    .min(5, 'Title must be at least 5 characters')
-    .max(120, 'Title cannot exceed 120 characters'),
+    .min(5, 'Position title must be at least 5 characters')
+    .max(150, 'Position title cannot exceed 150 characters'),
   description: z
     .string()
-    .min(15, 'Description must be at least 15 characters'),
-  department: z.string().refine((val) => {
-    return SRM_DEPARTMENTS.includes(val as any);
-  }, 'Please select a valid department'),
+    .min(15, 'Opportunity description must be at least 15 characters'),
+  department: z.string().optional(),
   researchDomain: z
     .string()
-    .min(3, 'Research domain/topic must be at least 3 characters')
-    .max(50, 'Research domain cannot exceed 50 characters')
+    .min(2, 'Select or enter at least one research domain'),
+  opportunityType: z.string().optional(),
+  positionsCount: z.coerce.number().int().min(1, 'Positions available must be at least 1').optional().default(1),
+  funding: z.string().optional().default('Fully Funded'),
+  fundingDetails: z.string().optional(),
+  eligibility: z.array(z.string()).optional().default([]),
+  deadline: z.string().nullable().optional(),
+  mode: z.string().optional().default('On Campus'),
+  applicationMethod: z.string().optional().default('CuriousBees'),
+  applicationUrl: z.string().optional().or(z.literal('')),
+  applicationEmail: z.string().optional().or(z.literal(''))
 });
 
 // 4. User Profile Update Schema

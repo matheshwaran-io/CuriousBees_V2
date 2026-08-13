@@ -46,7 +46,11 @@ export default function ResearchPostCard({
     toggleLikeThread, 
     toggleSaveThread, 
     requestThreadCollaboration, 
-    addToast 
+    addToast,
+    followedUserIds,
+    toggleFollowUser,
+    followedTopics,
+    toggleFollowTopic
   } = useStore();
 
   const isLiked = (post.likes && post.likes.length > 0) || false;
@@ -55,7 +59,7 @@ export default function ResearchPostCard({
     (post.saves || []).some((s: any) => s.userId === currentUser?.id)
   );
   const [isCollaborating, setIsCollaborating] = useState(false);
-  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+  const isFollowingAuthor = post.authorId ? !!followedUserIds[post.authorId] : false;
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -164,26 +168,40 @@ export default function ResearchPostCard({
             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
               <button
                 onClick={() => onAuthorClick?.(post.author || { name: authorName, department: authorDept })}
-                className="text-xs font-black text-slate-900 hover:text-[#0C4DA2] transition-colors truncate cursor-pointer"
+                className="text-[13px] font-bold text-slate-900 hover:underline transition-colors truncate cursor-pointer"
               >
                 {authorName}
               </button>
+              
+              {post.author?.role && (
+                <>
+                  <span className="text-[11px] font-medium text-slate-400">·</span>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    {post.author.role.replace('_', ' ')}
+                  </span>
+                </>
+              )}
 
-              <span className="text-[10px] font-bold text-slate-400">·</span>
+              {authorDept && (
+                <>
+                  <span className="text-[11px] font-medium text-slate-400">·</span>
+                  <span className="text-[11px] font-medium text-slate-500 truncate max-w-[140px] sm:max-w-none">
+                    {authorDept}
+                  </span>
+                </>
+              )}
 
-              <span className="text-[10px] font-bold text-slate-500 truncate max-w-[140px] sm:max-w-none">
-                {authorDept}
-              </span>
+              <span className="text-[11px] font-medium text-slate-400">·</span>
 
-              <span className="text-[10px] font-bold text-slate-400">·</span>
-
-              <span className="text-[10px] font-bold text-slate-400 hover:underline cursor-pointer">
+              <span className="text-[11px] font-medium text-slate-400 hover:underline cursor-pointer">
                 {formatDate(post.createdAt)}
               </span>
 
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${badge.style} ml-1`}>
-                {badge.label}
-              </span>
+              {badge && badge.label && (
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide uppercase border ${badge.style} ml-1`}>
+                  {badge.label}
+                </span>
+              )}
             </div>
 
             {/* Post Menu Dropdown */}
@@ -207,8 +225,12 @@ export default function ResearchPostCard({
                     >
                       {!isOwner && (
                         <button
-                          onClick={() => { setIsFollowingAuthor(!isFollowingAuthor); setShowMenu(false); }}
-                          className="w-full px-4 py-2 hover:bg-slate-50 text-left flex items-center gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (post.authorId) toggleFollowUser(post.authorId);
+                            setShowMenu(false);
+                          }}
+                          className="w-full px-4 py-2 hover:bg-slate-50 text-left flex items-center gap-2 cursor-pointer"
                         >
                           <UserPlus className="w-3.5 h-3.5 text-[#0C4DA2]" />
                           <span>{isFollowingAuthor ? 'Unfollow Author' : 'Follow Author'}</span>
@@ -251,27 +273,23 @@ export default function ResearchPostCard({
             </div>
           </div>
 
-          {/* Title (if present) */}
-          {post.title && post.title !== textContent.substring(0, 60) && (
-            <h4 className="text-xs font-black text-slate-900 mt-1 mb-1 leading-snug">
+          {/* Post Title */}
+          {post.title && (
+            <h3 className="text-sm font-bold text-slate-900 mt-1 mb-1 leading-tight">
               {post.title}
-            </h4>
+            </h3>
           )}
 
-          {/* Post Text Body */}
-          <div className="mt-1 text-xs text-slate-800 leading-relaxed font-medium whitespace-pre-line">
-            {isLongContent && !isExpanded ? (
-              <>
-                {textContent.substring(0, 280)}...
-                <button
-                  onClick={() => setIsExpanded(true)}
-                  className="text-[#0C4DA2] font-bold text-xs hover:underline ml-1 cursor-pointer"
-                >
-                  Show more
-                </button>
-              </>
-            ) : (
-              textContent
+          {/* Post Content */}
+          <div className="text-[13px] text-slate-800 font-medium whitespace-pre-wrap leading-relaxed mt-1">
+            {isExpanded ? textContent : (textContent.length > 280 ? textContent.slice(0, 280) + '...' : textContent)}
+            {textContent.length > 280 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+                className="text-[#0C4DA2] hover:underline font-bold ml-1 cursor-pointer"
+              >
+                {isExpanded ? 'Show less' : 'Read more'}
+              </button>
             )}
           </div>
 
@@ -322,11 +340,11 @@ export default function ResearchPostCard({
 
           {/* Research Domain Hashtags */}
           {post.tags && post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
+            <div className="flex flex-wrap gap-1.5 mt-2">
               {post.tags.map((tag: string, i: number) => (
                 <span
                   key={i}
-                  className="text-[11px] font-bold text-[#0C4DA2] hover:underline cursor-pointer"
+                  className="text-[12px] font-medium text-[#0C4DA2] hover:underline cursor-pointer"
                 >
                   #{tag.replace(/^#/, '')}
                 </span>
@@ -335,58 +353,67 @@ export default function ResearchPostCard({
           )}
 
           {/* Action Row */}
-          <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100/80 max-w-md">
+          <div className="flex items-center justify-between mt-3 max-w-md">
             {/* Like */}
             <button
               onClick={handleLikeToggle}
-              className={`flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-extrabold transition-all cursor-pointer ${
-                isLiked ? 'text-[#0C4DA2] bg-blue-50' : 'text-slate-500 hover:text-[#0C4DA2] hover:bg-slate-100'
+              className={`flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium transition-all cursor-pointer group ${
+                isLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500 hover:bg-rose-50'
               }`}
             >
-              <Heart className={`w-4 h-4 transition-transform active:scale-75 ${isLiked ? 'fill-[#0C4DA2] text-[#0C4DA2]' : ''}`} />
-              <span>{likesCount}</span>
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-rose-50 transition-colors">
+                <Heart className={`w-4 h-4 transition-transform group-active:scale-75 ${isLiked ? 'fill-current' : ''}`} />
+              </div>
+              {likesCount > 0 && <span>{likesCount}</span>}
             </button>
 
             {/* Comment */}
             <button
               onClick={() => setShowComments(!showComments)}
-              className="flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-extrabold text-slate-500 hover:text-[#0C4DA2] hover:bg-slate-100 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium text-slate-500 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
             >
-              <MessageSquare className="w-4 h-4" />
-              <span>{post.commentsCount ?? post._count?.comments ?? 0}</span>
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-blue-50 transition-colors">
+                <MessageSquare className="w-4 h-4 transition-transform group-active:scale-75" />
+              </div>
+              {(post.commentsCount ?? post._count?.comments ?? 0) > 0 && (
+                <span>{post.commentsCount ?? post._count?.comments ?? 0}</span>
+              )}
             </button>
 
-            {/* Repost / Share */}
+            {/* Share */}
             <button
               onClick={(e) => { e.stopPropagation(); onShareClick?.(post); }}
-              className="flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-extrabold text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 transition-all cursor-pointer group"
             >
-              <Share2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Share</span>
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-emerald-50 transition-colors">
+                <Share2 className="w-4 h-4 transition-transform group-active:scale-75" />
+              </div>
             </button>
 
             {/* Save */}
             <button
               onClick={handleSaveToggle}
-              className={`flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-extrabold transition-all cursor-pointer ${
-                isSaved ? 'text-amber-600 bg-amber-50' : 'text-slate-500 hover:text-amber-600 hover:bg-amber-50'
+              className={`flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium transition-all cursor-pointer group ${
+                isSaved ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500 hover:bg-amber-50'
               }`}
             >
-              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-amber-600' : ''}`} />
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-amber-50 transition-colors">
+                <Bookmark className={`w-4 h-4 transition-transform group-active:scale-75 ${isSaved ? 'fill-current' : ''}`} />
+              </div>
             </button>
 
             {/* Collaborate Action */}
             <button
               onClick={handleCollabRequest}
               disabled={isCollaborating || isOwner}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-2xs ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
                 isOwner 
-                  ? 'opacity-40 bg-slate-100 text-slate-500 cursor-not-allowed' 
-                  : 'bg-[#0C4DA2] text-white hover:bg-[#042654] active:scale-95'
+                  ? 'opacity-40 text-slate-500 cursor-not-allowed' 
+                  : 'text-[#0C4DA2] hover:bg-[#0C4DA2]/10 active:bg-[#0C4DA2]/20'
               }`}
             >
-              <Sparkles className="w-3 h-3" />
-              <span>Collab</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Collaborate</span>
             </button>
           </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -98,20 +98,19 @@ export default function ScholarFeedPage() {
     threads, feedCounts, feedError, searchQuery, setSearchQuery, activeTag, setActiveTag, 
     isLoading, fetchFeedThreads, fetchFeedCounts, currentUser, createThread,
     toggleLikeThread, requestThreadCollaboration, shareThread, reportThread, connectWithPeer,
-    toggleSaveThread, deleteThread, toggleSaveThreadLocally, addToast, fetchSuggestedPeers, fetchTrendingResearch
+    toggleSaveThread, deleteThread, toggleSaveThreadLocally, addToast, fetchSuggestedPeers, fetchTrendingResearch,
+    followedUserIds, followedDomains, followedTopics
   } = useStore();
 
   // ─── LOCAL STATE ──────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<'foryou' | 'discover'>('foryou');
+  const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'discover'>('foryou');
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [reportingPost, setReportingPost] = useState<any | null>(null);
   const [deletingPost, setDeletingPost] = useState<any | null>(null);
   const [sharingPost, setSharingPost] = useState<any | null>(null);
   const [shareCounts, setShareCounts] = useState<Record<string, number>>({});
   const [selectedResearcher, setSelectedResearcher] = useState<any | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [mobileComposerOpen, setMobileComposerOpen] = useState(false);
-  const [timelinesOpen, setTimelinesOpen] = useState(false);
   
   // Fetch threads and counts when URL params change
   useEffect(() => {
@@ -181,32 +180,74 @@ export default function ScholarFeedPage() {
         interestedCount: 0,
         attachments: (t as any).attachments,
         saves: (t as any).saves,
+        likes: (t as any).likes,
         comments: t.comments
       };
     });
   };
 
-  const filteredThreads = getCombinedThreads().filter(t => {
-    const matchesSearch = 
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      t.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (t.author?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesTag = activeTag === '' || t.tags.includes(activeTag);
+  const filteredThreads = useMemo(() => {
+    const combined = getCombinedThreads();
+    const q = searchQuery.toLowerCase().trim();
 
-    // Tab Filtering Logic
-    let matchesTab = true;
-    if (activeTab === 'foryou' && currentUser?.interests) {
-      const userInterests = currentUser.interests.map(i => i.interest?.name).filter(Boolean);
-      // If the user has defined interests, only show matching threads
-      if (userInterests.length > 0) {
-        matchesTab = t.tags.some(tag => userInterests.includes(tag));
+    // 1. Base Search & Tag Matching
+    const matched = combined.filter(t => {
+      const matchesSearch = !q || 
+        t.title.toLowerCase().includes(q) || 
+        t.content.toLowerCase().includes(q) ||
+        t.tags.some(tag => tag.toLowerCase().includes(q)) ||
+        (t.author?.name || '').toLowerCase().includes(q);
+      
+      const matchesTag = activeTag === '' || t.tags.includes(activeTag);
+      return matchesSearch && matchesTag;
+    });
+
+    // 2. Tab Specific Filtering & Personalization
+    if (activeTab === 'following') {
+      const followedAuthorCount = Object.keys(followedUserIds).filter(k => followedUserIds[k]).length;
+      const followedDomainCount = Object.keys(followedDomains).filter(k => followedDomains[k]).length;
+      const followedTopicCount = Object.keys(followedTopics).filter(k => followedTopics[k]).length;
+      const hasAnyFollows = followedAuthorCount > 0 || followedDomainCount > 0 || followedTopicCount > 0;
+
+      if (!hasAnyFollows) {
+        // Fallback: If user hasn't followed anyone yet, show matched threads so feed isn't empty
+        return matched;
       }
+
+      return matched.filter(t => {
+        const isAuthorFollowed = t.authorId ? !!followedUserIds[t.authorId] : false;
+        const isDomainFollowed = t.tags.some(tag => !!followedDomains[tag.toLowerCase()]);
+        const isTopicFollowed = t.tags.some(tag => !!followedTopics[tag.toLowerCase().replace(/^#/, '')]);
+        return isAuthorFollowed || isDomainFollowed || isTopicFollowed;
+      });
     }
 
-    return matchesSearch && matchesTag && matchesTab;
-  });
+    if (activeTab === 'foryou') {
+      const userInterests = (currentUser?.interests || []).map((i: any) => (i.interest?.name || i.name || '').toLowerCase()).filter(Boolean);
+
+      return [...matched].sort((a, b) => {
+        const aScore = (
+          (a.authorId && followedUserIds[a.authorId] ? 10 : 0) +
+          (a.tags.some(t => followedDomains[t.toLowerCase()] || followedTopics[t.toLowerCase().replace(/^#/, '')]) ? 8 : 0) +
+          (a.tags.some(t => userInterests.includes(t.toLowerCase())) ? 5 : 0) +
+          (a.author?.department && currentUser?.department && a.author.department === currentUser.department ? 3 : 0)
+        );
+
+        const bScore = (
+          (b.authorId && followedUserIds[b.authorId] ? 10 : 0) +
+          (b.tags.some(t => followedDomains[t.toLowerCase()] || followedTopics[t.toLowerCase().replace(/^#/, '')]) ? 8 : 0) +
+          (b.tags.some(t => userInterests.includes(t.toLowerCase())) ? 5 : 0) +
+          (b.author?.department && currentUser?.department && b.author.department === currentUser.department ? 3 : 0)
+        );
+
+        if (bScore !== aScore) return bScore - aScore;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
+
+    // DISCOVER: Return all matched threads chronologically
+    return matched;
+  }, [threads, searchQuery, activeTag, activeTab, currentUser, followedUserIds, followedDomains, followedTopics]);
 
   // ─── ACTIONS ──────────────────────────────────────────────────────────────
 
@@ -250,33 +291,19 @@ export default function ScholarFeedPage() {
         {/* ─── CENTER COLUMN (FEED TIMELINE) ─── */}
         <main className="flex-1 min-w-0 border-x border-slate-200/80 bg-white min-h-screen">
 
-          {/* ─── STICKY HEADER: TITLE + TABS ─── */}
-          <div className="sticky top-0 bg-white/95 backdrop-blur-md z-20 border-b border-slate-200/80">
-            {/* Feed Header */}
-            <div className="flex items-center justify-between px-4 pt-3 pb-1">
-              <h1 className="text-base font-black text-slate-900 tracking-tight">Research Feed</h1>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={handleRefresh}
-                  className="p-2 rounded-full text-slate-400 hover:text-[#0C4DA2] hover:bg-blue-50 transition-all cursor-pointer"
-                  title="Refresh Feed"
-                >
-                  <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-            </div>
-
+          {/* ─── STICKY HEADER ─── */}
+          <div className="sticky top-0 bg-white/95 backdrop-blur-md z-20">
             {/* Search Box */}
-            <form onSubmit={handleSearchSubmit} className="px-4 pb-2">
+            <form onSubmit={handleSearchSubmit} className="px-4 pb-2 pt-3">
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search feed..."
-                  className="w-full bg-slate-100/80 border border-slate-200/60 rounded-full pl-9 pr-8 py-2 text-[13px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#0C4DA2]/40 focus:ring-2 focus:ring-[#0C4DA2]/10 transition-all"
+                  placeholder="Search research, researchers, publications..."
+                  className="w-full bg-slate-100/60 border border-slate-200/50 rounded-full pl-9 pr-8 py-1.5 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#0C4DA2]/40 focus:ring-2 focus:ring-[#0C4DA2]/10 transition-all"
                 />
-                <button type="submit" className="absolute left-3 top-2.5 text-slate-400 cursor-pointer">
+                <button type="submit" className="absolute left-3 top-2 text-slate-400 cursor-pointer">
                   <Search className="w-3.5 h-3.5" />
                 </button>
                 {searchQuery && (
@@ -286,7 +313,7 @@ export default function ScholarFeedPage() {
                       setSearchQuery('');
                       router.push(`?type=${currentType}`);
                     }}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                    className="absolute right-3 top-2 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -294,105 +321,57 @@ export default function ScholarFeedPage() {
               </div>
             </form>
 
-            {/* For You / Discover Tabs + Timelines Button */}
-            <div className="flex items-center">
-              <button
-                onClick={() => setActiveTab('foryou')}
-                className={`flex-1 py-3 text-xs font-extrabold text-center relative transition-colors cursor-pointer ${
-                  activeTab === 'foryou' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                For You
-                {activeTab === 'foryou' && (
-                  <motion.div
-                    layoutId="feed-tab-indicator"
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[3px] bg-[#0C4DA2] rounded-full"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('discover')}
-                className={`flex-1 py-3 text-xs font-extrabold text-center relative transition-colors cursor-pointer ${
-                  activeTab === 'discover' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Discover
-                {activeTab === 'discover' && (
-                  <motion.div
-                    layoutId="feed-tab-indicator"
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-[3px] bg-[#0C4DA2] rounded-full"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-
-              {/* + Button to open Timelines */}
-              <button
-                onClick={() => setTimelinesOpen(true)}
-                className="w-10 h-full flex items-center justify-center text-slate-400 hover:text-[#0C4DA2] hover:bg-slate-50 transition-all cursor-pointer border-l border-slate-200/80 shrink-0"
-                title="Customize Timelines"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+            {/* Tabs */}
+            <div className="flex items-center border-b border-slate-200/80 bg-white">
+              {['foryou', 'following', 'discover'].map((tab) => {
+                const labels = { foryou: 'For You', following: 'Following', discover: 'Discover' };
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab as any)}
+                    className={`flex-1 flex items-center justify-center transition-colors cursor-pointer hover:bg-slate-50/80 ${
+                      isActive ? 'text-slate-900 font-black' : 'text-slate-500 font-bold hover:text-slate-700'
+                    }`}
+                  >
+                    <div className="relative py-3 px-1 text-[13px] flex items-center justify-center">
+                      <span>{labels[tab as keyof typeof labels]}</span>
+                      {isActive && (
+                        <motion.div
+                          layoutId="feed-tab-indicator"
+                          className="absolute bottom-0 inset-x-0 h-[4px] bg-[#0C4DA2] rounded-full"
+                          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                        />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          </div>
-
-          {/* ─── FILTER PILLS (Collapsible) ─── */}
-          <div className="border-b border-slate-200/80">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="w-full flex items-center justify-between px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <span className="flex items-center gap-1.5">
-                <Filter className="w-3 h-3" />
-                Filter by Category
-                {currentType !== 'ALL' && (
-                  <span className="bg-[#0C4DA2] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
-                    {currentType.replace('_', ' ')}
-                  </span>
-                )}
-              </span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex flex-wrap gap-1.5 px-4 pb-3">
-                    {TYPE_FILTERS.map(filter => {
-                      const IconComp = filter.icon;
-                      const isActive = currentType === filter.value;
-                      const count = feedCounts[filter.value] || 0;
-
-                      return (
-                        <button
-                          key={filter.value}
-                          onClick={() => handleTypeFilter(filter.value)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border cursor-pointer ${
-                            isActive 
-                              ? 'bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-sm' 
-                              : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
-                          }`}
-                        >
-                          <IconComp className={`w-3 h-3 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span>{filter.label}</span>
-                          <span className={`text-[9px] font-black ${isActive ? 'text-white/70' : 'text-slate-400'}`}>
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            
+            {/* Horizontal Filter Chips */}
+            <div className="overflow-x-auto custom-scrollbar border-b border-slate-200/60 bg-slate-50/50">
+              <div className="flex items-center gap-1.5 p-2.5 min-w-max">
+                {TYPE_FILTERS.map((filter) => {
+                  const Icon = filter.icon;
+                  const isActive = currentType === filter.value;
+                  return (
+                    <button
+                      key={filter.value}
+                      onClick={() => handleTypeFilter(filter.value)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                        isActive
+                          ? 'bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {Icon && <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white/80' : 'text-slate-400'}`} />}
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* ─── COMPACT COMPOSER ─── */}
@@ -452,12 +431,12 @@ export default function ScholarFeedPage() {
                       >
                         Explore Researchers
                       </Link>
-                      <button
-                        onClick={() => setShowFilters(true)}
+                      <Link
+                        href="/researchers"
                         className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-full text-xs cursor-pointer"
                       >
                         Browse Domains
-                      </button>
+                      </Link>
                     </div>
                   </>
                 )}
@@ -534,10 +513,6 @@ export default function ScholarFeedPage() {
         isOpen={!!selectedResearcher}
         onClose={() => setSelectedResearcher(null)}
         researcher={selectedResearcher}
-      />
-      <TimelinesModal
-        isOpen={timelinesOpen}
-        onClose={() => setTimelinesOpen(false)}
       />
 
       {/* Bottom padding for mobile nav */}

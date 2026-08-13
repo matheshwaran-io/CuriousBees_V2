@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateOpportunitySchema, SRM_DEPARTMENTS } from '@curiousbees/shared-utils';
+import { CreateOpportunitySchema } from '@curiousbees/shared-utils';
 import { useStore } from '@/store/useStore';
 import { 
   Briefcase, 
@@ -13,39 +13,127 @@ import {
   X,
   GraduationCap,
   Bookmark,
-  MapPin,
-  Clock,
-  Filter,
   Building,
-  Sparkles
+  Filter,
+  ShieldCheck,
+  Calendar,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Opportunity } from '@curiousbees/types';
+
+// Predefined taxonomy domains for quick tag selection
+const PREDEFINED_DOMAINS = [
+  'Artificial Intelligence',
+  'Quantum Computing',
+  'Bioinformatics',
+  'VLSI & Photonics',
+  'Cybersecurity',
+  'Medical Imaging',
+  'Clean Energy',
+  'Robotics',
+  'Nanotechnology',
+  'Cloud Computing',
+  'Data Science',
+  'Signal Processing'
+];
+
+const OPPORTUNITY_TYPES = [
+  'PhD Position',
+  'Research Assistantship',
+  'Research Project',
+  'Research Internship',
+  'Fellowship',
+  'Postdoctoral Position',
+  'Lab Position',
+  'Research Collaboration',
+  'Grant / Funding Opportunity',
+  'Other'
+];
+
+const FUNDING_OPTIONS = [
+  'Fully Funded',
+  'Partially Funded',
+  'Self Funded',
+  'Fellowship Supported',
+  'Grant Supported',
+  'Stipend Available',
+  'Unspecified'
+];
+
+const ELIGIBILITY_OPTIONS = [
+  'PhD Scholars',
+  'Research Scholars',
+  'Postgraduate Students',
+  'Faculty',
+  'Research Assistants',
+  'External Researchers'
+];
+
+const MODE_OPTIONS = [
+  'On Campus',
+  'Remote',
+  'Hybrid',
+  'Field / Laboratory',
+  'Other'
+];
+
+const APPLICATION_METHODS = [
+  'CuriousBees',
+  'External Application Link',
+  'Email'
+];
 
 export function PremiumOpportunities() {
-  const { opportunities, createOpportunity, currentUser, fetchData } = useStore();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { opportunities, createOpportunity, currentUser, fetchData, addToast } = useStore();
   
-  // Filtering states
-  const [selectedCategory, setSelectedCategory] = useState('');
+  // Drawer & Modal States
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [savedOppIds, setSavedOppIds] = useState<string[]>([]);
+  const [appliedOppIds, setAppliedOppIds] = useState<string[]>([]);
+  
+  // Filtering States
+  const [selectedTypeCategory, setSelectedTypeCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [selectedFunding, setSelectedFunding] = useState<string[]>([]);
+  const [selectedModes, setSelectedModes] = useState<string[]>([]);
   const [selectedPIs, setSelectedPIs] = useState<string[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Load opportunities on mount & auto-select user department
+  // Form custom domain tags state
+  const [domainTags, setDomainTags] = useState<string[]>([]);
+  const [customDomainInput, setCustomDomainInput] = useState('');
+  const [eligibilityTags, setEligibilityTags] = useState<string[]>(['PhD Scholars']);
+
+  // Fetch opportunities on mount
   useEffect(() => {
     fetchData(true);
   }, [fetchData]);
 
+  // Lock background body scroll when drawer or detail modal is open
   useEffect(() => {
-    if (currentUser?.department && selectedDepts.length === 0) {
-      setSelectedDepts([currentUser.department]);
+    if (isDrawerOpen || selectedOpportunity) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-  }, [currentUser?.department]);
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen, selectedOpportunity]);
 
-  // Derive unique departments, domains and PIs from data
+  // Check if current user is authorized to publish (Supervisors & Scholars)
+  const canPublish = useMemo(() => {
+    if (!currentUser) return false;
+    const role = currentUser.role as string;
+    return role === 'RESEARCH_SUPERVISOR' || role === 'SUPERVISOR' || role === 'RESEARCH_SCHOLAR' || role === 'SCHOLAR' || role === 'INSTITUTE_ADMIN';
+  }, [currentUser]);
+
+  // Derive unique taxonomy options from current data
   const uniqueDepartments = useMemo(() => {
     const depts = new Set<string>();
     if (currentUser?.department) depts.add(currentUser.department);
@@ -56,9 +144,11 @@ export function PremiumOpportunities() {
   }, [opportunities, currentUser?.department]);
 
   const uniqueDomains = useMemo(() => {
-    const domains = new Set<string>();
+    const domains = new Set<string>(PREDEFINED_DOMAINS);
     opportunities.forEach(o => {
-      if (o.researchDomain) domains.add(o.researchDomain);
+      if (o.researchDomain) {
+        o.researchDomain.split(',').map(d => d.trim()).filter(Boolean).forEach(d => domains.add(d));
+      }
     });
     return Array.from(domains).sort();
   }, [opportunities]);
@@ -71,70 +161,189 @@ export function PremiumOpportunities() {
     return Array.from(pis).sort();
   }, [opportunities]);
 
-  // Form setup with default user department
+  // Form setup
   const userDept = currentUser?.department || '';
-  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
+  const todayISO = new Date().toISOString().split('T')[0];
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(CreateOpportunitySchema),
     defaultValues: {
       title: '',
       description: '',
       department: userDept,
-      researchDomain: ''
+      researchDomain: '',
+      opportunityType: 'PhD Position',
+      positionsCount: 1,
+      funding: 'Fully Funded',
+      fundingDetails: '',
+      eligibility: ['PhD Scholars'],
+      deadline: '',
+      mode: 'On Campus',
+      applicationMethod: 'CuriousBees',
+      applicationUrl: '',
+      applicationEmail: ''
     }
   });
 
-  useEffect(() => {
-    if (userDept) {
-      setValue('department', userDept);
-    }
-  }, [userDept, setValue]);
+  const selectedAppMethod = watch('applicationMethod');
 
+  // Handle Domain Tag addition in drawer
+  const handleAddDomainTag = (tag: string) => {
+    const cleaned = tag.trim();
+    if (cleaned && !domainTags.includes(cleaned)) {
+      const next = [...domainTags, cleaned];
+      setDomainTags(next);
+      setValue('researchDomain', next.join(', '), { shouldValidate: true });
+    }
+    setCustomDomainInput('');
+  };
+
+  const handleRemoveDomainTag = (tag: string) => {
+    const next = domainTags.filter(t => t !== tag);
+    setDomainTags(next);
+    setValue('researchDomain', next.join(', '), { shouldValidate: true });
+  };
+
+  // Handle Eligibility Checkboxes
+  const toggleEligibility = (option: string) => {
+    let next: string[];
+    if (eligibilityTags.includes(option)) {
+      next = eligibilityTags.filter(t => t !== option);
+    } else {
+      next = [...eligibilityTags, option];
+    }
+    setEligibilityTags(next);
+    setValue('eligibility', next);
+  };
+
+  // Form submission handler
   const onSubmit = async (data: any) => {
     try {
-      await createOpportunity(
-        data.title,
-        data.description,
-        data.department || userDept,
-        data.researchDomain
-      );
+      if (domainTags.length === 0 && !data.researchDomain) {
+        addToast('Please select or add at least one research domain tag.', 'error');
+        return;
+      }
+
+      const domainString = domainTags.length > 0 ? domainTags.join(', ') : data.researchDomain;
+
+      const payload = {
+        title: data.title,
+        description: data.description,
+        department: userDept, // Derived strictly from user profile
+        researchDomain: domainString,
+        opportunityType: data.opportunityType || 'PhD Position',
+        positionsCount: Number(data.positionsCount) || 1,
+        funding: data.funding || 'Fully Funded',
+        fundingDetails: data.fundingDetails || undefined,
+        eligibility: eligibilityTags,
+        deadline: data.deadline || undefined,
+        mode: data.mode || 'On Campus',
+        applicationMethod: data.applicationMethod || 'CuriousBees',
+        applicationUrl: data.applicationUrl || undefined,
+        applicationEmail: data.applicationEmail || undefined
+      };
+
+      await createOpportunity(payload);
+      
+      addToast('Research opportunity published successfully!', 'success');
       setIsDrawerOpen(false);
+      
       reset({
         title: '',
         description: '',
         department: userDept,
-        researchDomain: ''
+        researchDomain: '',
+        opportunityType: 'PhD Position',
+        positionsCount: 1,
+        funding: 'Fully Funded',
+        fundingDetails: '',
+        eligibility: ['PhD Scholars'],
+        deadline: '',
+        mode: 'On Campus',
+        applicationMethod: 'CuriousBees',
+        applicationUrl: '',
+        applicationEmail: ''
       });
+      setDomainTags([]);
+      setEligibilityTags(['PhD Scholars']);
+
       fetchData(true);
     } catch (e: any) {
-      alert(`Error publishing position: ${e.message}`);
+      addToast(e.message || 'Failed to publish opportunity', 'error');
     }
   };
 
-  // Filter positions with flexible department matching
+  // Filter & Personalization Logic
+  const userInterestsList = useMemo(() => {
+    return (currentUser?.interests || []).map((i: any) => i.interest?.name || i.name || '').filter(Boolean);
+  }, [currentUser?.interests]);
+
   const filteredOpps = useMemo(() => {
-    return opportunities.filter((o) => {
-      const q = searchQuery.toLowerCase();
-      const matchesSearch = !q || o.title.toLowerCase().includes(q) || o.description.toLowerCase().includes(q);
+    const q = searchQuery.toLowerCase().trim();
+
+    const matched = opportunities.filter((o) => {
+      // 1. Text Search across Title, Domain, Description, Supervisor, Dept, Type
+      const matchesSearch = !q || 
+        o.title.toLowerCase().includes(q) || 
+        o.description.toLowerCase().includes(q) ||
+        (o.researchDomain || '').toLowerCase().includes(q) ||
+        (o.department || '').toLowerCase().includes(q) ||
+        (o.opportunityType || '').toLowerCase().includes(q) ||
+        (o.author?.name || '').toLowerCase().includes(q);
       
+      // 2. Department Filter
       const matchesDept = selectedDepts.length === 0 || selectedDepts.some(sd => {
         const sdBase = sd.split('(')[0].trim().toLowerCase();
         const oppBase = (o.department || '').split('(')[0].trim().toLowerCase();
         return sdBase === oppBase || sdBase.includes(oppBase) || oppBase.includes(sdBase);
       });
 
-      const matchesDomain = selectedDomains.length === 0 || selectedDomains.includes(o.researchDomain);
-      const matchesPI = selectedPIs.length === 0 || (o.author?.name && selectedPIs.includes(o.author.name));
-      const matchesCategory = !selectedCategory || o.researchDomain?.toLowerCase().includes(selectedCategory.toLowerCase()) || o.title?.toLowerCase().includes(selectedCategory.toLowerCase());
-      return matchesSearch && matchesDept && matchesDomain && matchesPI && matchesCategory;
-    });
-  }, [opportunities, searchQuery, selectedDepts, selectedDomains, selectedPIs, selectedCategory]);
+      // 3. Domain Filter
+      const matchesDomain = selectedDomains.length === 0 || (
+        o.researchDomain && selectedDomains.some(sd => o.researchDomain.toLowerCase().includes(sd.toLowerCase()))
+      );
 
-  const handleOpenDrawer = () => {
-    if (currentUser?.role !== 'RESEARCH_SUPERVISOR') {
-      alert('🔒 Access Restricted! Only verified Research Supervisors are authorized to publish funded research opportunities.');
-      return;
+      // 4. Type Filter
+      const matchesType = !selectedTypeCategory || 
+        (o.opportunityType || '').toLowerCase().includes(selectedTypeCategory.toLowerCase()) ||
+        (o.researchDomain || '').toLowerCase().includes(selectedTypeCategory.toLowerCase()) ||
+        (o.title || '').toLowerCase().includes(selectedTypeCategory.toLowerCase());
+
+      // 5. Funding Filter
+      const matchesFunding = selectedFunding.length === 0 || (o.funding && selectedFunding.includes(o.funding));
+
+      // 6. Mode Filter
+      const matchesMode = selectedModes.length === 0 || (o.mode && selectedModes.includes(o.mode));
+
+      // 7. Supervisor Filter
+      const matchesPI = selectedPIs.length === 0 || (o.author?.name && selectedPIs.includes(o.author.name));
+
+      return matchesSearch && matchesDept && matchesDomain && matchesType && matchesFunding && matchesMode && matchesPI;
+    });
+
+    // Personalization sorting: Prioritize posts matching user research interests
+    if (userInterestsList.length > 0) {
+      return [...matched].sort((a, b) => {
+        const aScore = userInterestsList.some(ui => (a.researchDomain || '').toLowerCase().includes(ui.toLowerCase())) ? 1 : 0;
+        const bScore = userInterestsList.some(ui => (b.researchDomain || '').toLowerCase().includes(ui.toLowerCase())) ? 1 : 0;
+        return bScore - aScore;
+      });
     }
-    setIsDrawerOpen(true);
+
+    return matched;
+  }, [opportunities, searchQuery, selectedDepts, selectedDomains, selectedTypeCategory, selectedFunding, selectedModes, selectedPIs, userInterestsList]);
+
+  // Active filter helper
+  const hasActiveFilters = selectedDepts.length > 0 || selectedDomains.length > 0 || selectedTypeCategory !== '' || selectedFunding.length > 0 || selectedModes.length > 0 || selectedPIs.length > 0 || searchQuery !== '';
+
+  const clearAllFilters = () => {
+    setSelectedDepts([]);
+    setSelectedDomains([]);
+    setSelectedTypeCategory('');
+    setSelectedFunding([]);
+    setSelectedModes([]);
+    setSelectedPIs([]);
+    setSearchQuery('');
   };
 
   const toggleFilter = (set: React.Dispatch<React.SetStateAction<string[]>>, list: string[], value: string) => {
@@ -145,210 +354,289 @@ export function PremiumOpportunities() {
     }
   };
 
-  const formatDate = (dateStr: string | Date) => {
+  const formatDate = (dateStr: string | Date | null | undefined) => {
+    if (!dateStr) return null;
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const [expandedCards, setExpandedCards] = useState<string[]>([]);
-  const toggleCard = (id: string) => {
-    if (expandedCards.includes(id)) {
-      setExpandedCards(expandedCards.filter(cid => cid !== id));
-    } else {
-      setExpandedCards([...expandedCards, id]);
+  const isExpired = (deadlineStr: string | Date | null | undefined) => {
+    if (!deadlineStr) return false;
+    return new Date(deadlineStr) < new Date();
+  };
+
+  const handleOpenDrawer = () => {
+    if (!canPublish) {
+      addToast('🔒 Access Restricted! Only verified Research Supervisors and Scholars are authorized to publish opportunities.', 'error');
+      return;
     }
+    setIsDrawerOpen(true);
+  };
+
+  const toggleSaveOpportunity = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (savedOppIds.includes(id)) {
+      setSavedOppIds(savedOppIds.filter(i => i !== id));
+      addToast('Opportunity removed from saved list', 'info');
+    } else {
+      setSavedOppIds([...savedOppIds, id]);
+      addToast('Opportunity saved to your research portal!', 'success');
+    }
+  };
+
+  const handleApplyAction = (e: React.MouseEvent, opp: Opportunity) => {
+    e.stopPropagation();
+    if (isExpired(opp.deadline)) {
+      addToast('This opportunity application deadline has passed.', 'error');
+      return;
+    }
+
+    if (opp.applicationMethod === 'External Application Link' && opp.applicationUrl) {
+      window.open(opp.applicationUrl.startsWith('http') ? opp.applicationUrl : `https://${opp.applicationUrl}`, '_blank');
+      return;
+    }
+
+    if (opp.applicationMethod === 'Email' && opp.applicationEmail) {
+      window.location.href = `mailto:${opp.applicationEmail}?subject=Application for ${encodeURIComponent(opp.title)}`;
+      return;
+    }
+
+    // Default CuriousBees direct application
+    setAppliedOppIds([...appliedOppIds, opp.id]);
+    addToast(`Application / Interest snapshot dispatched to ${opp.author?.name || 'the research lead'}!`, 'success');
   };
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-16 select-none text-left">
       <div className="max-w-[1400px] mx-auto p-4 md:p-8 space-y-6">
         
-        {/* ─── HEADER SECTION ────────────────────── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 backdrop-blur-xl p-6 md:p-8 rounded-[32px] border border-slate-200/80 shadow-[0_8px_30px_rgb(12,77,162,0.04)]">
+        {/* ─── 1. HEADER SECTION ────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/90 backdrop-blur-xl p-6 md:p-8 rounded-[32px] border border-slate-200/80 shadow-[0_8px_30px_rgb(12,77,162,0.04)]">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest bg-[#0C4DA2]/10 text-[#0C4DA2] px-2.5 py-0.5 rounded-full">
-                Research Directory
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest bg-[#0C4DA2]/10 text-[#0C4DA2] px-3 py-1 rounded-full flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Institutional Directory
               </span>
+              {currentUser?.department && (
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                  {currentUser.department.split('(')[0].trim()}
+                </span>
+              )}
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Research Opportunities</h1>
             <p className="text-xs md:text-sm font-medium text-slate-500 mt-1">
-              Discover funded PhD slots, active lab roles, grants, and department projects.
+              Discover funded PhD slots, assistantships, active lab positions, grants, and department research projects.
             </p>
           </div>
           
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-2xs hover:bg-slate-50"
+              className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-2xs hover:bg-slate-50 cursor-pointer"
             >
               <Filter className="w-4 h-4 text-slate-500" />
               <span>Filters</span>
             </button>
-            {currentUser?.role === 'RESEARCH_SUPERVISOR' && (
+            {canPublish && (
               <button
                 onClick={handleOpenDrawer}
                 className="flex items-center gap-2 px-5 py-3 bg-[#0C4DA2] hover:bg-[#042654] text-white rounded-2xl text-xs font-extrabold uppercase tracking-wider shadow-md shadow-blue-900/20 transition-all cursor-pointer active:scale-95"
               >
                 <Plus className="w-4 h-4" />
-                <span>Post Opportunity</span>
+                <span>Publish Opportunity</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* ─── CATEGORY FILTER PILLS ────────────── */}
+        {/* ─── 2. CATEGORY FILTER PILLS ────────────── */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {['All Opportunities', 'PhD Positions', 'Assistantships', 'Research Projects', 'Grants & Fellowships', 'CFPs & Conferences', 'Hackathons'].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat === 'All Opportunities' ? '' : cat)}
-              className={cn(
-                "px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer select-none",
-                (selectedCategory === cat || (!selectedCategory && cat === 'All Opportunities'))
-                  ? "bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-sm shadow-blue-900/20"
-                  : "bg-white text-slate-700 border-slate-200/80 hover:bg-slate-50"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
+          {['All Opportunities', 'PhD Positions', 'Assistantships', 'Research Projects', 'Fellowships', 'Lab Positions', 'Grant & Funding', 'Collaborations'].map((cat) => {
+            const isSelected = selectedTypeCategory === cat || (!selectedTypeCategory && cat === 'All Opportunities');
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedTypeCategory(cat === 'All Opportunities' ? '' : cat)}
+                className={cn(
+                  "px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap border cursor-pointer select-none",
+                  isSelected
+                    ? "bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-sm shadow-blue-900/20"
+                    : "bg-white text-slate-700 border-slate-200/80 hover:bg-slate-50"
+                )}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
 
-        {/* ─── MAIN LAYOUT (2-COLUMN) ────────────── */}
+        {/* ACTIVE FILTER TAGS ROW */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 flex-wrap bg-white p-3 rounded-2xl border border-slate-200/80">
+            <span className="text-[10px] font-black uppercase text-slate-400 mr-1">Active Filters:</span>
+            {selectedTypeCategory && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-[#0C4DA2] rounded-full text-xs font-bold border border-blue-100">
+                Type: {selectedTypeCategory}
+                <button onClick={() => setSelectedTypeCategory('')} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {selectedDepts.map(d => (
+              <span key={d} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200">
+                Dept: {d.split('(')[0].trim()}
+                <button onClick={() => toggleFilter(setSelectedDepts, selectedDepts, d)} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {selectedDomains.map(d => (
+              <span key={d} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-800 rounded-full text-xs font-bold border border-amber-200">
+                Domain: {d}
+                <button onClick={() => toggleFilter(setSelectedDomains, selectedDomains, d)} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {selectedFunding.map(f => (
+              <span key={f} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
+                Funding: {f}
+                <button onClick={() => toggleFilter(setSelectedFunding, selectedFunding, f)} className="hover:text-rose-600"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            <button
+              onClick={clearAllFilters}
+              className="text-xs font-bold text-rose-600 hover:underline ml-auto cursor-pointer"
+            >
+              Clear All Filters
+            </button>
+          </div>
+        )}
+
+        {/* ─── 3. MAIN LAYOUT (SIDEBAR + CARDS LIST) ────────────── */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start mt-6 w-full">
           
-          {/* LEFT SIDEBAR FILTERS (Fixed w-80 width) */}
+          {/* LEFT SIDEBAR FILTERS */}
           <aside className={`w-full lg:w-80 shrink-0 space-y-5 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
             
-            {/* Search Bar */}
+            {/* Search Input */}
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search opportunities..."
+                placeholder="Search title, domain, supervisor..."
                 className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2] focus:ring-2 focus:ring-[#0C4DA2]/20 shadow-2xs transition-all placeholder:text-slate-400"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            {/* Department Filter Card */}
+
+
+            {/* Research Domain Filter Card */}
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-5 shadow-2xs">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Department</h3>
-                {selectedDepts.length > 0 && (
-                  <button 
-                    onClick={() => setSelectedDepts([])}
-                    className="text-[10px] font-bold text-[#0C4DA2] hover:underline cursor-pointer"
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Research Domain</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                {uniqueDomains.map((domain) => (
+                  <div 
+                    key={domain} 
+                    onClick={() => toggleFilter(setSelectedDomains, selectedDomains, domain)} 
+                    className="flex items-center gap-3 cursor-pointer group py-1"
                   >
-                    Clear Filter
-                  </button>
-                )}
-              </div>
-              <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
-                {uniqueDepartments.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No active departments.</p>
-                ) : (
-                  uniqueDepartments.map((dept) => (
-                    <div 
-                      key={dept} 
-                      onClick={() => toggleFilter(setSelectedDepts, selectedDepts, dept)} 
-                      className="flex items-center gap-3 cursor-pointer group py-1"
-                    >
-                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
-                        selectedDepts.includes(dept) ? 'bg-[#0C4DA2] border-[#0C4DA2]' : 'border-slate-300 group-hover:border-[#0C4DA2]'
-                      }`}>
-                        {selectedDepts.includes(dept) && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <span className={`text-xs font-bold transition-colors truncate ${
-                        selectedDepts.includes(dept) ? 'text-[#0C4DA2]' : 'text-slate-700 group-hover:text-[#0C4DA2]'
-                      }`}>
-                        {dept.split('(')[0].trim()}
-                      </span>
+                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                      selectedDomains.includes(domain) ? 'bg-[#FEC727] border-[#FEC727]' : 'border-slate-300 group-hover:border-[#FEC727]'
+                    }`}>
+                      {selectedDomains.includes(domain) && <Check className="w-3 h-3 text-slate-900 font-bold" />}
                     </div>
-                  ))
-                )}
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-[#0C4DA2] transition-colors">{domain}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Research Area Filter Card */}
+            {/* Funding Filter Card */}
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-5 shadow-2xs">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Research Area</h3>
-              <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                {uniqueDomains.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No domain tags active.</p>
-                ) : (
-                  uniqueDomains.map((domain) => (
-                    <div 
-                      key={domain} 
-                      onClick={() => toggleFilter(setSelectedDomains, selectedDomains, domain)} 
-                      className="flex items-center gap-3 cursor-pointer group py-1"
-                    >
-                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
-                        selectedDomains.includes(domain) ? 'bg-[#FEC727] border-[#FEC727]' : 'border-slate-300 group-hover:border-[#FEC727]'
-                      }`}>
-                        {selectedDomains.includes(domain) && <Check className="w-3 h-3 text-slate-900 font-bold" />}
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 group-hover:text-[#0C4DA2] transition-colors">{domain}</span>
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Funding Type</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                {FUNDING_OPTIONS.map((f) => (
+                  <div 
+                    key={f} 
+                    onClick={() => toggleFilter(setSelectedFunding, selectedFunding, f)} 
+                    className="flex items-center gap-3 cursor-pointer group py-1"
+                  >
+                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                      selectedFunding.includes(f) ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300 group-hover:border-emerald-600'
+                    }`}>
+                      {selectedFunding.includes(f) && <Check className="w-3 h-3 text-white" />}
                     </div>
-                  ))
-                )}
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-emerald-700 transition-colors">{f}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Research Supervisor Filter Card */}
+            {/* Work Mode Filter */}
             <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-5 shadow-2xs">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Research Supervisor</h3>
-              <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                {uniquePIs.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No supervisors active.</p>
-                ) : (
-                  uniquePIs.map((pi) => (
-                    <div 
-                      key={pi} 
-                      onClick={() => toggleFilter(setSelectedPIs, selectedPIs, pi)} 
-                      className="flex items-center gap-3 cursor-pointer group py-1"
-                    >
-                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
-                        selectedPIs.includes(pi) ? 'bg-[#0C4DA2] border-[#0C4DA2]' : 'border-slate-300 group-hover:border-[#0C4DA2]'
-                      }`}>
-                        {selectedPIs.includes(pi) && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <span className="text-xs font-bold text-slate-700 group-hover:text-[#0C4DA2] transition-colors">{pi}</span>
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-4">Work Mode</h3>
+              <div className="space-y-2">
+                {MODE_OPTIONS.map((m) => (
+                  <div 
+                    key={m} 
+                    onClick={() => toggleFilter(setSelectedModes, selectedModes, m)} 
+                    className="flex items-center gap-3 cursor-pointer group py-1"
+                  >
+                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                      selectedModes.includes(m) ? 'bg-[#0C4DA2] border-[#0C4DA2]' : 'border-slate-300 group-hover:border-[#0C4DA2]'
+                    }`}>
+                      {selectedModes.includes(m) && <Check className="w-3 h-3 text-white" />}
                     </div>
-                  ))
-                )}
+                    <span className="text-xs font-bold text-slate-700 group-hover:text-[#0C4DA2]">{m}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
           </aside>
 
-          {/* RIGHT OPPORTUNITY CARDS LIST (Takes remaining width flex-1 min-w-0) */}
+          {/* RIGHT OPPORTUNITY CARDS LIST */}
           <div className="flex-1 min-w-0 w-full">
             <AnimatePresence mode="popLayout">
               {filteredOpps.length === 0 ? (
+                /* ── EMPTY STATE ── */
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="bg-white/80 backdrop-blur-xl border border-slate-200/80 p-12 text-center rounded-[32px] shadow-sm flex flex-col items-center justify-center min-h-[320px] w-full"
+                  className="bg-white/90 backdrop-blur-xl border border-slate-200/80 p-12 text-center rounded-[32px] shadow-sm flex flex-col items-center justify-center min-h-[360px] w-full"
                 >
-                  <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0C4DA2] mb-4">
-                    <Briefcase className="w-6 h-6" />
+                  <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0C4DA2] mb-4">
+                    <Briefcase className="w-7 h-7" />
                   </div>
-                  <h4 className="text-slate-900 font-extrabold text-base">No Opportunities Listed</h4>
-                  <p className="text-slate-500 text-xs max-w-sm mx-auto mt-2 leading-relaxed font-medium">
-                    Try adjusting your filters or search terms. Research Supervisors post department opportunities regularly.
+                  <h4 className="text-slate-900 font-extrabold text-lg">No research opportunities yet</h4>
+                  <p className="text-slate-500 text-xs max-w-md mx-auto mt-2 leading-relaxed font-medium">
+                    New research positions, projects, and collaboration opportunities will appear here. Try adjusting your search filters.
                   </p>
+                  {canPublish && (
+                    <button
+                      onClick={handleOpenDrawer}
+                      className="mt-6 px-6 py-3 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer"
+                    >
+                      Be the first to publish an opportunity
+                    </button>
+                  )}
                 </motion.div>
               ) : (
+                /* ── CARDS GRID ── */
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 w-full">
                   {filteredOpps.map((opp) => {
-                    const isExpanded = expandedCards.includes(opp.id);
+                    const isSaved = savedOppIds.includes(opp.id);
+                    const isApplied = appliedOppIds.includes(opp.id);
+                    const expired = isExpired(opp.deadline);
                     const authorInitials = opp.author?.name
                       ? opp.author.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                       : 'RS';
+
+                    const domainsList = (opp.researchDomain || '').split(',').map(d => d.trim()).filter(Boolean);
 
                     return (
                       <motion.div
@@ -357,27 +645,49 @@ export function PremiumOpportunities() {
                         initial={{ opacity: 0, scale: 0.97 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.97 }}
-                        className="bg-white/90 backdrop-blur-xl rounded-[28px] p-6 border border-slate-200/80 shadow-[0_8px_30px_rgb(12,77,162,0.04)] hover:shadow-[0_12px_40px_rgb(12,77,162,0.08)] transition-all flex flex-col justify-between group hover:-translate-y-0.5"
+                        className={cn(
+                          "bg-white/90 backdrop-blur-xl rounded-[28px] p-6 border transition-all flex flex-col justify-between group hover:-translate-y-0.5 shadow-[0_8px_30px_rgb(12,77,162,0.04)] hover:shadow-[0_12px_40px_rgb(12,77,162,0.08)]",
+                          expired ? "border-slate-200 opacity-80" : "border-slate-200/80"
+                        )}
                       >
                         <div>
-                          {/* Domain Pill & Bookmark */}
-                          <div className="flex justify-between items-start mb-4">
-                            <span className="inline-flex items-center px-3 py-1 bg-blue-50/80 text-[#0C4DA2] border border-blue-100 rounded-xl text-[10px] font-black uppercase tracking-wider">
-                              <Sparkles className="w-3 h-3 text-amber-500 mr-1.5" />
-                              {opp.researchDomain || 'Research Grant'}
-                            </span>
-                            <button className="text-slate-300 hover:text-amber-500 transition-colors cursor-pointer p-1">
-                              <Bookmark className="w-4 h-4" />
+                          {/* Top Badges & Bookmark */}
+                          <div className="flex justify-between items-start gap-2 mb-3">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center px-3 py-1 bg-blue-50 text-[#0C4DA2] border border-blue-100 rounded-xl text-[10px] font-black uppercase tracking-wider">
+                                {opp.opportunityType || 'PhD Position'}
+                              </span>
+                              {expired ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                                  Expired
+                                </span>
+                              ) : opp.funding ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9px] font-bold">
+                                  {opp.funding}
+                                </span>
+                              ) : null}
+                            </div>
+                            
+                            <button
+                              onClick={(e) => toggleSaveOpportunity(e, opp.id)}
+                              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                                isSaved ? 'text-amber-500 bg-amber-50' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'
+                              }`}
+                            >
+                              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-amber-500' : ''}`} />
                             </button>
                           </div>
 
                           {/* Title */}
-                          <h3 className="text-base font-extrabold text-slate-900 leading-snug mb-4 group-hover:text-[#0C4DA2] transition-colors">
+                          <h3 
+                            onClick={() => setSelectedOpportunity(opp)}
+                            className="text-base font-extrabold text-slate-900 leading-snug mb-3 group-hover:text-[#0C4DA2] transition-colors cursor-pointer"
+                          >
                             {opp.title}
                           </h3>
 
                           {/* Supervisor Author Info */}
-                          <div className="flex items-center gap-3 mb-4 bg-slate-50/60 p-2.5 rounded-2xl border border-slate-100">
+                          <div className="flex items-center gap-3 mb-4 bg-slate-50/80 p-2.5 rounded-2xl border border-slate-100">
                             {opp.author?.image ? (
                               <img src={opp.author.image} className="w-9 h-9 rounded-full object-cover border border-white shadow-2xs" alt="" />
                             ) : (
@@ -386,62 +696,85 @@ export function PremiumOpportunities() {
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Research Supervisor</p>
-                              <p className="text-xs font-bold text-slate-800 truncate leading-none">{opp.author?.name || 'Research Guide'}</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                                {(opp.author?.role as string) === 'RESEARCH_SUPERVISOR' || (opp.author?.role as string) === 'SUPERVISOR' ? 'Research Supervisor' : 'Researcher Lead'}
+                              </p>
+                              <p className="text-xs font-bold text-slate-800 truncate leading-none">{opp.author?.name || 'Faculty Lead'}</p>
                             </div>
                           </div>
 
-                          {/* Department & Date */}
-                          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 mb-4 pb-4 border-b border-slate-100">
+                          {/* Metadata Row: Department, Slots, Mode */}
+                          <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-600 mb-4 pb-3 border-b border-slate-100">
                             <span className="flex items-center gap-1.5 truncate">
-                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              <span className="truncate">{opp.department?.split('(')[0].trim() || 'SRMIST Campus'}</span>
+                              <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{opp.department?.split('(')[0].trim() || 'SRMIST'}</span>
                             </span>
-                            <span className="flex items-center gap-1.5 shrink-0">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{formatDate(opp.createdAt)}</span>
+                            <span className="flex items-center gap-1.5 truncate">
+                              <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span>{opp.positionsCount || 1} {opp.positionsCount === 1 ? 'Position' : 'Positions'}</span>
                             </span>
                           </div>
 
-                          {/* Description details */}
-                          <AnimatePresence>
-                            {isExpanded ? (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="mb-5"
-                              >
-                                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-2xl border border-slate-100 font-medium">
-                                  {opp.description}
-                                </p>
-                              </motion.div>
-                            ) : (
-                              <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-5 font-medium">
-                                {opp.description}
-                              </p>
-                            )}
-                          </AnimatePresence>
+                          {/* Domain Tags */}
+                          {domainsList.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-4">
+                              {domainsList.map((tag, idx) => (
+                                <span key={idx} className="text-[11px] font-bold text-[#0C4DA2] bg-blue-50/50 px-2.5 py-0.5 rounded-md">
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Short Description */}
+                          <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mb-4 font-medium">
+                            {opp.description}
+                          </p>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3 mt-auto pt-2">
-                          <button
-                            onClick={() => toggleCard(opp.id)}
-                            className="px-4 py-2.5 rounded-xl border border-slate-200 hover:border-[#0C4DA2] text-slate-700 hover:text-[#0C4DA2] text-xs font-extrabold uppercase tracking-wider transition-all bg-white hover:bg-blue-50/30 cursor-pointer"
-                          >
-                            {isExpanded ? 'Hide Details' : 'View Details'}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              alert(`Application submitted to ${opp.author?.name || 'Research Supervisor'}!`);
-                            }}
-                            className="px-4 py-2.5 rounded-xl bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold uppercase tracking-wider shadow-sm shadow-blue-900/20 transition-all cursor-pointer active:scale-95"
-                          >
-                            Apply Now
-                          </button>
+                        {/* Card Footer: Deadline & Action Buttons */}
+                        <div>
+                          {opp.deadline && (
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 mb-3">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Deadline: {formatDate(opp.deadline)}</span>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-2.5 pt-2">
+                            <button
+                              onClick={() => setSelectedOpportunity(opp)}
+                              className="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:border-[#0C4DA2] text-slate-700 hover:text-[#0C4DA2] text-xs font-extrabold uppercase tracking-wider transition-all bg-white cursor-pointer"
+                            >
+                              View Opportunity
+                            </button>
+                            
+                            <button
+                              onClick={(e) => handleApplyAction(e, opp)}
+                              disabled={expired || isApplied}
+                              className={cn(
+                                "px-3.5 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1",
+                                isApplied
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default"
+                                  : expired
+                                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                  : "bg-[#0C4DA2] hover:bg-[#042654] text-white active:scale-95 shadow-blue-900/20"
+                              )}
+                            >
+                              {isApplied ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Applied</span>
+                                </>
+                              ) : expired ? (
+                                <span>Expired</span>
+                              ) : (
+                                <span>Apply</span>
+                              )}
+                            </button>
+                          </div>
                         </div>
+
                       </motion.div>
                     );
                   })}
@@ -454,27 +787,188 @@ export function PremiumOpportunities() {
 
       </div>
 
-      {/* ─── DRAWER FORM FOR RESEARCH SUPERVISOR POSTING ─── */}
+      {/* ─── 4. OPPORTUNITY DETAILS MODAL ─────────────────── */}
       <AnimatePresence>
-        {isDrawerOpen && (
+        {selectedOpportunity && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
+              animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsDrawerOpen(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 cursor-pointer"
+              onClick={() => setSelectedOpportunity(null)}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 cursor-pointer"
             />
             
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-[32px] border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left"
+              >
+                {/* Modal Header */}
+                <div className="p-6 md:p-8 border-b border-slate-100 flex items-start justify-between gap-4 bg-slate-50/50">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 bg-blue-50 text-[#0C4DA2] border border-blue-100 rounded-xl text-[10px] font-black uppercase tracking-wider">
+                        {selectedOpportunity.opportunityType || 'PhD Position'}
+                      </span>
+                      {isExpired(selectedOpportunity.deadline) && (
+                        <span className="px-2.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-full text-[9px] font-black uppercase">
+                          Expired
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 leading-tight">
+                      {selectedOpportunity.title}
+                    </h2>
+                    <p className="text-xs font-semibold text-slate-500 mt-1">
+                      Department of {selectedOpportunity.department?.split('(')[0].trim()}
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => setSelectedOpportunity(null)}
+                    className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 md:p-8 overflow-y-auto space-y-6 flex-1">
+                  
+                  {/* Supervisor Card */}
+                  <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    {selectedOpportunity.author?.image ? (
+                      <img src={selectedOpportunity.author.image} className="w-12 h-12 rounded-full object-cover border border-white shadow-sm" alt="" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-[#0C4DA2] text-white font-extrabold text-sm uppercase flex items-center justify-center border border-white shadow-sm shrink-0">
+                        {selectedOpportunity.author?.name ? selectedOpportunity.author.name[0] : 'PI'}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Research Supervisor / Lead</p>
+                      <h4 className="text-sm font-bold text-slate-900">{selectedOpportunity.author?.name || 'Faculty Lead'}</h4>
+                      <p className="text-xs text-slate-500 font-medium">{selectedOpportunity.author?.department || selectedOpportunity.department}</p>
+                    </div>
+                  </div>
+
+                  {/* Grid Metadata */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black uppercase text-slate-400">Funding</p>
+                      <p className="text-xs font-extrabold text-slate-800 mt-0.5">{selectedOpportunity.funding || 'Fully Funded'}</p>
+                    </div>
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black uppercase text-slate-400">Positions</p>
+                      <p className="text-xs font-extrabold text-slate-800 mt-0.5">{selectedOpportunity.positionsCount || 1} Available</p>
+                    </div>
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+                      <p className="text-[10px] font-black uppercase text-slate-400">Work Mode</p>
+                      <p className="text-xs font-extrabold text-slate-800 mt-0.5">{selectedOpportunity.mode || 'On Campus'}</p>
+                    </div>
+                  </div>
+
+                  {/* Funding Details if present */}
+                  {selectedOpportunity.fundingDetails && (
+                    <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl text-xs text-emerald-900">
+                      <p className="font-bold mb-1">Funding Details:</p>
+                      <p className="font-medium">{selectedOpportunity.fundingDetails}</p>
+                    </div>
+                  )}
+
+                  {/* Eligibility List */}
+                  {selectedOpportunity.eligibility && selectedOpportunity.eligibility.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Eligible Candidates</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedOpportunity.eligibility.map((el, i) => (
+                          <span key={i} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold">
+                            ✓ {el}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description & Requirements */}
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Description & Requirements</h4>
+                    <div className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-wrap bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      {selectedOpportunity.description}
+                    </div>
+                  </div>
+
+                  {/* Application Method details */}
+                  <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-2xl text-xs text-slate-700">
+                    <p className="font-bold text-[#0C4DA2] mb-1">Application Method:</p>
+                    <p className="font-medium">
+                      {selectedOpportunity.applicationMethod === 'External Application Link' 
+                        ? `Submit via portal: ${selectedOpportunity.applicationUrl || 'External Portal'}`
+                        : selectedOpportunity.applicationMethod === 'Email'
+                        ? `Direct Email Submission to: ${selectedOpportunity.applicationEmail || selectedOpportunity.author?.email}`
+                        : 'Direct One-Click Submission through CuriousBees Institutional Portal.'}
+                    </p>
+                  </div>
+
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-6 border-t border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+                  <div className="text-xs text-slate-500 font-semibold">
+                    {selectedOpportunity.deadline ? `Deadline: ${formatDate(selectedOpportunity.deadline)}` : 'Rolling admissions'}
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSelectedOpportunity(null)}
+                      className="px-5 py-2.5 border border-slate-200 rounded-2xl text-xs font-extrabold uppercase text-slate-600 hover:bg-slate-100 cursor-pointer"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        handleApplyAction(e, selectedOpportunity);
+                        setSelectedOpportunity(null);
+                      }}
+                      disabled={isExpired(selectedOpportunity.deadline)}
+                      className="px-6 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold uppercase tracking-wider rounded-2xl shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {isExpired(selectedOpportunity.deadline) ? 'Expired' : 'Apply Now'}
+                    </button>
+                  </div>
+                </div>
+
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ─── 5. PUBLISH OPPORTUNITY DRAWER ─────────────────── */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDrawerOpen(false)}
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 cursor-pointer"
+            />
+            
+            {/* Drawer Content */}
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full sm:max-w-lg bg-white border-l border-slate-200 z-50 p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto text-left"
+              className="fixed inset-y-0 right-0 w-full sm:max-w-xl bg-white border-l border-slate-200 z-50 p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto text-left"
             >
               <div>
-                {/* Header */}
+                {/* Drawer Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-2xl bg-[#0C4DA2]/10 flex items-center justify-center shrink-0">
@@ -482,7 +976,7 @@ export function PremiumOpportunities() {
                     </div>
                     <div>
                       <h3 className="font-extrabold text-base text-slate-900 leading-none">Publish Opportunity</h3>
-                      <p className="text-[10px] text-[#0C4DA2] font-black uppercase tracking-wider mt-1">Research Supervisor Portal</p>
+                      <p className="text-[10px] text-[#0C4DA2] font-black uppercase tracking-wider mt-1">Research Portal</p>
                     </div>
                   </div>
                   <button 
@@ -493,53 +987,252 @@ export function PremiumOpportunities() {
                   </button>
                 </div>
 
-                {/* Form fields */}
+                {/* Form */}
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                  
+                  {/* Position Title */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Position Title</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Position Title <span className="text-rose-500">*</span>
+                    </label>
                     <input
                       type="text"
                       {...register('title')}
-                      placeholder="E.g. PhD Slot: Silicon Photonics & Quantum Devices"
+                      placeholder="e.g. PhD Position in Quantum Computing and Photonic Devices"
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2] focus:ring-2 focus:ring-[#0C4DA2]/20 transition-all placeholder:text-slate-400"
                     />
-                    {errors.title && <p className="text-[10px] text-rose-500 mt-1 font-bold">{errors.title.message as string}</p>}
+                    {errors.title && <p className="text-[10px] text-rose-500 font-bold mt-1">{errors.title.message as string}</p>}
                   </div>
 
+                  {/* Opportunity Type Dropdown */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Research Domain / Field</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Opportunity Type <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      {...register('opportunityType')}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2] focus:ring-2 focus:ring-[#0C4DA2]/20 transition-all cursor-pointer"
+                    >
+                      {OPPORTUNITY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+
+
+                  {/* Searchable Research Domains Multi-Tag */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Research Domains / Taxonomy <span className="text-rose-500">*</span>
+                    </label>
+                    
+                    {/* Selected Domain Badges */}
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {domainTags.map((tag) => (
+                        <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 bg-[#0C4DA2]/10 text-[#0C4DA2] border border-[#0C4DA2]/20 rounded-xl text-xs font-bold">
+                          {tag}
+                          <button type="button" onClick={() => handleRemoveDomainTag(tag)} className="hover:text-rose-600">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Predefined Domain Quick-Select */}
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {PREDEFINED_DOMAINS.map((domain) => (
+                        <button
+                          key={domain}
+                          type="button"
+                          onClick={() => handleAddDomainTag(domain)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer",
+                            domainTags.includes(domain) 
+                              ? "bg-[#0C4DA2] text-white border-[#0C4DA2]" 
+                              : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                          )}
+                        >
+                          + {domain}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Custom Domain Tag Add Input */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customDomainInput}
+                        onChange={(e) => setCustomDomainInput(e.target.value)}
+                        placeholder="Add custom domain..."
+                        className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddDomainTag(customDomainInput)}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        Add Tag
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Positions Available & Funding Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Positions Count */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Positions Available <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        {...register('positionsCount')}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      />
+                      {errors.positionsCount && <p className="text-[10px] text-rose-500 font-bold">{errors.positionsCount.message as string}</p>}
+                    </div>
+
+                    {/* Funding Select */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Funding Status
+                      </label>
+                      <select
+                        {...register('funding')}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      >
+                        {FUNDING_OPTIONS.map((f) => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Funding Details (Optional) */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Funding Details (Optional)
+                    </label>
                     <input
                       type="text"
-                      {...register('researchDomain')}
-                      placeholder="E.g. Artificial Intelligence"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2] focus:ring-2 focus:ring-[#0C4DA2]/20 transition-all placeholder:text-slate-400"
+                      {...register('fundingDetails')}
+                      placeholder="e.g. ₹35,000/month fellowship for 3 years"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
                     />
-                    {errors.researchDomain && <p className="text-[10px] text-rose-500 mt-1 font-bold">{errors.researchDomain.message as string}</p>}
                   </div>
 
-                  {/* Standard Department Field (Read-only for Supervisors) */}
+                  {/* Multi-Select Eligibility Checkboxes */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Department</label>
-                    <div className="w-full px-4 py-3 bg-slate-100/80 border border-slate-200 rounded-2xl text-xs font-bold text-slate-500 select-none cursor-not-allowed">
-                      {currentUser?.department || 'Not Assigned'}
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Eligible Candidates
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                      {ELIGIBILITY_OPTIONS.map((option) => (
+                        <div 
+                          key={option}
+                          onClick={() => toggleEligibility(option)}
+                          className="flex items-center gap-2 cursor-pointer py-1"
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                            eligibilityTags.includes(option) ? 'bg-[#0C4DA2] border-[#0C4DA2]' : 'border-slate-300'
+                          }`}>
+                            {eligibilityTags.includes(option) && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <span className="text-xs font-bold text-slate-700">{option}</span>
+                        </div>
+                      ))}
                     </div>
-                    <input type="hidden" {...register('department')} />
-                    <p className="text-[9px] text-[#0C4DA2] font-semibold mt-1">Assigned by Institute Administration</p>
-                    {errors.department && <p className="text-[10px] text-rose-500 mt-1 font-bold">{errors.department.message as string}</p>}
                   </div>
 
+                  {/* Application Deadline & Work Mode */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Application Deadline
+                      </label>
+                      <input
+                        type="date"
+                        min={todayISO}
+                        {...register('deadline')}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Work Mode
+                      </label>
+                      <select
+                        {...register('mode')}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      >
+                        {MODE_OPTIONS.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Description & Requirements */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Opportunity Description & Requirements</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Opportunity Description & Requirements <span className="text-rose-500">*</span>
+                    </label>
                     <textarea
-                      rows={6}
+                      rows={5}
                       {...register('description')}
-                      placeholder="Provide funding details, required credentials, lab responsibilities, and application guidelines..."
+                      placeholder="Describe the research project, responsibilities, required qualifications, expected outcomes, funding details, and application process..."
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2] focus:ring-2 focus:ring-[#0C4DA2]/20 transition-all placeholder:text-slate-400 resize-none"
                     />
-                    {errors.description && <p className="text-[10px] text-rose-500 mt-1 font-bold">{errors.description.message as string}</p>}
+                    {errors.description && <p className="text-[10px] text-rose-500 font-bold">{errors.description.message as string}</p>}
                   </div>
 
-                  {/* Submit buttons */}
+                  {/* Application Method Select */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      Application Method
+                    </label>
+                    <select
+                      {...register('applicationMethod')}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                    >
+                      {APPLICATION_METHODS.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Dynamic External Link or Email Field */}
+                  {selectedAppMethod === 'External Application Link' && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Application URL
+                      </label>
+                      <input
+                        type="url"
+                        {...register('applicationUrl')}
+                        placeholder="https://srmist.edu.in/careers/research-slot-102"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      />
+                    </div>
+                  )}
+
+                  {selectedAppMethod === 'Email' && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Application Email
+                      </label>
+                      <input
+                        type="email"
+                        {...register('applicationEmail')}
+                        placeholder="supervisor@srmist.edu.in"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2]"
+                      />
+                    </div>
+                  )}
+
+                  {/* Submit Buttons Footer */}
                   <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
                     <button
                       type="button"
@@ -551,7 +1244,7 @@ export function PremiumOpportunities() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-6 py-3 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold uppercase tracking-wider rounded-2xl shadow-md shadow-blue-900/20 transition-all active:scale-95 flex items-center space-x-2 cursor-pointer"
+                      className="px-6 py-3 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold uppercase tracking-wider rounded-2xl shadow-md shadow-blue-900/20 transition-all active:scale-95 flex items-center space-x-2 cursor-pointer disabled:opacity-50"
                     >
                       {isSubmitting ? (
                         <span className="w-4 h-4 border-2 border-white border-t-transparent animate-spin rounded-full" />
@@ -563,12 +1256,14 @@ export function PremiumOpportunities() {
                       )}
                     </button>
                   </div>
+
                 </form>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
     </div>
   );
 }

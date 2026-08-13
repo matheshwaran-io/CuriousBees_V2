@@ -34,7 +34,7 @@ export class EventsController {
   @Post()
   async createEvent(
     @Req() req: any,
-    @Body() body: { title: string; date: string; time: string; venue: string; description?: string, eventType?: string }
+    @Body() body: { title: string; date: string; time: string; venue: string; description?: string; eventType?: string; registrationLink?: string }
   ) {
     return this.eventsService.createEvent(req.user, body);
   }

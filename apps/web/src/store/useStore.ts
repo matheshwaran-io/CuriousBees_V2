@@ -56,6 +56,16 @@ interface AppState {
   notifications: Notification[];
   toasts: { id: string; message: string; type: 'success' | 'error' | 'info' }[];
 
+  // Follow System State
+  followedUserIds: Record<string, boolean>;
+  followedDomains: Record<string, boolean>;
+  followedTopics: Record<string, boolean>;
+
+  fetchFollowState: () => Promise<void>;
+  toggleFollowUser: (targetId: string) => Promise<boolean>;
+  toggleFollowDomain: (domain: string) => Promise<boolean>;
+  toggleFollowTopic: (topic: string) => Promise<boolean>;
+
   // Setters & Actions
   setCurrentUser: (user: User | null) => void;
   setDashboardRoute: (route: string) => void;
@@ -92,12 +102,12 @@ interface AppState {
   fetchSuggestedPeers: () => Promise<any[]>;
   connectWithPeer: (peerId: string) => Promise<'connect' | 'pending' | 'connected' | null>;
   searchFeed: (query: string) => Promise<{ threads: Thread[], publications: Publication[], users: User[] }>;
-  createOpportunity: (title: string, description: string, department: string, researchDomain: string) => Promise<Opportunity>;
+  createOpportunity: (titleOrPayload: string | any, description?: string, department?: string, researchDomain?: string, extraData?: any) => Promise<Opportunity>;
   updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
   fetchEvents: (showIndicator?: boolean) => Promise<Event[]>;
 
-  createEvent: (title: string, date: string, time: string, venue: string, description?: string, eventType?: string) => Promise<Event>;
-  updateEvent: (id: string, title: string, date: string, time: string, venue: string, description?: string, eventType?: string) => Promise<Event>;
+  createEvent: (title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
+  updateEvent: (id: string, title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
   logout: () => void;
 
@@ -224,6 +234,135 @@ export const useStore = create<AppState>((set, get) => ({
   myScholars: [],
   notifications: [],
   toasts: [],
+
+  followedUserIds: {},
+  followedDomains: {},
+  followedTopics: {},
+
+  fetchFollowState: async () => {
+    try {
+      const res = await apiFetch('/api/users/me/follow-state');
+      if (res.ok) {
+        const data = await res.json();
+        const userMap: Record<string, boolean> = {};
+        const domainMap: Record<string, boolean> = {};
+        const topicMap: Record<string, boolean> = {};
+
+        (data.followedUserIds || []).forEach((id: string) => { userMap[id] = true; });
+        (data.followedDomains || []).forEach((d: string) => { domainMap[d.toLowerCase()] = true; });
+        (data.followedTopics || []).forEach((t: string) => { topicMap[t.toLowerCase().replace(/^#/, '')] = true; });
+
+        set({
+          followedUserIds: userMap,
+          followedDomains: domainMap,
+          followedTopics: topicMap
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch follow state:', e);
+    }
+  },
+
+  toggleFollowUser: async (targetId: string) => {
+    const isFollowing = !!get().followedUserIds[targetId];
+    const nextState = !isFollowing;
+
+    // Optimistic update
+    set(state => ({
+      followedUserIds: {
+        ...state.followedUserIds,
+        [targetId]: nextState
+      }
+    }));
+
+    try {
+      const method = nextState ? 'POST' : 'DELETE';
+      const res = await apiFetch(`/api/users/${targetId}/follow`, { method });
+      if (!res.ok) throw new Error('Follow action failed');
+      get().addToast(nextState ? 'Following researcher' : 'Unfollowed researcher', 'success');
+      return nextState;
+    } catch (e) {
+      // Revert on failure
+      set(state => ({
+        followedUserIds: {
+          ...state.followedUserIds,
+          [targetId]: isFollowing
+        }
+      }));
+      get().addToast('Failed to update follow status', 'error');
+      return isFollowing;
+    }
+  },
+
+  toggleFollowDomain: async (domain: string) => {
+    const key = domain.trim().toLowerCase();
+    const isFollowing = !!get().followedDomains[key];
+    const nextState = !isFollowing;
+
+    // Optimistic update
+    set(state => ({
+      followedDomains: {
+        ...state.followedDomains,
+        [key]: nextState
+      }
+    }));
+
+    try {
+      const method = nextState ? 'POST' : 'DELETE';
+      const res = await apiFetch('/api/users/follow-domain', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain })
+      });
+      if (!res.ok) throw new Error('Domain follow failed');
+      get().addToast(nextState ? `Following domain: ${domain}` : `Unfollowed domain: ${domain}`, 'success');
+      return nextState;
+    } catch (e) {
+      set(state => ({
+        followedDomains: {
+          ...state.followedDomains,
+          [key]: isFollowing
+        }
+      }));
+      get().addToast('Failed to update domain follow status', 'error');
+      return isFollowing;
+    }
+  },
+
+  toggleFollowTopic: async (topic: string) => {
+    const key = topic.trim().toLowerCase().replace(/^#/, '');
+    const isFollowing = !!get().followedTopics[key];
+    const nextState = !isFollowing;
+
+    // Optimistic update
+    set(state => ({
+      followedTopics: {
+        ...state.followedTopics,
+        [key]: nextState
+      }
+    }));
+
+    try {
+      const method = nextState ? 'POST' : 'DELETE';
+      const res = await apiFetch('/api/users/follow-topic', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: key })
+      });
+      if (!res.ok) throw new Error('Topic follow failed');
+      get().addToast(nextState ? `Following #${key}` : `Unfollowed #${key}`, 'success');
+      return nextState;
+    } catch (e) {
+      set(state => ({
+        followedTopics: {
+          ...state.followedTopics,
+          [key]: isFollowing
+        }
+      }));
+      get().addToast('Failed to update topic follow status', 'error');
+      return isFollowing;
+    }
+  },
 
   setCurrentUser: (user) => {
     if (user) {
@@ -402,6 +541,9 @@ export const useStore = create<AppState>((set, get) => ({
         const threads = await threadsRes.json();
         set({ threads });
       }
+
+      // Fetch user's current follow states (researchers, domains, topics)
+      get().fetchFollowState();
     } catch (e) {
       console.error('Failed to load data:', e);
     } finally {
@@ -633,7 +775,7 @@ export const useStore = create<AppState>((set, get) => ({
           
           return {
             ...t,
-            likes: newLiked ? [{ userId: state.currentUser?.id }] : [],
+            likes: newLiked ? [{ id: `like-${threadId}`, threadId, userId: state.currentUser?.id || '', createdAt: new Date().toISOString() }] : [],
             _count: { ...t._count, likes: newCount }
           };
         }
@@ -645,11 +787,14 @@ export const useStore = create<AppState>((set, get) => ({
     const res = await apiFetch(`/api/threads/${threadId}/like`, { method: 'POST' });
     if (res.ok) {
       const data = await res.json();
-      // Sync exact count from server
       set(state => ({
         threads: state.threads.map(t => 
           t.id === threadId 
-            ? { ...t, _count: { ...t._count, likes: data.likeCount } }
+            ? { 
+                ...t, 
+                likes: data.liked ? [{ id: `like-${threadId}`, threadId, userId: state.currentUser?.id || '', createdAt: new Date().toISOString() }] : [],
+                _count: { ...t._count, likes: data.likeCount } 
+              }
             : t
         )
       }));
@@ -806,13 +951,17 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   // 6. Publish a research opportunity (Hiring/Collaboration)
-  createOpportunity: async (title, description, department, researchDomain) => {
+  createOpportunity: async (titleOrPayload: any, description?: string, department?: string, researchDomain?: string, extraData?: any) => {
     set({ isLoading: true });
     try {
+      const payload = typeof titleOrPayload === 'object' 
+        ? titleOrPayload 
+        : { title: titleOrPayload, description, department, researchDomain, ...extraData };
+
       const res = await apiFetch('/api/opportunities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, department, researchDomain }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         const newOpp = await res.json();
@@ -821,7 +970,11 @@ export const useStore = create<AppState>((set, get) => ({
         }));
         return newOpp;
       }
-      throw new Error('Failed to publish opportunity.');
+      const err = await res.json();
+      throw new Error(err.message || 'Failed to create opportunity');
+    } catch (e: any) {
+      console.error(e);
+      throw e;
     } finally {
       set({ isLoading: false });
     }
@@ -868,13 +1021,13 @@ export const useStore = create<AppState>((set, get) => ({
 
 
 
-  createEvent: async (title, date, time, venue, description, eventType) => {
+  createEvent: async (title, date, time, venue, description, eventType, registrationLink) => {
     set({ isLoading: true });
     try {
       const res = await apiFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, date, time, venue, description, eventType }),
+        body: JSON.stringify({ title, date, time, venue, description, eventType, registrationLink }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -887,18 +1040,18 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  updateEvent: async (id, title, date, time, venue, description, eventType) => {
+  updateEvent: async (id, title, date, time, venue, description, eventType, registrationLink) => {
     set({ isLoading: true });
     try {
       const res = await apiFetch(`/api/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, date, time, venue, description, eventType }),
+        body: JSON.stringify({ title, date, time, venue, description, eventType, registrationLink }),
       });
       if (res.ok) {
         const data = await res.json();
         set(state => ({
-          events: state.events.map(ev => ev.id === id ? data : ev)
+          events: state.events.map(e => e.id === id ? data : e)
         }));
         return data;
       }

@@ -137,9 +137,20 @@ export interface Opportunity {
   description: string;
   department: string;
   researchDomain: string;
+  opportunityType?: string;
+  positionsCount?: number;
+  funding?: string;
+  fundingDetails?: string | null;
+  eligibility?: string[];
+  deadline?: Date | string | null;
+  mode?: string;
+  applicationMethod?: string;
+  applicationUrl?: string | null;
+  applicationEmail?: string | null;
   authorId: string;
   author?: User;
   createdAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 // REST API Request / Response Types
@@ -160,8 +171,18 @@ export interface CreateCommentInput {
 export interface CreateOpportunityInput {
   title: string;
   description: string;
-  department: string;
+  department?: string;
   researchDomain: string;
+  opportunityType?: string;
+  positionsCount?: number;
+  funding?: string;
+  fundingDetails?: string;
+  eligibility?: string[];
+  deadline?: string | null;
+  mode?: string;
+  applicationMethod?: string;
+  applicationUrl?: string;
+  applicationEmail?: string;
 }
 
 export interface UpdateProfileInput {
