@@ -41,3 +41,21 @@ export function useUnfollowUser() {
     },
   });
 }
+
+export function useToggleFollowNotifications() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, enabled }: { userId: string; enabled: boolean }) => {
+      return apiFetch(`/api/users/${userId}/follow-notifications`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ['followStatus', userId] });
+      queryClient.invalidateQueries({ queryKey: ['researchers'] });
+    },
+  });
+}

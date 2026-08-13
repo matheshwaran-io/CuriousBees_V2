@@ -126,64 +126,79 @@ async function main() {
   console.log(`✅ Created ${Object.keys(interestsMap).length} research interests.`);
 
   // 4. Create Users (Faculty, Scholars, and Admins)
+  // 4. Create Users (Faculty, Scholars, and Admins)
   const users = [
     {
-      name: 'Dr. Anand Ramachandran',
-      email: 'dr.anand@srmist.edu.in',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-      role: Role.RESEARCH_SUPERVISOR,
-      facultyName: 'Engineering & Technology',
-      departmentName: 'CSE',
-      designation: 'Professor',
-      employeeId: 'EMP001',
-      bio: 'Professor of Computer Science. Researching distributed systems, edge computing, and large language model optimizations.',
-      interests: ['Generative AI & LLMs', 'Reinforcement Learning', 'Blockchains & Smart Contracts']
-    },
-    {
-      name: 'Dr. Priya Subramanian',
-      email: 'dr.priya@srmist.edu.in',
+      name: 'Dr. SUDHA M R',
+      email: 'dr.sudha@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
       role: Role.RESEARCH_SUPERVISOR,
       facultyName: 'Engineering & Technology',
-      departmentName: 'Biotechnology & Bioengineering',
-      designation: 'Associate Professor',
-      employeeId: 'EMP002',
-      bio: 'Associate Professor of Bioengineering. Focused on genomic sequencing algorithms and computational oncology.',
-      interests: ['Cancer Immunotherapy', 'Bioinformatics', 'Nanomaterials & Thin Films']
+      departmentName: 'Computer Applications',
+      designation: 'Assistant Professor grade I',
+      employeeId: '600215',
+      bio: 'Assistant Professor grade I. Focused on genomic sequencing algorithms, web applications, and data science.',
+      interests: ['Generative AI & LLMs', 'Reinforcement Learning', 'Blockchains & Smart Contracts']
     },
     {
-      name: 'Dr. Ramesh Kumar',
-      email: 'dr.ramesh@srmist.edu.in',
+      name: 'Dr. RAZIA BEGUM S',
+      email: 'dr.razia@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
       role: Role.RESEARCH_SUPERVISOR,
       facultyName: 'Engineering & Technology',
-      departmentName: 'ECE',
-      designation: 'Professor & Head',
-      employeeId: 'EMP003',
-      bio: 'Professor & Head of ECE Dept. Researching high-speed transceiver design and 6G cellular networks.',
+      departmentName: 'Computer Applications',
+      designation: 'Associate Professor',
+      employeeId: '600180',
+      bio: 'Associate Professor in Computer Applications. Focus on computer networks, IoT and smart infrastructure.',
+      interests: ['Cancer Immunotherapy', 'Bioinformatics', 'Nanomaterials & Thin Films']
+    },
+    {
+      name: 'Dr. JAYANTHI D',
+      email: 'dr.jayanthi@srmist.edu.in',
+      image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      role: Role.RESEARCH_SUPERVISOR,
+      facultyName: 'Engineering & Technology',
+      departmentName: 'Computer Applications',
+      designation: 'Assistant Professor',
+      employeeId: '600183',
+      bio: 'Assistant Professor in ECE. Researching silicon photonics and wireless body area networks.',
       interests: ['Silicon Photonics', '5G/6G Wireless Networks', 'VLSI System Design']
     },
     {
-      name: 'Suresh Karthik',
-      email: 'scholar.suresh@srmist.edu.in',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-      role: Role.RESEARCH_SCHOLAR,
-      facultyName: 'Engineering & Technology',
-      departmentName: 'CSE',
-      researchArea: 'Generative AI and PEFT optimization',
-      bio: 'PhD Candidate working on parameter-efficient fine-tuning (PEFT) methods for vision-language models.',
-      interests: ['Generative AI & LLMs', 'Reinforcement Learning']
-    },
-    {
-      name: 'Divya Nambiar',
-      email: 'scholar.divya@srmist.edu.in',
+      name: 'GAYATHRI R',
+      email: 'gr2516@srmist.edu.in',
       image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
       role: Role.RESEARCH_SCHOLAR,
       facultyName: 'Engineering & Technology',
-      departmentName: 'Biotechnology & Bioengineering',
-      researchArea: 'Genomic target therapy and Bioinformatics',
-      bio: 'PhD Scholar researching nano-carriers in bioinformatics. Exploring molecular modeling using graph neural networks.',
+      departmentName: 'Computer Applications',
+      employeeId: '800180',
+      researchArea: 'Generative AI and Cloud Architectures',
+      bio: 'PhD Candidate working on parameter-efficient fine-tuning methods for cloud environments.',
+      interests: ['Generative AI & LLMs', 'Reinforcement Learning']
+    },
+    {
+      name: 'SANTHOSHKUMAR S',
+      email: 'santhosh.s@srmist.edu.in',
+      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+      role: Role.RESEARCH_SCHOLAR,
+      facultyName: 'Engineering & Technology',
+      departmentName: 'Computer Applications',
+      employeeId: '800217',
+      researchArea: 'Bioinformatics and genomic target sequence analysis',
+      bio: 'PhD Scholar researching nano-carriers in bioinformatics.',
       interests: ['Bioinformatics', 'Cancer Immunotherapy', 'Nanomaterials & Thin Films']
+    },
+    {
+      name: 'REVATHI M',
+      email: 'rm9040@srmist.edu.in',
+      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+      role: Role.RESEARCH_SCHOLAR,
+      facultyName: 'Engineering & Technology',
+      departmentName: 'Computer Applications',
+      employeeId: '800237',
+      researchArea: 'Cryptography and distributed ledger systems',
+      bio: 'Research scholar focusing on zero knowledge proof verification.',
+      interests: ['Blockchains & Smart Contracts', 'VLSI System Design']
     },
     {
       name: 'CuriousBees Admin',
@@ -191,7 +206,7 @@ async function main() {
       image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       role: Role.INSTITUTE_ADMIN,
       facultyName: 'Engineering & Technology',
-      departmentName: 'CSE',
+      departmentName: 'Computer Applications',
       bio: 'SRMIST System Administrator for CuriousBees platform.',
       interests: []
     }
@@ -206,6 +221,7 @@ async function main() {
         email: u.email,
         image: u.image,
         role: u.role,
+        employeeId: u.employeeId || null,
         department: u.departmentName,
         departmentId: deptRef ? deptRef.id : null,
         bio: u.bio,
@@ -241,7 +257,7 @@ async function main() {
     }
 
     // Link interests
-    for (const interestName of u.interests) {
+    for (const interestName of u.interests || []) {
       const interest = interestsMap[interestName];
       if (interest) {
         await prisma.userInterest.create({
@@ -253,46 +269,72 @@ async function main() {
       }
     }
   }
-  console.log(`✅ Created ${Object.keys(createdUsers).length} user profiles, designations, and profiles.`);
+  console.log(`... Created ${Object.keys(createdUsers).length} user profiles.`);
 
   // Link supervisor relationship (legacy self-relation + new request sync)
-  const anand = createdUsers['dr.anand@srmist.edu.in'];
-  const priya = createdUsers['dr.priya@srmist.edu.in'];
-  const suresh = createdUsers['scholar.suresh@srmist.edu.in'];
-  const divya = createdUsers['scholar.divya@srmist.edu.in'];
+  const sudha = createdUsers['dr.sudha@srmist.edu.in'];
+  const razia = createdUsers['dr.razia@srmist.edu.in'];
+  const jayanthi = createdUsers['dr.jayanthi@srmist.edu.in'];
+  
+  const gayathri = createdUsers['gr2516@srmist.edu.in'];
+  const santhosh = createdUsers['santhosh.s@srmist.edu.in'];
+  const revathi = createdUsers['rm9040@srmist.edu.in'];
 
-  // Link Suresh to Anand
+  // Link Gayathri to Sudha
   await prisma.user.update({
-    where: { id: suresh.id },
+    where: { id: gayathri.id },
     data: {
-      supervisorId: anand.id,
-      supervisorEmail: anand.email
+      supervisorId: sudha.id,
+      supervisorEmail: sudha.email
     }
   });
   await prisma.scholarSupervisorRequest.create({
     data: {
-      scholarId: suresh.id,
-      supervisorId: anand.id,
+      scholarId: gayathri.id,
+      supervisorId: sudha.id,
       status: 'APPROVED'
     }
   });
 
-  // Link Divya to Priya
+  // Link Santhosh to Razia
   await prisma.user.update({
-    where: { id: divya.id },
+    where: { id: santhosh.id },
     data: {
-      supervisorId: priya.id,
-      supervisorEmail: priya.email
+      supervisorId: razia.id,
+      supervisorEmail: razia.email
     }
   });
   await prisma.scholarSupervisorRequest.create({
     data: {
-      scholarId: divya.id,
-      supervisorId: priya.id,
+      scholarId: santhosh.id,
+      supervisorId: razia.id,
+      status: 'APPROVED'
+    }
+  });
+
+  // Link Revathi to Jayanthi
+  await prisma.user.update({
+    where: { id: revathi.id },
+    data: {
+      supervisorId: jayanthi.id,
+      supervisorEmail: jayanthi.email
+    }
+  });
+  await prisma.scholarSupervisorRequest.create({
+    data: {
+      scholarId: revathi.id,
+      supervisorId: jayanthi.id,
       status: 'APPROVED'
     }
   });
   console.log('✅ Scholar supervisor associations resolved.');
+
+  // Aliases for compatibility with subsequent seed blocks
+  const anand = sudha;
+  const priya = razia;
+  const divya = gayathri;
+  const suresh = gayathri;
+  createdUsers['dr.ramesh@srmist.edu.in'] = jayanthi;
 
   // 5. Create Threads
   const t1 = await prisma.thread.create({

@@ -67,16 +67,25 @@ export default function EventDetailModal({
     (currentUser?.role as string) === 'ADMIN' || 
     (currentUser?.role === 'RESEARCH_SUPERVISOR' && event.authorId === currentUser?.id);
 
-  // Formatting dates
-  const formattedEventDate = new Date(event.date).toLocaleDateString('en-US', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  const parseSafeDate = (d: any) => {
+    if (!d) return null;
+    const parsed = new Date(d);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
 
-  const formattedPostedDate = event.createdAt 
-    ? new Date(event.createdAt).toLocaleDateString('en-US', {
+  const eventDateObj = parseSafeDate(event.date);
+  const formattedEventDate = eventDateObj 
+    ? eventDateObj.toLocaleDateString('en-US', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })
+    : 'Date TBD';
+
+  const postedDateObj = parseSafeDate(event.createdAt);
+  const formattedPostedDate = postedDateObj 
+    ? postedDateObj.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',

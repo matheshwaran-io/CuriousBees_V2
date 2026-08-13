@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { NotificationsService } from './notifications.service';
@@ -18,6 +18,11 @@ export class NotificationsController {
   @Put('read-all')
   async markAllAsRead(@Req() req: any) {
     return this.notificationsService.markAllAsRead(req.user.id);
+  }
+
+  @Put(':id/read')
+  async markAsRead(@Req() req: any, @Param('id') id: string) {
+    return this.notificationsService.markAsRead(req.user.id, id);
   }
 
   @Get('preferences')

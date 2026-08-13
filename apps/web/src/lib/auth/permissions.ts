@@ -73,7 +73,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/workspace',
     '/nexus',
     '/publications',
-    '/reports',
     '/notifications',
     '/scholar',
     '/chat',

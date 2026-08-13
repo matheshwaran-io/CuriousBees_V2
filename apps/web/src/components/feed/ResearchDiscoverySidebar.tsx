@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
+import { getProfileImageUrl } from '@/lib/avatar';
 
 interface ResearchDiscoverySidebarProps {
   onSearchChange?: (query: string) => void;
@@ -84,7 +85,7 @@ export default function ResearchDiscoverySidebar({
               const dept = peer.department || 'SRMIST';
               const roleLabel = peer.role || (peer.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar');
               const isFollowed = !!followedUserIds[peer.id] || peer.isFollowing;
-              const avatar = peer.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0C4DA2&color=fff&size=64`;
+              const avatar = getProfileImageUrl(peer);
               const domainsList: string[] = peer.domains || peer.researchInterests || [];
               const reason = peer.reason || 'Active SRMIST Researcher';
 

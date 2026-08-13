@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
+import { getProfileImageUrl } from '@/lib/avatar';
 
 interface ResearcherProfileModalProps {
   isOpen: boolean;
@@ -23,7 +24,14 @@ export default function ResearcherProfileModal({
   onClose,
   researcher
 }: ResearcherProfileModalProps) {
-  const { followedUserIds, toggleFollowUser, addToast } = useStore();
+  const { followedUserIds, toggleFollowUser, addToast, collabStatuses, fetchCollabStatus, sendCollabRequest, currentUser } = useStore();
+  const [isCollaborating, setIsCollaborating] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && researcher?.id && currentUser?.id !== researcher.id) {
+      fetchCollabStatus(researcher.id);
+    }
+  }, [isOpen, researcher?.id, currentUser?.id, fetchCollabStatus]);
 
   if (!researcher) return null;
 
@@ -32,13 +40,45 @@ export default function ResearcherProfileModal({
   const role = researcher.role === 'RESEARCH_SUPERVISOR' || researcher.role === 'SUPERVISOR' 
     ? 'Research Supervisor' 
     : 'Research Scholar';
-  const avatarUrl = researcher.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0C4DA2&color=fff&size=96`;
+  const avatarUrl = getProfileImageUrl(researcher);
 
   const isFollowing = researcher.id ? !!followedUserIds[researcher.id] : false;
 
   const handleFollow = () => {
     if (researcher.id) {
       toggleFollowUser(researcher.id);
+    }
+  };
+
+  const collabState = collabStatuses[researcher.id]?.status || 'NONE';
+  const collabId = collabStatuses[researcher.id]?.collaborationId;
+
+  const handleCollabRequest = async () => {
+    if (!researcher.id || currentUser?.id === researcher.id) return;
+
+    if (collabState === 'ACTIVE' && collabId) {
+      window.location.href = `/nexus?collab=${collabId}`;
+      return;
+    }
+
+    if (collabState === 'PENDING_SENT' || collabState === 'PENDING_RECEIVED') {
+      window.location.href = `/nexus?view=requests`;
+      return;
+    }
+
+    const defaultMsg = `I would like to explore potential research collaborations with you.`;
+    const customMessage = window.prompt(`Send a collaboration request to ${name}`, defaultMsg);
+    if (customMessage === null) return;
+
+    setIsCollaborating(true);
+    try {
+      await sendCollabRequest(researcher.id, undefined, customMessage);
+      addToast(`Collaboration request sent to ${name}`, 'success');
+      onClose();
+    } catch (err: any) {
+      addToast(err.message || 'Collaboration request failed', 'error');
+    } finally {
+      setIsCollaborating(false);
     }
   };
 
@@ -115,14 +155,27 @@ export default function ResearcherProfileModal({
               </button>
 
               <button
-                onClick={() => {
-                  addToast(`Opening collaboration space with ${name}...`, 'info');
-                  onClose();
-                }}
-                className="py-2.5 px-4 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                onClick={handleCollabRequest}
+                disabled={isCollaborating || currentUser?.id === researcher.id}
+                className={`py-2.5 px-4 rounded-full text-white text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  currentUser?.id === researcher.id
+                    ? 'bg-slate-300 cursor-not-allowed text-slate-500'
+                    : collabState === 'ACTIVE'
+                    ? 'bg-[#0C4DA2] hover:bg-blue-800'
+                    : collabState === 'PENDING_SENT'
+                    ? 'bg-amber-500 hover:bg-amber-600'
+                    : collabState === 'PENDING_RECEIVED'
+                    ? 'bg-emerald-500 hover:bg-emerald-600'
+                    : 'bg-slate-900 hover:bg-black active:scale-95'
+                }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#FEC727]" />
-                <span>Collaborate</span>
+                <Sparkles className={`w-3.5 h-3.5 ${collabState === 'ACTIVE' || collabState === 'PENDING_SENT' || collabState === 'PENDING_RECEIVED' ? 'text-white' : 'text-[#FEC727]'}`} />
+                <span>
+                  {collabState === 'ACTIVE' ? 'Open Collab' : 
+                   collabState === 'PENDING_SENT' ? 'Request Sent' :
+                   collabState === 'PENDING_RECEIVED' ? 'Review Request' :
+                   'Collaborate'}
+                </span>
               </button>
             </div>
           </motion.div>

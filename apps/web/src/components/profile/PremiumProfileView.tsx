@@ -14,6 +14,8 @@ import {
   Edit3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useStore } from '@/store/useStore';
+import { useState, useEffect } from 'react';
 
 interface PremiumProfileViewProps {
   user: any;
@@ -22,6 +24,45 @@ interface PremiumProfileViewProps {
 }
 
 export function PremiumProfileView({ user, isOwnProfile, onEditClick }: PremiumProfileViewProps) {
+  const { collabStatuses, fetchCollabStatus, sendCollabRequest, addToast } = useStore();
+  const [isCollaborating, setIsCollaborating] = useState(false);
+
+  useEffect(() => {
+    if (user?.id && !isOwnProfile) {
+      fetchCollabStatus(user.id);
+    }
+  }, [user?.id, isOwnProfile, fetchCollabStatus]);
+
+  const collabState = collabStatuses[user?.id]?.status || 'NONE';
+  const collabId = collabStatuses[user?.id]?.collaborationId;
+
+  const handleCollabRequest = async () => {
+    if (isOwnProfile || !user?.id) return;
+
+    if (collabState === 'ACTIVE' && collabId) {
+      window.location.href = `/nexus?collab=${collabId}`;
+      return;
+    }
+
+    if (collabState === 'PENDING_SENT' || collabState === 'PENDING_RECEIVED') {
+      window.location.href = `/nexus?view=requests`;
+      return;
+    }
+
+    const defaultMsg = `I would like to explore potential research collaborations with you.`;
+    const customMessage = window.prompt(`Send a collaboration request to ${user.name || 'this researcher'}`, defaultMsg);
+    if (customMessage === null) return;
+
+    setIsCollaborating(true);
+    try {
+      await sendCollabRequest(user.id, undefined, customMessage);
+      addToast(`Collaboration request sent to ${user.name || 'researcher'}`, 'success');
+    } catch (err: any) {
+      addToast(err.message || 'Collaboration request failed', 'error');
+    } finally {
+      setIsCollaborating(false);
+    }
+  };
   
   // Safe fallbacks for user data
   const name = user?.name || 'Academic Scholar';
@@ -103,8 +144,24 @@ export function PremiumProfileView({ user, isOwnProfile, onEditClick }: PremiumP
               <Edit3 className="w-4 h-4" /> Edit Profile
             </button>
           ) : (
-            <button className="w-full sm:w-auto px-12 py-3 bg-[#3B82F6] hover:bg-blue-600 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
-              <Network className="w-4 h-4" /> Collaborate
+            <button 
+              onClick={handleCollabRequest}
+              disabled={isCollaborating}
+              className={`w-full sm:w-auto px-12 py-3 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                collabState === 'ACTIVE'
+                  ? 'bg-[#0C4DA2] hover:bg-blue-800 shadow-blue-500/20'
+                  : collabState === 'PENDING_SENT'
+                  ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                  : collabState === 'PENDING_RECEIVED'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
+                  : 'bg-[#3B82F6] hover:bg-blue-600 shadow-blue-500/20'
+              }`}
+            >
+              <Network className="w-4 h-4" /> 
+              {collabState === 'ACTIVE' ? 'Open Collab' : 
+               collabState === 'PENDING_SENT' ? 'Request Sent' :
+               collabState === 'PENDING_RECEIVED' ? 'Review Request' :
+               'Collaborate'}
             </button>
           )}
           

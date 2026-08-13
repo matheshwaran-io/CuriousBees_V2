@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Thread } from '@curiousbees/types';
 import { MessageSquare, Calendar, ChevronRight, Heart, Repeat, Bookmark, Handshake } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useStore } from '@/store/useStore';
 
 interface ThreadCardProps {
   thread: Thread;
@@ -27,9 +28,36 @@ export default function ThreadCard({ thread }: ThreadCardProps) {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  const { currentUser, workspaces } = useStore();
+
+  const hasValidRelationship = React.useMemo(() => {
+    const author = thread.author;
+    if (!currentUser || !author) return false;
+    if (currentUser.id === author.id) return true;
+
+    // 1. Direct Supervisor-Scholar relationship
+    if (currentUser.supervisorId === author.id || author.supervisorId === currentUser.id) {
+      return true;
+    }
+
+    // 2. Shared Workspace project collaboration
+    const sharesWorkspace = workspaces.some((ws) => 
+      ws.members?.some((m: any) => m.userId === author.id)
+    );
+    if (sharesWorkspace) {
+      return true;
+    }
+
+    return false;
+  }, [currentUser, thread.author, workspaces]);
+
   const handleCollaborate = () => {
     if (thread.author?.id) {
-      router.push(`/nexus?userId=${thread.author.id}`);
+      if (hasValidRelationship) {
+        router.push(`/nexus?userId=${thread.author.id}`);
+      } else {
+        router.push(`/researchers/${thread.author.id}`);
+      }
     }
   };
 

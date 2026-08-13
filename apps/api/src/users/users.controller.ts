@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, Query, UseGuards, Req, BadRequestException, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Post, Body, Query, UseGuards, Req, BadRequestException, Param, Delete } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from '@curiousbees/types';
@@ -22,6 +22,53 @@ export class UsersController {
   @Put('profile')
   async updateProfile(@Req() req: any, @Body() body: UpdateProfileInput) {
     return this.usersService.updateProfile(req.user.id, body);
+  }
+
+  @Patch('profile')
+  async patchProfile(@Req() req: any, @Body() body: UpdateProfileInput) {
+    return this.usersService.updateProfile(req.user.id, body);
+  }
+
+  @Get(':id/external-links')
+  async getExternalLinks(@Param('id') id: string) {
+    return this.usersService.getExternalLinks(id);
+  }
+
+  @Post(':id/external-links')
+  async addExternalLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { platform: string; label?: string; url: string },
+  ) {
+    if (req.user.id !== id) {
+      throw new BadRequestException('You can only edit external links for your own profile.');
+    }
+    return this.usersService.addExternalLink(id, body.platform, body.label, body.url);
+  }
+
+  @Patch(':id/external-links/:linkId')
+  async updateExternalLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('linkId') linkId: string,
+    @Body() body: { label?: string; url?: string; isVisible?: boolean },
+  ) {
+    if (req.user.id !== id) {
+      throw new BadRequestException('You can only edit external links for your own profile.');
+    }
+    return this.usersService.updateExternalLink(id, linkId, body.label, body.url, body.isVisible);
+  }
+
+  @Delete(':id/external-links/:linkId')
+  async deleteExternalLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('linkId') linkId: string,
+  ) {
+    if (req.user.id !== id) {
+      throw new BadRequestException('You can only delete external links from your own profile.');
+    }
+    return this.usersService.deleteExternalLink(id, linkId);
   }
 
   @Get('collaborators')
@@ -199,6 +246,15 @@ export class UsersController {
   @Delete(':id/follow')
   async unfollowUser(@Req() req: any, @Param('id') targetId: string) {
     return this.usersService.unfollowUser(req.user.id, targetId);
+  }
+
+  @Put(':id/follow-notifications')
+  async setFollowNotifications(
+    @Req() req: any, 
+    @Param('id') targetId: string, 
+    @Body('enabled') enabled: boolean
+  ) {
+    return this.usersService.setFollowNotifications(req.user.id, targetId, enabled);
   }
 
   @Get(':id/follow-status')

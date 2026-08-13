@@ -13,24 +13,96 @@ export class AdminSupervisorsService {
     private clerkService: ClerkService
   ) {}
 
-  async getSupervisors() {
-    const supervisors = await this.prisma.user.findMany({
-      where: { role: Role.RESEARCH_SUPERVISOR },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        departmentRef: true,
-        supervisorProfile: true,
-        _count: {
-          select: { scholars: true }
-        }
-      },
-    });
+  async getSupervisors(query: any = {}) {
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 25);
+    const skip = (page - 1) * limit;
 
-    return supervisors.map(s => ({
+    const where: any = { role: Role.RESEARCH_SUPERVISOR };
+
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+        { employeeId: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.department) {
+      where.OR = [
+        { department: { contains: query.department, mode: 'insensitive' } },
+        { departmentId: query.department }
+      ];
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.access) {
+      if (query.access === 'MATCHED') {
+        where.clerkId = { not: null };
+        where.employeeId = { not: null };
+      } else if (query.access === 'UNMATCHED') {
+        where.clerkId = null;
+      } else if (query.access === 'REQUIRES REVIEW') {
+        where.clerkId = { not: null };
+        where.employeeId = null;
+      }
+    }
+
+    if (query.hasScholars === 'YES') {
+      where.scholars = { some: {} };
+    } else if (query.hasScholars === 'NO') {
+      where.scholars = { none: {} };
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (query.sort) {
+      const order = query.order === 'asc' ? 'asc' : 'desc';
+      if (query.sort === 'name') orderBy = { name: order };
+      else if (query.sort === 'employeeId') orderBy = { employeeId: order };
+      else if (query.sort === 'department') orderBy = { department: order };
+      else if (query.sort === 'status') orderBy = { status: order };
+      else if (query.sort === 'createdAt') orderBy = { createdAt: order };
+    }
+
+    const [total, data] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          departmentRef: true,
+          supervisorProfile: true,
+          _count: {
+            select: { scholars: true }
+          }
+        },
+      }),
+    ]);
+
+    const formattedData = data.map(s => ({
       ...s,
       scholarCount: s._count.scholars,
       _count: undefined,
     }));
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: formattedData,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async createSupervisor(adminId: string, data: any) {
@@ -111,6 +183,47 @@ export class AdminSupervisorsService {
     });
 
     await this.logAudit(adminId, 'UPDATE_SUPERVISOR_STATUS', `Changed status to ${status} for supervisor ${user.email}`);
+  }
+
+  async updateSupervisor(adminId: string, id: string, data: any) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new BadRequestException('Supervisor not found.');
+
+    let departmentName = user.department;
+    if (data.departmentId) {
+      const dept = await this.prisma.department.findUnique({ where: { id: data.departmentId } });
+      if (dept) departmentName = dept.name;
+    }
+
+    // Extract employeeId from email prefix
+    let employeeId = user.employeeId;
+    if (data.email) {
+      const prefix = data.email.split('@')[0];
+      employeeId = prefix.toUpperCase();
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name,
+        email: data.email?.toLowerCase(),
+        department: departmentName,
+        departmentId: data.departmentId || null,
+        employeeId,
+      },
+    });
+
+    if (data.designation) {
+      await this.prisma.supervisorProfile.updateMany({
+        where: { userId: id },
+        data: {
+          designation: data.designation,
+          employeeId: employeeId || undefined,
+        },
+      });
+    }
+
+    await this.logAudit(adminId, 'UPDATE_SUPERVISOR', `Updated details for supervisor ${user.email}`);
     return updated;
   }
 

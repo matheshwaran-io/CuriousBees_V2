@@ -35,16 +35,7 @@ export class OpportunitiesService {
   }
 
   async getOpportunities(currentUser: any, department?: string, researchDomain?: string) {
-    let deptQuery = department ? department.split('(')[0].trim() : undefined;
-
-    // Enforce strict department boundary on listing for scholars/supervisors
-    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
-      const userDept = currentUser.department;
-      if (!userDept) {
-        return [];
-      }
-      deptQuery = userDept.split('(')[0].trim();
-    }
+    const deptQuery = department ? department.split('(')[0].trim() : undefined;
 
     return this.prisma.opportunity.findMany({
       where: {

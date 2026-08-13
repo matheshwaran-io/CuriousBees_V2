@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { Send, Loader2, MoreHorizontal, Edit2, Trash2, Heart, Reply, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getProfileImageUrl } from '@/lib/avatar';
 
 interface FeedCommentsProps {
   threadId: string;
@@ -90,7 +91,7 @@ function CommentItem({
   }, [showReplyInput]);
 
   const authorName = comment.author?.name || 'Scholar';
-  const avatarUrl = comment.author?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0C4DA2&color=fff&size=40`;
+  const avatarUrl = getProfileImageUrl(comment.author);
   const roleLabel = comment.author?.role === 'RESEARCH_SUPERVISOR' ? 'Supervisor' : 'Scholar';
   const roleBadgeStyle = comment.author?.role === 'RESEARCH_SUPERVISOR'
     ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -222,7 +223,7 @@ function CommentItem({
               >
                 <div className="w-6 h-6 rounded-full overflow-hidden shrink-0">
                   <img
-                    src={currentUser?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'U')}&background=0C4DA2&color=fff&size=32`}
+                    src={getProfileImageUrl(currentUser)}
                     alt="You"
                     className="w-full h-full object-cover"
                   />
@@ -412,17 +413,13 @@ export default function FeedComments({ threadId }: FeedCommentsProps) {
 
       {/* Comment Input */}
       <form onSubmit={handleCommentSubmit} className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-        {currentUser?.image ? (
+        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-slate-200 shadow-sm flex items-center justify-center">
           <img
-            src={currentUser.image}
-            className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm shrink-0"
+            src={getProfileImageUrl(currentUser)}
+            className="w-full h-full object-cover"
             alt={currentUser?.name || 'User'}
           />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-[#0C4DA2] text-white font-extrabold text-xs uppercase flex items-center justify-center border border-slate-200 shadow-sm shrink-0 select-none">
-            {(currentUser?.name || 'U').charAt(0)}
-          </div>
-        )}
+        </div>
         <div className="flex-1 relative">
           <input
             type="text"

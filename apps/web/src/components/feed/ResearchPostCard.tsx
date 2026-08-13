@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import FeedComments from './FeedComments';
+import { getProfileImageUrl } from '@/lib/avatar';
 
 interface ResearchPostCardProps {
   post: any;
@@ -45,12 +46,14 @@ export default function ResearchPostCard({
     currentUser, 
     toggleLikeThread, 
     toggleSaveThread, 
-    requestThreadCollaboration, 
     addToast,
     followedUserIds,
     toggleFollowUser,
     followedTopics,
-    toggleFollowTopic
+    toggleFollowTopic,
+    collabStatuses,
+    fetchCollabStatus,
+    sendCollabRequest
   } = useStore();
 
   const isLiked = (post.likes && post.likes.length > 0) || false;
@@ -58,8 +61,22 @@ export default function ResearchPostCard({
   const [isSaved, setIsSaved] = useState(
     (post.saves || []).some((s: any) => s.userId === currentUser?.id)
   );
+  
+  const authorId = post.authorId || post.author?.id;
+  const isOwner = authorId === currentUser?.id;
+  
+  React.useEffect(() => {
+    if (authorId && currentUser && !isOwner) {
+      fetchCollabStatus(authorId, post.id);
+    }
+  }, [authorId, post.id, currentUser, isOwner, fetchCollabStatus]);
+
+  const collabState = collabStatuses[authorId]?.status || 'NONE';
+  const collabRequestId = collabStatuses[authorId]?.requestId;
+  const collabId = collabStatuses[authorId]?.collaborationId;
+
   const [isCollaborating, setIsCollaborating] = useState(false);
-  const isFollowingAuthor = post.authorId ? !!followedUserIds[post.authorId] : false;
+  const isFollowingAuthor = authorId ? !!followedUserIds[authorId] : false;
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -67,9 +84,7 @@ export default function ResearchPostCard({
   const authorName = post.author?.name || 'Academic Researcher';
   const authorDept = post.author?.department || 'Research Division';
   const authorRole = post.author?.role || 'RESEARCH_SCHOLAR';
-  const avatarUrl = post.author?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0C4DA2&color=fff&size=64`;
-
-  const isOwner = post.authorId === currentUser?.id || post.author?.id === currentUser?.id;
+  const avatarUrl = getProfileImageUrl(post.author);
 
   const formatDate = (dateStr: string | Date) => {
     if (!dateStr) return 'Just now';
@@ -112,14 +127,33 @@ export default function ResearchPostCard({
 
   const handleCollabRequest = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isOwner) {
-      addToast('This is your own research post', 'info');
+    if (isOwner) return;
+
+    if (collabState === 'ACTIVE' && collabId) {
+      window.location.href = `/nexus?collab=${collabId}`;
       return;
     }
 
+    if (collabState === 'PENDING_SENT' || collabState === 'PENDING_RECEIVED') {
+      window.location.href = `/nexus?view=requests`;
+      return;
+    }
+
+    // Determine default message based on context
+    let defaultMsg = `I would like to collaborate with you on your research.`;
+    if (post.title) defaultMsg = `I am interested in collaborating on "${post.title}".`;
+    else if (post.isPaper) defaultMsg = `I found your recent publication very insightful and would love to explore a collaboration.`;
+
+    const customMessage = window.prompt(
+      `Send a collaboration request to ${authorName}`, 
+      defaultMsg
+    );
+    
+    if (customMessage === null) return;
+
     setIsCollaborating(true);
     try {
-      await requestThreadCollaboration(post.id);
+      await sendCollabRequest(authorId, post.id, customMessage);
       addToast(`Collaboration request sent to ${authorName}`, 'success');
     } catch (err: any) {
       addToast(err.message || 'Collaboration request failed', 'error');
@@ -409,11 +443,22 @@ export default function ResearchPostCard({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
                 isOwner 
                   ? 'opacity-40 text-slate-500 cursor-not-allowed' 
+                  : collabState === 'ACTIVE'
+                  ? 'bg-[#0C4DA2] text-white hover:bg-blue-800'
+                  : collabState === 'PENDING_SENT'
+                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  : collabState === 'PENDING_RECEIVED'
+                  ? 'bg-blue-100 text-[#0C4DA2] hover:bg-blue-200'
                   : 'text-[#0C4DA2] hover:bg-[#0C4DA2]/10 active:bg-[#0C4DA2]/20'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Collaborate</span>
+              <span className="hidden sm:inline">
+                {collabState === 'ACTIVE' ? 'Open Collab' : 
+                 collabState === 'PENDING_SENT' ? 'Request Sent' :
+                 collabState === 'PENDING_RECEIVED' ? 'Review Request' :
+                 'Collaborate'}
+              </span>
             </button>
           </div>
 

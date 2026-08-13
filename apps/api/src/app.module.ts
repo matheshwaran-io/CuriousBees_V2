@@ -25,6 +25,8 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { SupervisorRequestsModule } from './supervisor-requests/requests.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { FeedModule } from './feed/feed.module';
+import { CollaborationsModule } from './collaborations/collaborations.module';
+import { MyResearchModule } from './my-research/my-research.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { FeedModule } from './feed/feed.module';
     SupervisorRequestsModule,
     AnnouncementsModule,
     FeedModule,
+    CollaborationsModule,
+    MyResearchModule,
   ],
   controllers: [AppController],
   providers: [],

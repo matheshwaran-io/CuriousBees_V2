@@ -21,7 +21,8 @@ interface MobileFeedNavProps {
 
 export default function MobileFeedNav({ onOpenCreate }: MobileFeedNavProps) {
   const pathname = usePathname();
-  const { currentUser } = useStore();
+  const { currentUser, notifications } = useStore();
+  const unreadCount = (notifications || []).filter(n => !n.isRead).length;
 
   const isScholar = currentUser?.role === 'RESEARCH_SCHOLAR';
 
@@ -34,7 +35,11 @@ export default function MobileFeedNav({ onOpenCreate }: MobileFeedNavProps) {
         <div className="flex items-center gap-3">
           <Link href="/notifications" className="p-2 rounded-full text-slate-600 hover:bg-slate-100 relative">
             <Bell className="w-5 h-5 text-slate-700" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#0C4DA2]" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 min-w-[14px] h-3.5 px-1 bg-[#0C4DA2] text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white">
+                {unreadCount}
+              </span>
+            )}
           </Link>
         </div>
       </header>

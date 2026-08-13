@@ -3,22 +3,12 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useResearcherProfile } from '@/hooks/useResearchers';
-import { useFollowStatus, useFollowUser, useUnfollowUser } from '@/hooks/useFollow';
+import { useFollowStatus, useFollowUser, useUnfollowUser, useToggleFollowNotifications } from '@/hooks/useFollow';
 import { useStore } from '@/store/useStore';
 import { 
   ArrowLeft,
-  MapPin, 
-  Award,
-  BookOpen,
-  Network,
-  Loader2,
-  UserCheck,
-  MessageSquare,
-  FileText,
-  Briefcase,
-  Share2
+  Loader2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { AcademicProfileView } from '@/components/profile/AcademicProfileView';
 
 export default function ResearcherProfilePage() {
@@ -32,19 +22,15 @@ export default function ResearcherProfilePage() {
   
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
+  const toggleNotifyMutation = useToggleFollowNotifications();
 
   const status = followStatus as any;
-
-  const getInitials = (name: string) => {
-    if (!name) return 'U';
-    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  };
 
   if (isLoadingProfile || isLoadingFollow) {
     return (
       <div className="min-h-screen flex items-center justify-center gap-2 text-slate-500">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <span className="text-sm font-medium">Loading profile...</span>
+        <Loader2 className="w-8 h-8 text-[#0C4DA2] animate-spin" />
+        <span className="text-sm font-bold">Loading profile...</span>
       </div>
     );
   }
@@ -53,8 +39,8 @@ export default function ResearcherProfilePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
         <h2 className="text-2xl font-bold text-slate-900">Researcher Not Found</h2>
-        <button onClick={() => router.push('/researchers')} className="text-indigo-600 font-bold hover:underline">
-          Return to Directory
+        <button onClick={() => router.push('/researchers')} className="text-[#0C4DA2] font-bold hover:underline cursor-pointer">
+          Return to Researcher Network
         </button>
       </div>
     );
@@ -68,8 +54,9 @@ export default function ResearcherProfilePage() {
     }
   };
 
-  const handleMessage = () => {
-    router.push(`/nexus?userId=${id}`);
+  const handleToggleNotifications = () => {
+    const nextState = !status?.notificationsEnabled;
+    toggleNotifyMutation.mutate({ userId: id, enabled: nextState });
   };
 
   return (
@@ -78,9 +65,9 @@ export default function ResearcherProfilePage() {
       <div className="max-w-[1240px] mx-auto px-4 md:px-8 pt-4">
         <button 
           onClick={() => router.push('/researchers')}
-          className="flex items-center gap-2 text-[#6B7890] hover:text-[#004495] transition-colors text-xs font-bold uppercase tracking-wider cursor-pointer"
+          className="flex items-center gap-2 text-[#6B7890] hover:text-[#0C4DA2] transition-colors text-xs font-bold uppercase tracking-wider cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Researcher Directory
+          <ArrowLeft className="w-4 h-4" /> Back to Researcher Network
         </button>
       </div>
 
@@ -88,7 +75,9 @@ export default function ResearcherProfilePage() {
         user={researcher}
         isOwnProfile={currentUser?.id === id}
         isFollowing={status?.isFollowing}
+        notificationsEnabled={status?.notificationsEnabled}
         onFollowToggle={handleFollowToggle}
+        onToggleNotifications={handleToggleNotifications}
       />
     </div>
   );

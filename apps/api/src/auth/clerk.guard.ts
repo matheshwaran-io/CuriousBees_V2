@@ -151,8 +151,17 @@ export class ClerkAuthGuard implements CanActivate {
         this.logger.log(`Linking clerkId to existing user record for ${normalizedEmail}.`);
         updateData.clerkId = decodedToken.sub;
       }
-      if (decodedToken.picture && !user.image) {
-        updateData.image = decodedToken.picture;
+      // Dynamic profile image sync from Clerk API if clerkClient is available
+      if (decodedToken.sub && this.clerkClient) {
+        try {
+          const clerkUser = await this.clerkClient.users.getUser(decodedToken.sub);
+          if (clerkUser && clerkUser.imageUrl && clerkUser.imageUrl !== user.image) {
+            this.logger.log(`Syncing updated clerk profile image for ${normalizedEmail} from Clerk API.`);
+            updateData.image = clerkUser.imageUrl;
+          }
+        } catch (clerkApiError: any) {
+          this.logger.error(`Failed to fetch user image from Clerk API: ${clerkApiError.message}`);
+        }
       }
 
       if (Object.keys(updateData).length > 0) {

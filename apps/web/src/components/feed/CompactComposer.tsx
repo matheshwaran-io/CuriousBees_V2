@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { supabase, getStoragePublicUrl } from '@/lib/supabase';
+import { getProfileImageUrl } from '@/lib/avatar';
 
 const POST_TYPES = [
   { id: 'RESEARCH_UPDATE', label: 'Research Update', icon: MessageSquare, color: 'text-blue-600 bg-blue-50 border-blue-200' },
@@ -58,7 +59,7 @@ export default function CompactComposer({ onPostCreated }: CompactComposerProps)
   const photoInputRef = useRef<HTMLInputElement>(null);
   const typeMenuRef = useRef<HTMLDivElement>(null);
 
-  const avatarUrl = currentUser?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'Researcher')}&background=0C4DA2&color=fff&size=64`;
+  const avatarUrl = getProfileImageUrl(currentUser);
 
   // Auto-resize textarea
   useEffect(() => {

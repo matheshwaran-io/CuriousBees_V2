@@ -41,15 +41,39 @@ const HOURS = [
 
 const HOUR_HEIGHT = 64; // px per hour slot
 
+/**
+ * Safely parses any date string (ISO '2026-08-15T00:00:00.000Z', '2026-08-15', or Date object)
+ * into a consistent local YYYY-M-D key for calendar cell indexing.
+ */
+function getEventDateKey(dateInput: string | Date | null | undefined): string | null {
+  if (!dateInput) return null;
+  try {
+    let d: Date;
+    if (typeof dateInput === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+        const [y, m, day] = dateInput.split('-').map(Number);
+        return `${y}-${m - 1}-${day}`;
+      }
+      d = new Date(dateInput);
+    } else {
+      d = dateInput;
+    }
+    if (isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  } catch {
+    return null;
+  }
+}
+
 function parseEventTimeRange(timeStr: string | undefined) {
   if (!timeStr) return { startHour: 9, startMinute: 0, durationMinutes: 60, displayTime: '10:00 AM' };
   try {
     const parts = timeStr.split(' - ');
     const parseTime = (t: string) => {
-      const match = t.trim().match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      const match = t.trim().match(/(\d+)(?::(\d+))?\s*(AM|PM)?/i);
       if (!match) return { h: 9, m: 0 };
       let h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
+      const m = match[2] ? parseInt(match[2], 10) : 0;
       const period = match[3]?.toUpperCase();
       if (period === 'PM' && h < 12) h += 12;
       if (period === 'AM' && h === 12) h = 0;
@@ -57,25 +81,27 @@ function parseEventTimeRange(timeStr: string | undefined) {
     };
 
     const start = parseTime(parts[0]);
+    const clampedStartHour = Math.max(6, Math.min(21, start.h));
+
     if (parts.length > 1) {
       const end = parseTime(parts[1]);
       let duration = (end.h - start.h) * 60 + (end.m - start.m);
       if (duration <= 0) duration = 60;
       return { 
-        startHour: start.h, 
+        startHour: clampedStartHour, 
         startMinute: start.m, 
         durationMinutes: Math.min(duration, 300),
         displayTime: timeStr
       };
     }
-    return { startHour: start.h, startMinute: start.m, durationMinutes: 60, displayTime: timeStr };
+    return { startHour: clampedStartHour, startMinute: start.m, durationMinutes: 60, displayTime: timeStr };
   } catch (e) {
     return { startHour: 9, startMinute: 0, durationMinutes: 60, displayTime: timeStr || '10:00 AM' };
   }
 }
 
 export function PremiumCalendarWidget({ 
-  events, 
+  events = [], 
   onEventClick, 
   view, 
   selectedDate, 
@@ -85,9 +111,10 @@ export function PremiumCalendarWidget({
   // Group events by date string (YYYY-M-D)
   const eventsByDate = useMemo(() => {
     const map = new Map<string, Event[]>();
-    events.forEach(e => {
-      const d = new Date(e.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    (events || []).forEach(e => {
+      if (!e || !e.date) return;
+      const key = getEventDateKey(e.date);
+      if (!key) return;
       if (!map.has(key)) map.set(key, []);
       map.get(key)?.push(e);
     });
@@ -187,8 +214,8 @@ export function PremiumCalendarWidget({
 
               {/* Render Positioned Event Cards */}
               {(() => {
-                const key = `${selectedDate.getFullYear()}-${selectedDate.getMonth()}-${selectedDate.getDate()}`;
-                const dayEvents = eventsByDate.get(key) || [];
+                const key = getEventDateKey(selectedDate);
+                const dayEvents = key ? (eventsByDate.get(key) || []) : [];
 
                 if (dayEvents.length === 0) {
                   return (
@@ -295,8 +322,8 @@ export function PremiumCalendarWidget({
               <div className="grid grid-cols-7 flex-1 relative" style={{ height: `${HOURS.length * HOUR_HEIGHT}px` }}>
                 {/* Vertical Grid Dividers */}
                 {weekDays.map((date, dayIdx) => {
-                  const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-                  const dayEvents = eventsByDate.get(key) || [];
+                  const key = getEventDateKey(date);
+                  const dayEvents = key ? (eventsByDate.get(key) || []) : [];
 
                   return (
                     <div key={date.toISOString()} className="relative border-r border-slate-100 last:border-r-0 h-full">
@@ -357,8 +384,8 @@ export function PremiumCalendarWidget({
                 return <div key={`empty-${i}`} className="bg-slate-50/30 min-h-[110px]" />;
               }
 
-              const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-              const dayEvents = eventsByDate.get(key) || [];
+              const key = getEventDateKey(date);
+              const dayEvents = key ? (eventsByDate.get(key) || []) : [];
               const isToday = new Date().toDateString() === date.toDateString();
               const isSelected = selectedDate.toDateString() === date.toDateString();
 
@@ -533,16 +560,19 @@ export function PremiumCalendarWidget({
               const now = new Date();
               now.setHours(0, 0, 0, 0);
 
-              const filteredList = events.filter(e => {
-                const eDate = new Date(e.date);
-                eDate.setHours(0, 0, 0, 0);
+              const filteredList = (events || []).filter(e => {
+                if (!e || !e.date) return false;
 
                 if (agendaSelectedDate) {
-                  return eDate.toDateString() === agendaSelectedDate.toDateString();
+                  return getEventDateKey(e.date) === getEventDateKey(agendaSelectedDate);
                 }
 
+                const eDate = new Date(e.date);
+                if (isNaN(eDate.getTime())) return false;
+                eDate.setHours(0, 0, 0, 0);
+
                 if (agendaFilter === 'today') {
-                  return eDate.toDateString() === now.toDateString();
+                  return getEventDateKey(e.date) === getEventDateKey(now);
                 }
 
                 if (agendaFilter === 'upcoming') {

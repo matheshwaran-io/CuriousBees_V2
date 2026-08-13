@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import SpotlightSearch from './SpotlightSearch';
 import { cn } from '@/lib/utils';
+import { getProfileImageUrl } from '@/lib/avatar';
 import { ROLE_LABELS } from '@/lib/auth/role-mapping';
 import { RoleBadge } from './shared/role-badge';
 import type { UserRole } from '@curiousbees/types';
@@ -107,15 +108,11 @@ export default function Navbar() {
             <Settings className="w-5 h-5" />
           </Link>
 
-          {/* Avatar */}
-          <div className="ml-1 h-8 w-8 rounded-full bg-[#0B4EA2] text-white font-bold border border-[#E4E9F2] overflow-hidden shadow-xs shrink-0 flex items-center justify-center text-xs">
+          <div className="ml-1 h-8 w-8 rounded-full bg-slate-100 border border-[#E4E9F2] overflow-hidden shadow-xs shrink-0 flex items-center justify-center text-xs">
             <img
               alt="Profile"
               className="w-full h-full object-cover"
-              src={
-                currentUser?.image ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'U')}&background=0B4EA2&color=fff&size=64`
-              }
+              src={getProfileImageUrl(currentUser)}
             />
           </div>
         </div>

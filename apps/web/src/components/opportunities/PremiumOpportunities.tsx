@@ -137,16 +137,16 @@ export function PremiumOpportunities() {
   const uniqueDepartments = useMemo(() => {
     const depts = new Set<string>();
     if (currentUser?.department) depts.add(currentUser.department);
-    opportunities.forEach(o => {
-      if (o.department) depts.add(o.department);
+    (opportunities || []).forEach(o => {
+      if (o && o.department) depts.add(o.department);
     });
     return Array.from(depts).sort();
   }, [opportunities, currentUser?.department]);
 
   const uniqueDomains = useMemo(() => {
     const domains = new Set<string>(PREDEFINED_DOMAINS);
-    opportunities.forEach(o => {
-      if (o.researchDomain) {
+    (opportunities || []).forEach(o => {
+      if (o && o.researchDomain) {
         o.researchDomain.split(',').map(d => d.trim()).filter(Boolean).forEach(d => domains.add(d));
       }
     });
@@ -155,8 +155,8 @@ export function PremiumOpportunities() {
 
   const uniquePIs = useMemo(() => {
     const pis = new Set<string>();
-    opportunities.forEach(o => {
-      if (o.author?.name) pis.add(o.author.name);
+    (opportunities || []).forEach(o => {
+      if (o && o.author?.name) pis.add(o.author.name);
     });
     return Array.from(pis).sort();
   }, [opportunities]);
@@ -281,11 +281,12 @@ export function PremiumOpportunities() {
   const filteredOpps = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
-    const matched = opportunities.filter((o) => {
+    const matched = (opportunities || []).filter((o) => {
+      if (!o || !o.title) return false;
       // 1. Text Search across Title, Domain, Description, Supervisor, Dept, Type
       const matchesSearch = !q || 
         o.title.toLowerCase().includes(q) || 
-        o.description.toLowerCase().includes(q) ||
+        (o.description || '').toLowerCase().includes(q) ||
         (o.researchDomain || '').toLowerCase().includes(q) ||
         (o.department || '').toLowerCase().includes(q) ||
         (o.opportunityType || '').toLowerCase().includes(q) ||
@@ -357,12 +358,14 @@ export function PremiumOpportunities() {
   const formatDate = (dateStr: string | Date | null | undefined) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const isExpired = (deadlineStr: string | Date | null | undefined) => {
     if (!deadlineStr) return false;
-    return new Date(deadlineStr) < new Date();
+    const d = new Date(deadlineStr);
+    if (isNaN(d.getTime())) return false;
+    return d < new Date();
   };
 
   const handleOpenDrawer = () => {

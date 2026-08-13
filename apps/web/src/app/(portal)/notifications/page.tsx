@@ -1,65 +1,319 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
-import { Bell, Info, Mail, AlertTriangle, Calendar, Award } from 'lucide-react';
+import { 
+  Bell, 
+  CheckCircle2, 
+  FileText, 
+  Briefcase, 
+  Users, 
+  Award, 
+  Sparkles, 
+  Calendar,
+  ExternalLink,
+  Search
+} from 'lucide-react';
+import { Notification } from '@curiousbees/types';
+
+function formatRelativeTime(dateInput: Date | string | undefined): string {
+  if (!dateInput) return 'Recently';
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return 'Recently';
+    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return `${Math.floor(diffSec / 86400)}d ago`;
+  } catch {
+    return 'Recently';
+  }
+}
+
+type FilterCategory = 'ALL' | 'UNREAD' | 'RESEARCH' | 'OPPORTUNITIES' | 'COLLABORATION' | 'SYSTEM';
 
 export default function NotificationsPage() {
-  const { notifications, fetchNotifications, isLoading } = useStore();
+  const router = useRouter();
+  const { notifications, fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead } = useStore();
+  
+  const [activeFilter, setActiveFilter] = useState<FilterCategory>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  const unreadCount = useMemo(() => {
+    return (notifications || []).filter(n => !n.isRead).length;
+  }, [notifications]);
+
+  // Filtered Notifications
+  const filteredNotifications = useMemo(() => {
+    return (notifications || []).filter(n => {
+      // 1. Filter category
+      if (activeFilter === 'UNREAD' && n.isRead) return false;
+      if (activeFilter === 'RESEARCH' && !(n.type === 'RESEARCH_PAPER' || n.type === 'POST')) return false;
+      if (activeFilter === 'OPPORTUNITIES' && n.type !== 'OPPORTUNITY') return false;
+      if (activeFilter === 'COLLABORATION' && n.type !== 'COLLABORATION') return false;
+      if (activeFilter === 'SYSTEM' && !(n.type === 'SYSTEM' || n.type === 'EVENT' || n.type === 'ADVISORY' || n.type === 'SUPERVISION')) return false;
+
+      // 2. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesTitle = (n.title || '').toLowerCase().includes(q);
+        const matchesBody = (n.body || '').toLowerCase().includes(q);
+        if (!matchesTitle && !matchesBody) return false;
+      }
+
+      return true;
+    });
+  }, [notifications, activeFilter, searchQuery]);
+
+  // Date Grouping Helper (TODAY, YESTERDAY, EARLIER)
+  const groupedNotifications = useMemo(() => {
+    const today: Notification[] = [];
+    const yesterday: Notification[] = [];
+    const earlier: Notification[] = [];
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfYesterday = startOfToday - 86400000;
+
+    filteredNotifications.forEach(n => {
+      const d = n.createdAt ? new Date(n.createdAt) : null;
+      if (!d || isNaN(d.getTime())) {
+        today.push(n);
+        return;
+      }
+      const time = d.getTime();
+      if (time >= startOfToday) {
+        today.push(n);
+      } else if (time >= startOfYesterday) {
+        yesterday.push(n);
+      } else {
+        earlier.push(n);
+      }
+    });
+
+    return [
+      { group: 'TODAY', items: today },
+      { group: 'YESTERDAY', items: yesterday },
+      { group: 'EARLIER', items: earlier },
+    ].filter(g => g.items.length > 0);
+  }, [filteredNotifications]);
+
+  const handleItemClick = (notif: Notification) => {
+    markNotificationAsRead(notif.id);
+    const target = notif.href || notif.actionUrl;
+    if (target) {
+      router.push(target);
+    }
+  };
+
+  const getIcon = (type?: string) => {
+    switch(type) {
+      case 'POST':
+      case 'RESEARCH_PAPER': 
+        return <FileText className="w-4 h-4 text-blue-600" />;
+      case 'OPPORTUNITY': 
+        return <Briefcase className="w-4 h-4 text-[#0C4DA2]" />;
+      case 'COLLABORATION': 
+        return <Users className="w-4 h-4 text-blue-700" />;
+      case 'ADVISORY':
+      case 'SUPERVISION': 
+        return <Award className="w-4 h-4 text-amber-600" />;
+      case 'EVENT':
+        return <Calendar className="w-4 h-4 text-emerald-600" />;
+      default: 
+        return <Sparkles className="w-4 h-4 text-[#0C4DA2]" />;
+    }
+  };
+
+  const getTypeLabel = (type?: string) => {
+    switch(type) {
+      case 'POST':
+      case 'RESEARCH_PAPER': return 'Research Paper';
+      case 'OPPORTUNITY': return 'Opportunity';
+      case 'COLLABORATION': return 'Collaboration';
+      case 'ADVISORY':
+      case 'SUPERVISION': return 'Advisory Update';
+      case 'EVENT': return 'Event';
+      default: return 'System';
+    }
+  };
+
   return (
-    <div className="space-y-6 text-left select-none max-w-2xl">
+    <div className="space-y-6 text-left select-none max-w-4xl mx-auto pb-16">
       
-      {/* 🚀 Header */}
-      <div className="border-b border-slate-100 pb-5">
-        <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
-          <Bell className="w-4 h-4 text-primary animate-bounce" />
-          <span>FCM Push Logs</span>
-        </span>
-        <h1 className="cb-page-title mt-2 font-display">System Notifications</h1>
-        <p className="cb-page-subtitle">
-          Review recent push notification logs dispatched to your devices.
-        </p>
-      </div>
-
-      {/* 🚀 Notifications List */}
-      <div className="space-y-4">
-        {notifications.length === 0 ? (
-          <div className="cb-card p-12 text-center bg-white/95 backdrop-blur-md">
-            <Bell className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-slate-900 font-bold text-sm">All caught up!</h3>
-            <p className="text-slate-400 text-xs mt-1">
-              You do not have any push notifications logged in this cycle.
-            </p>
+      {/* ─── 1. HEADER ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-xl p-6 md:p-8 rounded-[32px] border border-slate-200/80 shadow-[0_8px_30px_rgb(12,77,162,0.04)]">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest bg-[#0C4DA2]/10 text-[#0C4DA2] px-3 py-1 rounded-full flex items-center gap-1.5">
+              <Bell className="w-3.5 h-3.5" />
+              SYSTEM NOTIFICATIONS
+            </span>
+            {unreadCount > 0 && (
+              <span className="text-[10px] font-black text-white bg-[#0C4DA2] px-2.5 py-0.5 rounded-full">
+                {unreadCount} Unread
+              </span>
+            )}
           </div>
-        ) : (
-          notifications.map((notif) => (
-            <div key={notif.id} className="cb-card p-4 bg-white/95 backdrop-blur-md flex items-start gap-4">
-              <div className="w-8 h-8 rounded-lg bg-primary/5 text-primary border border-primary/10 flex items-center justify-center shrink-0">
-                <Bell className="w-4.5 h-4.5" />
-              </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight font-display">Notification Center</h1>
+          <p className="text-xs md:text-sm font-medium text-slate-500 mt-1">
+            Review recent updates, paper publications, grant announcements, and collaboration requests.
+          </p>
+        </div>
 
-              <div className="space-y-1 flex-1">
-                <div className="flex items-center justify-between gap-4">
-                  <h4 className="font-bold text-slate-900 text-xs leading-tight">
-                    {notif.title}
-                  </h4>
-                  <span className="text-[9px] text-slate-400 font-bold shrink-0">
-                    {new Date(notif.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                  {notif.body}
-                </p>
-              </div>
-            </div>
-          ))
+        {unreadCount > 0 && (
+          <button
+            onClick={() => markAllNotificationsAsRead()}
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200/70 text-[#0C4DA2] rounded-2xl text-xs font-bold transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Mark all as read</span>
+          </button>
         )}
       </div>
+
+      {/* ─── 2. FILTER PILLS & SEARCH BAR ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {[
+            { id: 'ALL', label: 'All' },
+            { id: 'UNREAD', label: `Unread (${unreadCount})` },
+            { id: 'RESEARCH', label: 'Research' },
+            { id: 'OPPORTUNITIES', label: 'Opportunities' },
+            { id: 'COLLABORATION', label: 'Collaboration' },
+            { id: 'SYSTEM', label: 'System' },
+          ].map((cat) => {
+            const isSelected = activeFilter === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveFilter(cat.id as FilterCategory)}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-2xs'
+                    : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="relative shrink-0 sm:w-64">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter notifications..."
+            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200/80 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0C4DA2] focus:ring-1 focus:ring-[#0C4DA2] shadow-2xs"
+          />
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+        </div>
+      </div>
+
+      {/* ─── 3. NOTIFICATION GROUPS / LIST ─── */}
+      {groupedNotifications.length === 0 ? (
+        /* Empty State */
+        <div className="bg-white/90 backdrop-blur-xl border border-slate-200/80 p-12 text-center rounded-[32px] shadow-sm flex flex-col items-center justify-center min-h-[300px]">
+          <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0C4DA2] mb-3">
+            <Bell className="w-6 h-6 opacity-60" />
+          </div>
+          <h3 className="text-slate-900 font-extrabold text-base">All caught up!</h3>
+          <p className="text-slate-500 text-xs mt-1 max-w-sm font-medium">
+            {activeFilter !== 'ALL' || searchQuery
+              ? 'No notifications match your selected filter.'
+              : 'You do not have any notifications right now.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {groupedNotifications.map((group) => (
+            <div key={group.group} className="space-y-3">
+              {/* Date Group Heading */}
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {group.group}
+                </span>
+                <div className="h-px bg-slate-200/70 flex-1" />
+              </div>
+
+              {/* Items in Group */}
+              <div className="space-y-2.5">
+                {group.items.map((notif) => (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleItemClick(notif)}
+                    className={`p-4 md:p-5 rounded-2xl border transition-all cursor-pointer group flex items-start gap-4 shadow-2xs hover:shadow-xs ${
+                      !notif.isRead 
+                        ? 'bg-blue-50/40 border-blue-200/80' 
+                        : 'bg-white border-slate-200/80 hover:bg-slate-50/80'
+                    }`}
+                  >
+                    {/* Icon Box */}
+                    <div className={`p-2.5 rounded-xl shrink-0 mt-0.5 border shadow-2xs ${
+                      notif.type === 'RESEARCH_PAPER' || notif.type === 'POST' ? 'bg-blue-50 border-blue-100' :
+                      notif.type === 'OPPORTUNITY' ? 'bg-blue-50/80 border-blue-100' :
+                      notif.type === 'COLLABORATION' ? 'bg-blue-50/50 border-blue-100' :
+                      notif.type === 'ADVISORY' || notif.type === 'SUPERVISION' ? 'bg-amber-50 border-amber-100' :
+                      'bg-slate-50 border-slate-100'
+                    }`}>
+                      {getIcon(notif.type)}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/60">
+                            {getTypeLabel(notif.type)}
+                          </span>
+                          <h4 className={`text-xs md:text-sm text-slate-900 group-hover:text-[#0C4DA2] transition-colors truncate ${
+                            !notif.isRead ? 'font-extrabold' : 'font-semibold'
+                          }`}>
+                            {notif.title}
+                          </h4>
+                        </div>
+
+                        <span className="text-[10px] font-medium text-slate-400 shrink-0">
+                          {notif.time || formatRelativeTime(notif.createdAt)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                        {notif.body}
+                      </p>
+
+                      {/* Optional Action / Link button */}
+                      {(notif.href || notif.actionUrl) && (
+                        <div className="mt-2.5">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0C4DA2] group-hover:underline">
+                            <span>View details</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Unread dot */}
+                    {!notif.isRead && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#0C4DA2] shrink-0 mt-2.5 animate-pulse" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

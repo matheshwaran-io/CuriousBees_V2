@@ -235,6 +235,58 @@ export interface CollaborationRequest {
   thread?: Thread;
 }
 
+export type CollabRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
+export type CollaborationStatus = 'ACTIVE' | 'CLOSED';
+
+export interface ResearchCollabRequest {
+  id: string;
+  requesterId: string;
+  recipientId: string;
+  threadId?: string | null;
+  message?: string | null;
+  status: CollabRequestStatus;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  
+  requester?: User;
+  recipient?: User;
+  thread?: Thread;
+}
+
+export interface ResearchCollaboration {
+  id: string;
+  requesterId: string;
+  recipientId: string;
+  threadId?: string | null;
+  workspaceId?: string | null;
+  status: CollaborationStatus;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  lastActivityAt: Date | string;
+
+  requester?: User;
+  recipient?: User;
+  thread?: Thread;
+  workspace?: Workspace;
+  messages?: CollaborationMessage[];
+}
+
+export interface CollaborationMessage {
+  id: string;
+  collaborationId: string;
+  senderId: string;
+  content: string;
+  createdAt: Date | string;
+
+  sender?: User;
+}
+
+export interface CollaborationStatusResponse {
+  status: 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACTIVE';
+  requestId?: string;
+  collaborationId?: string;
+}
+
 export interface Workspace {
   id: string;
   title: string;
@@ -348,13 +400,105 @@ export interface Report {
   updatedAt: Date | string;
 }
 
+export type NotificationType = 
+  | 'RESEARCH_PAPER' 
+  | 'OPPORTUNITY' 
+  | 'COLLABORATION' 
+  | 'ADVISORY' 
+  | 'EVENT' 
+  | 'SYSTEM'
+  | 'POST'
+  | 'SUPERVISION'
+  | 'COLLABORATION_REQUEST'
+  | 'COLLABORATION_ACCEPTED'
+  | 'COLLABORATION_DECLINED'
+  | 'COLLABORATION_MESSAGE';
+
 export interface Notification {
   id: string;
-  userId: string;
-  eventId: string | null;
+  userId?: string;
+  eventId?: string | null;
+  type?: NotificationType;
   title: string;
   body: string;
-  sentStatus: boolean;
-  openedStatus: boolean;
+  message?: string;
+  sentStatus?: boolean;
+  openedStatus?: boolean;
+  isRead?: boolean;
+  actionUrl?: string;
+  href?: string;
+  time?: string;
   createdAt: Date | string;
 }
+
+// My Research Module Types
+export type ResearchStatus = 'ACTIVE' | 'NOT_STARTED' | 'ON_HOLD' | 'COMPLETED';
+
+export type ResearchStage = 
+  | 'PROPOSAL' 
+  | 'LITERATURE_REVIEW' 
+  | 'METHODOLOGY' 
+  | 'IMPLEMENTATION' 
+  | 'EVALUATION' 
+  | 'THESIS_PUBLICATION';
+
+export type MilestoneStatus = 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
+export type MilestonePriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface ResearchMilestone {
+  id: string;
+  researchProfileId: string;
+  title: string;
+  description?: string | null;
+  stage: ResearchStage;
+  status: MilestoneStatus;
+  priority: MilestonePriority;
+  dueDate?: Date | string | null;
+  completedAt?: Date | string | null;
+  createdById?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface ResearchActivity {
+  id: string;
+  researchProfileId: string;
+  actorId: string;
+  actor?: User;
+  type: string;
+  description: string;
+  metadata?: string | null;
+  createdAt: Date | string;
+}
+
+export interface ResearchProfile {
+  id: string;
+  scholarId: string;
+  scholar?: User;
+  title: string;
+  researchArea: string;
+  abstract?: string | null;
+  status: ResearchStatus;
+  currentStage: ResearchStage;
+  startDate?: Date | string | null;
+  expectedCompletionDate?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  milestones?: ResearchMilestone[];
+  activities?: ResearchActivity[];
+  supervisor?: any;
+  activeCollabId?: string | null;
+}
+
+export interface ResearcherExternalLink {
+  id: string;
+  userId: string;
+  platform: 'ORCID' | 'GOOGLE_SCHOLAR' | 'RESEARCHGATE' | 'GITHUB' | 'LINKEDIN' | 'WEBSITE' | 'PORTFOLIO' | 'YOUTUBE' | 'TWITTER' | 'OTHER' | string;
+  label?: string | null;
+  url: string;
+  isVisible: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification } from '@curiousbees/types';
+import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification, ResearchCollaboration, CollaborationMessage, ResearchCollabRequest, CollaborationStatusResponse } from '@curiousbees/types';
 // Clerk is used for authentication
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@curiousbees/constants';
@@ -15,6 +15,76 @@ const MOCK_INTERESTS = [
   'VLSI System Design',
   'Bioinformatics'
 ];
+
+const DEFAULT_INITIAL_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'notif-1',
+    type: 'RESEARCH_PAPER',
+    title: 'New Research Paper Shared',
+    body: 'Dr. Suresh Kumar published a paper in IEEE TPAMI',
+    time: '10m ago',
+    href: '/feed?type=PUBLICATION',
+    isRead: false,
+    sentStatus: false,
+    openedStatus: false,
+    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'notif-2',
+    type: 'OPPORTUNITY',
+    title: 'New Research Opportunity',
+    body: 'SERB-DST Selective Excellence Grant 2025 is now accepting proposals',
+    time: '25m ago',
+    href: '/opportunities',
+    isRead: false,
+    sentStatus: false,
+    openedStatus: false,
+    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'notif-3',
+    type: 'COLLABORATION',
+    title: 'Collaboration Invitation',
+    body: 'A researcher with matching interests requested a collaboration',
+    time: '1h ago',
+    href: '/feed?type=COLLABORATION_REQUEST',
+    isRead: false,
+    sentStatus: false,
+    openedStatus: false,
+    createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: 'notif-4',
+    type: 'ADVISORY',
+    title: 'PhD Advisory Update',
+    body: 'Annual research milestone review schedule released',
+    time: '2h ago',
+    href: '/scholar/my-research',
+    isRead: false,
+    sentStatus: false,
+    openedStatus: false,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  }
+];
+
+function deriveNotificationType(title: string = ''): any {
+  const t = title.toLowerCase();
+  if (t.includes('paper') || t.includes('publication') || t.includes('journal')) return 'RESEARCH_PAPER';
+  if (t.includes('grant') || t.includes('opportunity') || t.includes('phd position') || t.includes('funding')) return 'OPPORTUNITY';
+  if (t.includes('collab') || t.includes('invitation') || t.includes('peer')) return 'COLLABORATION';
+  if (t.includes('supervisor') || t.includes('scholar') || t.includes('advisory') || t.includes('milestone')) return 'ADVISORY';
+  if (t.includes('event') || t.includes('conference') || t.includes('seminar')) return 'EVENT';
+  return 'SYSTEM';
+}
+
+function deriveNotificationHref(type?: string, title: string = ''): string {
+  if (type === 'RESEARCH_PAPER') return '/feed?type=PUBLICATION';
+  if (type === 'OPPORTUNITY') return '/opportunities';
+  if (type === 'COLLABORATION') return '/feed?type=COLLABORATION_REQUEST';
+  if (type === 'ADVISORY' || type === 'SUPERVISION') return '/scholar/my-research';
+  if (type === 'EVENT') return '/events';
+  return '/notifications';
+}
 
 interface AppState {
   // Session & Profiles
@@ -47,6 +117,33 @@ interface AppState {
   adminUsers: User[];
   adminAuditLogs: AuditLog[];
   collaborators: User[];
+
+  // New Controlled Research Collaboration State
+  collabStatuses: Record<string, CollaborationStatusResponse>;
+  myCollaborations: ResearchCollaboration[];
+  activeCollabMessages: CollaborationMessage[];
+  myCollabRequests: { sent: ResearchCollabRequest[]; received: ResearchCollabRequest[] };
+
+  // My Research Module State & Actions
+  myResearchProfile: any | null;
+  myResearchMilestones: any[];
+  myResearchActivities: any[];
+  myResearchMaterials: any[];
+
+  fetchMyResearch: () => Promise<any>;
+  updateResearchProfile: (data: any) => Promise<any>;
+  fetchMyResearchMilestones: () => Promise<any[]>;
+  createResearchMilestone: (data: any) => Promise<any>;
+  updateMilestone: (id: string, data: any) => Promise<any>;
+  completeMilestone: (id: string) => Promise<any>;
+  fetchMyResearchActivity: () => Promise<any[]>;
+  fetchMyResearchMaterials: () => Promise<any[]>;
+
+  // External Links Actions
+  fetchUserExternalLinks: (userId: string) => Promise<any[]>;
+  addExternalLink: (userId: string, data: { platform: string; label?: string; url: string }) => Promise<any>;
+  updateExternalLink: (userId: string, linkId: string, data: { label?: string; url?: string; isVisible?: boolean }) => Promise<any>;
+  deleteExternalLink: (userId: string, linkId: string) => Promise<void>;
 
   publications: Publication[];
   reports: Report[];
@@ -103,7 +200,8 @@ interface AppState {
   connectWithPeer: (peerId: string) => Promise<'connect' | 'pending' | 'connected' | null>;
   searchFeed: (query: string) => Promise<{ threads: Thread[], publications: Publication[], users: User[] }>;
   createOpportunity: (titleOrPayload: string | any, description?: string, department?: string, researchDomain?: string, extraData?: any) => Promise<Opportunity>;
-  updateProfile: (data: { name: string; department: string; bio: string; role: UserRole; interests: string[] }) => Promise<User>;
+  fetchProfile: () => Promise<any>;
+  updateProfile: (data: { name?: string; department?: string; bio?: string; role?: UserRole; interests?: string[] }) => Promise<User>;
   fetchEvents: (showIndicator?: boolean) => Promise<Event[]>;
 
   createEvent: (title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
@@ -135,6 +233,18 @@ interface AppState {
   toggleWorkspaceMilestone: (workspaceId: string, milestoneId: string, completed: boolean) => Promise<WorkspaceMilestone>;
   addWorkspaceAnnouncement: (workspaceId: string, title: string, content: string) => Promise<WorkspaceAnnouncement>;
 
+  // Controlled Research Collaborations
+  fetchCollabStatus: (targetUserId: string, threadId?: string) => Promise<CollaborationStatusResponse>;
+  sendCollabRequest: (recipientId: string, threadId?: string, message?: string) => Promise<ResearchCollabRequest>;
+  cancelCollabRequest: (requestId: string) => Promise<ResearchCollabRequest>;
+  acceptCollabRequest: (requestId: string) => Promise<ResearchCollaboration>;
+  declineCollabRequest: (requestId: string) => Promise<ResearchCollabRequest>;
+  fetchMyCollaborations: () => Promise<ResearchCollaboration[]>;
+  fetchMyCollabRequests: () => Promise<{ sent: ResearchCollabRequest[]; received: ResearchCollabRequest[] }>;
+  fetchCollabMessages: (collabId: string, page?: number) => Promise<CollaborationMessage[]>;
+  sendCollabMessage: (collabId: string, content: string) => Promise<CollaborationMessage>;
+
+
   // Admin / Governance
   fetchAdminUsers: () => Promise<User[]>;
   fetchAdminAuditLogs: () => Promise<AuditLog[]>;
@@ -164,6 +274,9 @@ interface AppState {
 
   // Notifications
   fetchNotifications: () => Promise<Notification[]>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  addNotification: (data: Partial<Notification>) => void;
 
   // Departments
   fetchDepartments: () => Promise<Department[]>;
@@ -217,6 +330,7 @@ export const useStore = create<AppState>((set, get) => ({
   feedError: null,
   opportunities: [],
   events: [],
+  publications: [],
 
   collaborators: [],
   pendingApprovals: [],
@@ -226,8 +340,15 @@ export const useStore = create<AppState>((set, get) => ({
   activeWorkspace: null,
   adminUsers: [],
   adminAuditLogs: [],
-
-  publications: [],
+  
+  collabStatuses: {},
+  myCollaborations: [],
+  activeCollabMessages: [],
+  myCollabRequests: { sent: [], received: [] },
+  myResearchProfile: null,
+  myResearchMilestones: [],
+  myResearchActivities: [],
+  myResearchMaterials: [],
   reports: [],
   departments: [],
   supervisors: [],
@@ -519,30 +640,40 @@ export const useStore = create<AppState>((set, get) => ({
     return activeSyncPromise;
   },
 
-  // 2. Fetch live Threads and Opportunities concurrently
+  // 2. Fetch live Threads, Opportunities, and Events concurrently
   fetchData: async (skipThreads?: boolean) => {
     set({ isLoading: true });
     try {
-      const promises = [apiFetch('/api/opportunities')];
+      const promises = [
+        apiFetch('/api/opportunities'),
+        apiFetch('/api/events')
+      ];
       if (!skipThreads) {
         promises.push(apiFetch('/api/threads'));
       }
 
       const results = await Promise.all(promises);
       const oppsRes = results[0];
-      const threadsRes = !skipThreads ? results[1] : null;
+      const eventsRes = results[1];
+      const threadsRes = !skipThreads ? results[2] : null;
 
       if (oppsRes.ok) {
-        const opportunities = await oppsRes.json();
-        set({ opportunities });
+        const data = await oppsRes.json();
+        set({ opportunities: Array.isArray(data) ? data : [] });
+      }
+
+      if (eventsRes.ok) {
+        const data = await eventsRes.json();
+        set({ events: Array.isArray(data) ? data : [] });
       }
 
       if (threadsRes && threadsRes.ok) {
-        const threads = await threadsRes.json();
-        set({ threads });
+        const data = await threadsRes.json();
+        set({ threads: Array.isArray(data) ? data : [] });
       }
 
-      // Fetch user's current follow states (researchers, domains, topics)
+      // Fetch notifications & follow state concurrently
+      get().fetchNotifications();
       get().fetchFollowState();
     } catch (e) {
       console.error('Failed to load data:', e);
@@ -980,6 +1111,20 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  fetchProfile: async () => {
+    try {
+      const res = await apiFetch('/api/users/profile');
+      if (res.ok) {
+        const user = await res.json();
+        set({ currentUser: user });
+        return user;
+      }
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+    }
+    return null;
+  },
+
   // 7. Update logged-in Profile metadata
   updateProfile: async (data) => {
     set({ isLoading: true });
@@ -1008,12 +1153,13 @@ export const useStore = create<AppState>((set, get) => ({
       const res = await apiFetch('/api/events');
       if (res.ok) {
         const data = await res.json();
-        set({ events: data });
-        return data;
+        const eventList = Array.isArray(data) ? data : [];
+        set({ events: eventList });
+        return eventList;
       }
       throw new Error();
     } catch (e) {
-      return get().events;
+      return get().events || [];
     } finally {
       set({ isLoading: false });
     }
@@ -1432,25 +1578,209 @@ export const useStore = create<AppState>((set, get) => ({
         body: JSON.stringify({ title, content }),
       });
       if (res.ok) {
-        const announcementData = await res.json();
-        set(state => {
-          if (state.activeWorkspace && state.activeWorkspace.id === workspaceId) {
-            return {
-              activeWorkspace: {
+        const data = await res.json();
+        // Insert at beginning of announcements
+        set((state) => ({
+          activeWorkspace: state.activeWorkspace
+            ? {
                 ...state.activeWorkspace,
-                announcements: [announcementData, ...(state.activeWorkspace.announcements || [])]
+                announcements: [data, ...(state.activeWorkspace.announcements || [])]
               }
-            };
-          }
-          return {};
-        });
-        return announcementData;
+            : null
+        }));
+        return data;
       }
-      throw new Error('Failed to post announcement.');
+      throw new Error('Failed to add announcement');
     } finally {
       set({ isLoading: false });
     }
   },
+
+  // ─── CONTROLLED RESEARCH COLLABORATIONS ──────────────────────────────────────
+
+  fetchCollabStatus: async (targetUserId: string, threadId?: string) => {
+    try {
+      const qs = threadId ? `?threadId=${threadId}` : '';
+      const res = await apiFetch(`/api/collaborations/status/${targetUserId}${qs}`);
+      if (res.ok) {
+        const data = await res.json();
+        set(state => ({
+          collabStatuses: { ...state.collabStatuses, [targetUserId]: data }
+        }));
+        return data;
+      }
+      return { status: 'NONE' };
+    } catch (e) {
+      console.error(e);
+      return { status: 'NONE' };
+    }
+  },
+
+  sendCollabRequest: async (recipientId: string, threadId?: string, message?: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/collaborations/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientId, threadId, message }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to send request');
+      }
+      const data = await res.json();
+      set(state => ({
+        collabStatuses: {
+          ...state.collabStatuses,
+          [recipientId]: { status: 'PENDING_SENT', requestId: data.id }
+        },
+        myCollabRequests: {
+          ...state.myCollabRequests,
+          sent: [data, ...state.myCollabRequests.sent]
+        }
+      }));
+      return data;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  cancelCollabRequest: async (requestId: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/collaborations/requests/${requestId}/cancel`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Failed to cancel request');
+      const data = await res.json();
+      set(state => {
+        const newSent = state.myCollabRequests.sent.filter(r => r.id !== requestId);
+        return {
+          myCollabRequests: { ...state.myCollabRequests, sent: newSent },
+          collabStatuses: { ...state.collabStatuses, [data.recipientId]: { status: 'NONE' } }
+        };
+      });
+      return data;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  acceptCollabRequest: async (requestId: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/collaborations/requests/${requestId}/accept`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Failed to accept request');
+      const data = await res.json();
+      set(state => {
+        const newReceived = state.myCollabRequests.received.filter(r => r.id !== requestId);
+        return {
+          myCollabRequests: { ...state.myCollabRequests, received: newReceived },
+          myCollaborations: [data, ...state.myCollaborations]
+        };
+      });
+      return data;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  declineCollabRequest: async (requestId: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/collaborations/requests/${requestId}/decline`, {
+        method: 'POST'
+      });
+      if (!res.ok) throw new Error('Failed to decline request');
+      const data = await res.json();
+      set(state => {
+        const newReceived = state.myCollabRequests.received.filter(r => r.id !== requestId);
+        return {
+          myCollabRequests: { ...state.myCollabRequests, received: newReceived }
+        };
+      });
+      return data;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchMyCollaborations: async () => {
+    try {
+      const res = await apiFetch('/api/collaborations');
+      if (res.ok) {
+        const data = await res.json();
+        set({ myCollaborations: data });
+        return data;
+      }
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  fetchMyCollabRequests: async () => {
+    try {
+      const res = await apiFetch('/api/collaborations/requests');
+      if (res.ok) {
+        const data = await res.json();
+        set({ myCollabRequests: data });
+        return data;
+      }
+      return { sent: [], received: [] };
+    } catch (e) {
+      console.error(e);
+      return { sent: [], received: [] };
+    }
+  },
+
+  fetchCollabMessages: async (collabId: string, page: number = 1) => {
+    try {
+      const res = await apiFetch(`/api/collaborations/${collabId}/messages?page=${page}`);
+      if (res.ok) {
+        const data = await res.json();
+        set(state => {
+          if (page === 1) {
+            return { activeCollabMessages: data.messages };
+          }
+          // Assuming older messages are pushed to front or back depending on UI, 
+          // but typically we'll just prepend or append. Let's do a simple replacement for now.
+          return { activeCollabMessages: [...data.messages, ...state.activeCollabMessages] };
+        });
+        return data.messages;
+      }
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  sendCollabMessage: async (collabId: string, content: string) => {
+    try {
+      const res = await apiFetch(`/api/collaborations/${collabId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set(state => ({
+          activeCollabMessages: [...state.activeCollabMessages, data]
+        }));
+        return data;
+      }
+      throw new Error('Failed to send message');
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  },
+
+  // ─── ADMIN ───────────────────────────────────────────────────────────────────
 
   fetchAdminUsers: async () => {
     try {
@@ -1914,16 +2244,91 @@ export const useStore = create<AppState>((set, get) => ({
   fetchNotifications: async () => {
     try {
       const res = await apiFetch('/api/notifications');
+      let loaded: Notification[] = [];
       if (res.ok) {
         const data = await res.json();
-        set({ notifications: data });
-        return data;
+        if (Array.isArray(data) && data.length > 0) {
+          loaded = data.map((n: any) => ({
+            id: n.id,
+            userId: n.userId,
+            eventId: n.eventId,
+            title: n.title || 'Institutional Notification',
+            body: n.body || n.message || '',
+            sentStatus: n.sentStatus,
+            openedStatus: n.openedStatus,
+            isRead: !!(n.openedStatus || n.isRead || (n.sentStatus && n.openedStatus)),
+            type: n.type || deriveNotificationType(n.title),
+            href: n.href || n.actionUrl || deriveNotificationHref(n.type, n.title),
+            createdAt: n.createdAt || new Date().toISOString()
+          }));
+        }
       }
-      return [];
+
+      const current = get().notifications;
+
+      // If state is empty and backend returned empty array, use initial contextual notifications
+      if (loaded.length === 0 && current.length === 0) {
+        set({ notifications: DEFAULT_INITIAL_NOTIFICATIONS });
+        return DEFAULT_INITIAL_NOTIFICATIONS;
+      }
+
+      if (loaded.length > 0) {
+        // Merge loaded with local state if local has user-read status updates
+        const localReadMap = new Map(current.map(n => [n.id, n.isRead]));
+        const merged = loaded.map(n => ({
+          ...n,
+          isRead: localReadMap.has(n.id) ? !!localReadMap.get(n.id) : !!n.isRead
+        }));
+        set({ notifications: merged });
+        return merged;
+      }
+
+      return get().notifications;
     } catch (e) {
-      console.error(e);
-      return [];
+      console.error('Failed to fetch notifications:', e);
+      if (get().notifications.length === 0) {
+        set({ notifications: DEFAULT_INITIAL_NOTIFICATIONS });
+        return DEFAULT_INITIAL_NOTIFICATIONS;
+      }
+      return get().notifications;
     }
+  },
+
+  markNotificationAsRead: async (id: string) => {
+    set(state => ({
+      notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true, openedStatus: true } : n)
+    }));
+    try {
+      await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+    } catch (e) {
+      // silent catch
+    }
+  },
+
+  markAllNotificationsAsRead: async () => {
+    set(state => ({
+      notifications: state.notifications.map(n => ({ ...n, isRead: true, openedStatus: true }))
+    }));
+    try {
+      await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+    } catch (e) {
+      // silent catch
+    }
+  },
+
+  addNotification: (data: Partial<Notification>) => {
+    const newNotif: Notification = {
+      id: data.id || `notif-${Date.now()}`,
+      title: data.title || 'New Notification',
+      body: data.body || data.message || '',
+      type: data.type || 'SYSTEM',
+      isRead: false,
+      href: data.href || data.actionUrl || '/notifications',
+      createdAt: data.createdAt || new Date().toISOString()
+    };
+    set(state => ({
+      notifications: [newNotif, ...state.notifications]
+    }));
   },
 
   suspendUserToggle: async (userId: string, suspended: boolean) => {
@@ -1963,5 +2368,219 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     }));
+  },
+
+  // ─── MY RESEARCH API ACTIONS ─────────────────────────────────────────────
+  fetchMyResearch: async () => {
+    try {
+      const res = await apiFetch('/api/my-research');
+      if (res.ok) {
+        const data = await res.json();
+        set({
+          myResearchProfile: data,
+          myResearchMilestones: data.milestones || [],
+          myResearchActivities: data.activities || [],
+        });
+        return data;
+      }
+    } catch (err) {
+      console.error('Failed to fetch my research profile:', err);
+    }
+    return null;
+  },
+
+  updateResearchProfile: async (data: any) => {
+    try {
+      const res = await apiFetch('/api/my-research', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        set((state) => ({
+          myResearchProfile: {
+            ...state.myResearchProfile,
+            ...updated,
+          },
+          myResearchMilestones: updated.milestones || state.myResearchMilestones,
+          myResearchActivities: updated.activities || state.myResearchActivities,
+        }));
+        get().addToast('Research profile updated successfully.', 'success');
+        return updated;
+      }
+      throw new Error('Failed to update research profile');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to update research profile', 'error');
+      throw err;
+    }
+  },
+
+  fetchMyResearchMilestones: async () => {
+    try {
+      const res = await apiFetch('/api/my-research/milestones');
+      if (res.ok) {
+        const milestones = await res.json();
+        set({ myResearchMilestones: milestones });
+        return milestones;
+      }
+    } catch (err) {
+      console.error('Failed to fetch research milestones:', err);
+    }
+    return [];
+  },
+
+  createResearchMilestone: async (data: any) => {
+    try {
+      const res = await apiFetch('/api/my-research/milestones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const milestone = await res.json();
+        get().addToast(`Milestone "${data.title}" added`, 'success');
+        await get().fetchMyResearch();
+        return milestone;
+      }
+      throw new Error('Failed to create milestone');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to create milestone', 'error');
+      throw err;
+    }
+  },
+
+  updateMilestone: async (id: string, data: any) => {
+    try {
+      const res = await apiFetch(`/api/my-research/milestones/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        get().addToast('Milestone updated', 'success');
+        await get().fetchMyResearch();
+        return updated;
+      }
+      throw new Error('Failed to update milestone');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to update milestone', 'error');
+      throw err;
+    }
+  },
+
+  completeMilestone: async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/my-research/milestones/${id}/complete`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        const completed = await res.json();
+        get().addToast(`Milestone marked as complete!`, 'success');
+        await get().fetchMyResearch();
+        return completed;
+      }
+      throw new Error('Failed to complete milestone');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to complete milestone', 'error');
+      throw err;
+    }
+  },
+
+  fetchMyResearchActivity: async () => {
+    try {
+      const res = await apiFetch('/api/my-research/activity');
+      if (res.ok) {
+        const activities = await res.json();
+        set({ myResearchActivities: activities });
+        return activities;
+      }
+    } catch (err) {
+      console.error('Failed to fetch research activities:', err);
+    }
+    return [];
+  },
+
+  fetchMyResearchMaterials: async () => {
+    try {
+      const res = await apiFetch('/api/my-research/materials');
+      if (res.ok) {
+        const materials = await res.json();
+        set({ myResearchMaterials: materials });
+        return materials;
+      }
+    } catch (err) {
+      console.error('Failed to fetch research materials:', err);
+    }
+    return [];
+  },
+
+  // ─── EXTERNAL LINKS ACTIONS ──────────────────────────────────────────────
+  fetchUserExternalLinks: async (userId: string) => {
+    try {
+      const res = await apiFetch(`/api/users/${userId}/external-links`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.error('Failed to fetch user external links:', err);
+    }
+    return [];
+  },
+
+  addExternalLink: async (userId: string, data: { platform: string; label?: string; url: string }) => {
+    try {
+      const res = await apiFetch(`/api/users/${userId}/external-links`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const link = await res.json();
+        get().addToast(`Added ${data.platform} profile link`, 'success');
+        return link;
+      }
+      const errData = await res.json();
+      throw new Error(errData.message || 'Failed to add external link');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to add external link', 'error');
+      throw err;
+    }
+  },
+
+  updateExternalLink: async (userId: string, linkId: string, data: { label?: string; url?: string; isVisible?: boolean }) => {
+    try {
+      const res = await apiFetch(`/api/users/${userId}/external-links/${linkId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        get().addToast('Updated external link', 'success');
+        return updated;
+      }
+      throw new Error('Failed to update external link');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to update external link', 'error');
+      throw err;
+    }
+  },
+
+  deleteExternalLink: async (userId: string, linkId: string) => {
+    try {
+      const res = await apiFetch(`/api/users/${userId}/external-links/${linkId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        get().addToast('External link removed', 'info');
+        return;
+      }
+      throw new Error('Failed to delete external link');
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to delete external link', 'error');
+      throw err;
+    }
   }
 }));

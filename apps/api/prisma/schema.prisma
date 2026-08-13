@@ -90,15 +90,28 @@ model User {
   followedDomains      DomainFollow[]
   followedTopics       TopicFollow[]
 
+  // Research Collaboration relations
+  collabRequestsSent      ResearchCollabRequest[]   @relation("CollabRequestSender")
+  collabRequestsReceived  ResearchCollabRequest[]   @relation("CollabRequestReceiver")
+  collaborationsRequested ResearchCollaboration[]   @relation("CollabRequester")
+  collaborationsReceived  ResearchCollaboration[]   @relation("CollabRecipient")
+  collaborationMessages   CollaborationMessage[]    @relation("CollabMessageSender")
+
+  // Research Profile & Activity relations
+  researchProfile         ResearchProfile?
+  researchActivities      ResearchActivity[]
+  externalLinks           ResearcherExternalLink[]
+
   @@index([departmentId])
   @@index([supervisorId])
 }
 
 model UserFollow {
-  id          String   @id @default(cuid())
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
+  id                 String   @id @default(cuid())
+  followerId         String
+  followingId        String
+  notificationsEnabled Boolean @default(true)
+  createdAt          DateTime @default(now())
 
   follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
   following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
@@ -178,6 +191,8 @@ model Thread {
   reports     ThreadReport[]
   saves       SavedThread[]
   collaborationRequests CollaborationRequest[]
+  collabRequests          ResearchCollabRequest[]   @relation("CollabRequestThread")
+  researchCollaborations  ResearchCollaboration[]   @relation("CollabThread")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -327,6 +342,8 @@ model Notification {
   
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   event         Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  type          String?
+  actionUrl     String?
 
   createdAt     DateTime @default(now())
 
@@ -388,6 +405,7 @@ model Workspace {
   files         WorkspaceFile[]
   milestones    WorkspaceMilestone[]
   announcements WorkspaceAnnouncement[]
+  researchCollaboration ResearchCollaboration?
 }
 
 model WorkspaceMember {
@@ -687,4 +705,172 @@ model ResearchConnection {
   @@unique([requesterId, receiverId])
   @@index([requesterId])
   @@index([receiverId])
+}
+
+enum CollabRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum CollaborationStatus {
+  ACTIVE
+  CLOSED
+}
+
+model ResearchCollabRequest {
+  id            String              @id @default(cuid())
+  requesterId   String
+  recipientId   String
+  threadId      String?
+  message       String?             @db.Text
+  status        CollabRequestStatus @default(PENDING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  requester     User                @relation("CollabRequestSender", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient     User                @relation("CollabRequestReceiver", fields: [recipientId], references: [id], onDelete: Cascade)
+  thread        Thread?             @relation("CollabRequestThread", fields: [threadId], references: [id], onDelete: SetNull)
+
+  @@index([requesterId])
+  @@index([recipientId])
+  @@index([threadId])
+}
+
+model ResearchCollaboration {
+  id              String              @id @default(cuid())
+  requesterId     String
+  recipientId     String
+  threadId        String?
+  workspaceId     String?             @unique
+  status          CollaborationStatus @default(ACTIVE)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  lastActivityAt  DateTime            @default(now())
+
+  requester       User                @relation("CollabRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient       User                @relation("CollabRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  thread          Thread?             @relation("CollabThread", fields: [threadId], references: [id], onDelete: SetNull)
+  workspace       Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  messages        CollaborationMessage[]
+
+  @@index([requesterId])
+  @@index([recipientId])
+  @@index([workspaceId])
+}
+
+model CollaborationMessage {
+  id              String                @id @default(cuid())
+  collaborationId String
+  senderId        String
+  content         String                @db.Text
+  createdAt       DateTime              @default(now())
+
+  collaboration   ResearchCollaboration  @relation(fields: [collaborationId], references: [id], onDelete: Cascade)
+  sender          User                   @relation("CollabMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([collaborationId])
+  @@index([senderId])
+}
+
+// ============================================
+// My Research Module Models
+// ============================================
+
+enum ResearchStatus {
+  ACTIVE
+  NOT_STARTED
+  ON_HOLD
+  COMPLETED
+}
+
+enum ResearchStage {
+  PROPOSAL
+  LITERATURE_REVIEW
+  METHODOLOGY
+  IMPLEMENTATION
+  EVALUATION
+  THESIS_PUBLICATION
+}
+
+enum MilestoneStatus {
+  UPCOMING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum MilestonePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model ResearchProfile {
+  id                    String            @id @default(cuid())
+  scholarId             String            @unique
+  scholar               User              @relation(fields: [scholarId], references: [id], onDelete: Cascade)
+  title                 String
+  researchArea          String
+  abstract              String?           @db.Text
+  status                ResearchStatus    @default(ACTIVE)
+  currentStage          ResearchStage     @default(PROPOSAL)
+  startDate             DateTime?
+  expectedCompletionDate DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  milestones            ResearchMilestone[]
+  activities            ResearchActivity[]
+
+  @@index([scholarId])
+}
+
+model ResearchMilestone {
+  id                String            @id @default(cuid())
+  researchProfileId String
+  researchProfile   ResearchProfile   @relation(fields: [researchProfileId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?           @db.Text
+  stage             ResearchStage     @default(PROPOSAL)
+  status            MilestoneStatus   @default(UPCOMING)
+  priority          MilestonePriority @default(MEDIUM)
+  dueDate           DateTime?
+  completedAt       DateTime?
+  createdById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([researchProfileId])
+}
+
+model ResearchActivity {
+  id                String          @id @default(cuid())
+  researchProfileId String
+  researchProfile   ResearchProfile @relation(fields: [researchProfileId], references: [id], onDelete: Cascade)
+  actorId           String
+  actor             User            @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  type              String
+  description       String
+  metadata          String?         @db.Text
+  createdAt         DateTime        @default(now())
+
+  @@index([researchProfileId])
+  @@index([actorId])
+}
+
+model ResearcherExternalLink {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform  String   // e.g. "ORCID", "GOOGLE_SCHOLAR", "RESEARCHGATE", "GITHUB", "LINKEDIN", "WEBSITE", "PORTFOLIO", "YOUTUBE", "TWITTER", "OTHER"
+  label     String?
+  url       String
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
 }

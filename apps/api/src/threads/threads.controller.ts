@@ -31,8 +31,8 @@ export class ThreadsController {
   }
 
   @Get(':id')
-  async getThreadById(@Param('id') id: string) {
-    return this.threadsService.getThreadById(id);
+  async getThreadById(@Req() req: any, @Param('id') id: string) {
+    return this.threadsService.getThreadById(id, req.user?.id);
   }
 
   @Post()

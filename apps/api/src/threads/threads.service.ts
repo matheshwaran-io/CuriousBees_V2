@@ -49,6 +49,9 @@ export class ThreadsService {
         saves: userId ? {
           where: { userId }
         } : undefined,
+        likes: userId ? {
+          where: { userId }
+        } : undefined,
         comments: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -131,7 +134,7 @@ export class ThreadsService {
     return result;
   }
 
-  async getThreadById(id: string) {
+  async getThreadById(id: string, userId?: string) {
     const thread = await this.prisma.thread.findUnique({
       where: { id },
       include: {
@@ -148,6 +151,12 @@ export class ThreadsService {
           }
         },
         attachments: true,
+        saves: userId ? {
+          where: { userId }
+        } : undefined,
+        likes: userId ? {
+          where: { userId }
+        } : undefined,
         _count: {
           select: { comments: true, likes: true, shares: true, saves: true }
         },
@@ -275,6 +284,12 @@ export class ThreadsService {
           }
         },
         attachments: true,
+        saves: authorId ? {
+          where: { userId: authorId }
+        } : undefined,
+        likes: authorId ? {
+          where: { userId: authorId }
+        } : undefined,
         _count: {
           select: { comments: true, likes: true, shares: true, saves: true }
         }
@@ -415,6 +430,9 @@ export class ThreadsService {
             saves: {
               where: { userId }
             },
+            likes: {
+              where: { userId }
+            },
             _count: {
               select: { comments: true, likes: true, shares: true, saves: true }
             }
@@ -464,6 +482,12 @@ export class ThreadsService {
           }
         },
         attachments: true,
+        saves: userId ? {
+          where: { userId }
+        } : undefined,
+        likes: userId ? {
+          where: { userId }
+        } : undefined,
         _count: {
           select: { comments: true, likes: true, shares: true, saves: true }
         }

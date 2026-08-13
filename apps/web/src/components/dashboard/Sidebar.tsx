@@ -31,8 +31,10 @@ import {
   Crown,
   Megaphone,
   Network,
+  BookMarked,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getProfileImageUrl } from '@/lib/avatar';
 import Logo from '../Logo';
 import { RoleBadge } from '../shared/role-badge';
 import type { UserRole } from '@curiousbees/types';
@@ -45,92 +47,41 @@ interface SidebarItem {
   icon: React.ElementType;
 }
 
-interface SidebarSection {
-  label: string;
-  items: SidebarItem[];
-}
-
-const getSidebarSections = (role: UserRole): SidebarSection[] => {
+const getSidebarItems = (role: UserRole): SidebarItem[] => {
   if (role === 'INSTITUTE_ADMIN') {
     return [
-      {
-        label: 'ADMIN CONSOLE',
-        items: [
-          { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-          { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
-          { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
-          { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
-          { name: 'Notification Logs', href: '/notifications', icon: MessageSquare },
-          { name: 'System Settings', href: '/admin/settings', icon: Shield },
-        ],
-      },
-      {
-        label: 'NETWORK',
-        items: [
-          { name: 'Researcher Network', href: '/researchers', icon: Users },
-          { name: 'Curious Nexus', href: '/nexus', icon: Network },
-        ]
-      }
+      { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+      { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
+      { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
+      { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
+      { name: 'Notification Logs', href: '/notifications', icon: MessageSquare },
+      { name: 'System Settings', href: '/admin/settings', icon: Shield },
+      { name: 'Researcher Network', href: '/researchers', icon: Users },
+      { name: 'Curious Nexus', href: '/nexus', icon: Network },
     ];
   }
 
   if (role === 'RESEARCH_SUPERVISOR') {
     return [
-      {
-        label: 'RESEARCH',
-        items: [
-          { name: 'Research Feed', href: '/feed', icon: MessageSquare },
-          { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
-          { name: 'Events', href: '/events', icon: CalendarIcon },
-        ],
-      },
-      {
-        label: 'NETWORK',
-        items: [
-          { name: 'Researcher Network', href: '/researchers', icon: Users },
-          { name: 'Curious Nexus', href: '/nexus', icon: Network },
-        ]
-      },
-      {
-        label: 'SUPERVISION',
-        items: [
-          { name: 'My Scholars', href: '/my-scholars', icon: UserCog },
-          { name: 'Supervision Requests', href: '/approval-requests', icon: Clock },
-          { name: 'Advisory Reports', href: '/reports', icon: BarChart3 },
-        ],
-      },
-      {
-        label: 'RESEARCH RECORDS',
-        items: [
-          { name: 'Publications', href: '/publications', icon: BookOpen },
-        ]
-      }
+      { name: 'Research Feed', href: '/feed', icon: MessageSquare },
+      { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
+      { name: 'Events', href: '/events', icon: CalendarIcon },
+      { name: 'Researcher Network', href: '/researchers', icon: Users },
+      { name: 'Curious Nexus', href: '/nexus', icon: Network },
+      { name: 'Supervision Panel', href: '/my-scholars', icon: GraduationCap },
+      { name: 'Publications', href: '/publications', icon: BookOpen },
     ];
   }
 
-  // Scholar
+  // Default: Research Scholar
   return [
-    {
-      label: 'RESEARCH',
-      items: [
-        { name: 'Research Feed', href: '/feed', icon: MessageSquare },
-        { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
-        { name: 'Events', href: '/events', icon: CalendarIcon },
-      ],
-    },
-    {
-      label: 'NETWORK',
-      items: [
-        { name: 'Researcher Network', href: '/researchers', icon: Users },
-        { name: 'Curious Nexus', href: '/nexus', icon: Network },
-      ]
-    },
-    {
-      label: 'RESEARCH RECORDS',
-      items: [
-        { name: 'Publications', href: '/publications', icon: BookOpen },
-      ]
-    }
+    { name: 'Research Feed', href: '/feed', icon: MessageSquare },
+    { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
+    { name: 'Events', href: '/events', icon: CalendarIcon },
+    { name: 'Researcher Network', href: '/researchers', icon: Users },
+    { name: 'Curious Nexus', href: '/nexus', icon: Network },
+    { name: 'My Research', href: '/my-research', icon: BookMarked },
+    { name: 'Publications', href: '/publications', icon: BookOpen },
   ];
 };
 
@@ -195,14 +146,6 @@ function NavItem({
 
 // ─── Collapsible Nav Section ─────────────────────────────────────────────────
 
-function NavSection({ label }: { label: string }) {
-  return (
-    <div className="w-full px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400 select-none">
-      {label}
-    </div>
-  );
-}
-
 // ─── Sidebar Content ──────────────────────────────────────────────────────────
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
@@ -211,7 +154,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   
   const role = currentUser?.role || 'RESEARCH_SCHOLAR';
-  const sections = getSidebarSections(role);
+  const items = getSidebarItems(role);
 
   const isActive = (href: string) => {
     if (href === '/dashboard' || href === '/admin') {
@@ -236,24 +179,19 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-1.5 scrollbar-thin">
-        {sections.map((section) => (
-          <div key={section.label}>
-            <NavSection label={section.label} />
-            <div className="flex flex-col gap-0.5 mt-0.5">
-              {section.items.map((item) => (
-                <NavItem
-                  key={item.href + item.name}
-                  {...item}
-                  active={isActive(item.href)}
-                  onClick={onClose}
-                  hoveredItem={hoveredItem}
-                  setHoveredItem={setHoveredItem}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-1.5 scrollbar-thin mt-2">
+        <div className="flex flex-col gap-0.5">
+          {items.map((item) => (
+            <NavItem
+              key={item.href + item.name}
+              {...item}
+              active={isActive(item.href)}
+              onClick={onClose}
+              hoveredItem={hoveredItem}
+              setHoveredItem={setHoveredItem}
+            />
+          ))}
+        </div>
       </nav>
 
       {/* User mini-profile pill */}
@@ -266,7 +204,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           >
             <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
               <img
-                src={currentUser.image || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser.name || 'User') + '&background=0C4DA2&color=fff&size=64'}
+                src={getProfileImageUrl(currentUser)}
                 alt={currentUser.name || 'User'}
                 className="w-full h-full object-cover"
               />
@@ -274,6 +212,22 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2]">{currentUser.name || 'Researcher'}</p>
               <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{currentUser.department || (role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar')}</p>
+            </div>
+          </Link>
+        )}
+
+        {role === 'RESEARCH_SUPERVISOR' && (
+          <Link
+            href="/my-scholars"
+            onClick={onClose}
+            className="p-2.5 rounded-full bg-[#0C4DA2]/10 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] transition-all flex items-center gap-3 border border-[#0C4DA2]/25 mb-2 cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-full bg-[#0C4DA2] text-white flex items-center justify-center shrink-0 shadow-sm">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-black text-[#0C4DA2]">Supervision Panel</p>
+              <p className="text-[10px] font-bold text-blue-650/80 mt-0.5">Manage Scholars & Advisory</p>
             </div>
           </Link>
         )}

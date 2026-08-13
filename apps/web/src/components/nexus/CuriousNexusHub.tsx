@@ -1,1081 +1,958 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useStore } from '@/store/useStore';
+import { getProfileImageUrl } from '@/lib/avatar';
 import { 
-  MessageSquare, 
-  FolderOpen, 
+  Network, 
   Search, 
+  Users, 
+  ArrowUpRight, 
   Plus, 
   FileText, 
-  Image as ImageIcon, 
-  Paperclip, 
-  Send, 
-  Info, 
-  CheckCheck, 
+  UploadCloud, 
   Check, 
-  User, 
-  Users, 
-  BookOpen, 
-  Calendar, 
-  Award, 
-  Trash2, 
-  CornerUpLeft, 
   X, 
-  Sparkles, 
-  Layers, 
-  CheckCircle2, 
   Clock, 
-  FileDown, 
-  Share2, 
-  ExternalLink,
-  ChevronRight,
+  ArrowLeft,
+  Calendar,
+  BookOpen,
+  Send,
+  MessageSquare,
   ShieldCheck,
-  Megaphone,
-  Network
+  Download,
+  Info,
+  Activity,
+  Award,
+  BookMarked
 } from 'lucide-react';
-import { useStore } from '@/store/useStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api-client';
 
-interface CuriousNexusHubProps {
-  initialView?: 'messages' | 'workspaces';
-  initialUserId?: string | null;
+interface CollaborationFile {
+  name: string;
+  url: string;
+  size: string;
+  uploadedBy: string;
+  date: string;
 }
 
-interface NexusMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar?: string;
-  content: string;
-  timestamp: string;
-  isMine: boolean;
-  status: 'sent' | 'delivered' | 'read';
-  attachment?: {
-    type: 'pdf' | 'docx' | 'image';
-    name: string;
-    url: string;
-    size: string;
-  };
-  reactions?: { emoji: string; count: number; userReacted?: boolean }[];
-  replyTo?: { id: string; senderName: string; content: string };
-}
+export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { initialView?: string; initialUserId?: string | null }) {
+  const router = useRouter();
+  const { 
+    currentUser, 
+    workspaces, 
+    activeWorkspace, 
+    myScholars,
+    pendingApprovals,
+    collaborationRequests,
+    fetchWorkspaces,
+    fetchWorkspaceDetails,
+    addWorkspaceFile,
+    fetchMyScholars,
+    fetchPendingApprovals,
+    fetchCollaborationRequests,
+    approveScholar,
+    declineScholar,
+    updateCollaborationRequest,
+    addToast,
+    myCollaborations,
+    myCollabRequests,
+    fetchMyCollaborations,
+    fetchMyCollabRequests,
+    fetchCollabMessages,
+    sendCollabMessage,
+    acceptCollabRequest,
+    declineCollabRequest
+  } = useStore();
 
-export function CuriousNexusHub({ initialView = 'messages', initialUserId }: CuriousNexusHubProps) {
-  const { currentUser, workspaces, collaborators, threads } = useStore();
-
-  // Active View State: 'messages' or 'workspaces'
-  const [activeTab, setActiveTab] = useState<'messages' | 'workspaces'>(initialView);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'unread'>('all');
-  
-  // Selection States
-  const [selectedConversationId, setSelectedConversationId] = useState<string>(initialUserId ? `conv-${initialUserId}` : 'c1');
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('w1');
-  const [showDetailsPane, setShowDetailsPane] = useState<boolean>(true);
-  const [workspaceSubTab, setWorkspaceSubTab] = useState<'chat' | 'overview' | 'members' | 'files' | 'milestones' | 'announcements'>('overview');
-
-  // New Chat Modal state
-  const [showNewModal, setShowNewModal] = useState(false);
-
-  // Attachment & Composer State
+  const [openedCollabId, setOpenedCollabId] = useState<string | null>(initialUserId ? initialUserId : null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [messageInput, setMessageInput] = useState('');
-  const [replyingTo, setReplyingTo] = useState<NexusMessage | null>(null);
-  const [attachedFile, setAttachedFile] = useState<{ name: string; type: 'pdf' | 'docx' | 'image'; url: string; size: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<any | null>(null);
+  
+  // File Upload Modal States
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFileUrl, setNewFileUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  // ─── MOCK DIRECT CONVERSATIONS DATA ──────────────────────────────────────────
-  const [conversations, setConversations] = useState([
-    {
-      id: 'c1',
-      participant: {
-        id: 'u1',
-        name: 'Dr. Arun Kumar',
-        role: 'RESEARCH_SUPERVISOR',
-        department: 'Artificial Intelligence & Knowledge Systems',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        online: true,
-        lastSeen: 'Active now',
-        connectionStatus: 'Supervisor',
-        sharedInterests: ['Knowledge Graphs', 'Neural Networks', 'NLP'],
-      },
-      lastMessage: 'Please review the methodology section in our research proposal PDF.',
-      timestamp: '10:42 AM',
-      unreadCount: 2,
-    },
-    {
-      id: 'c2',
-      participant: {
-        id: 'u2',
-        name: 'Dr. Jane Du',
-        role: 'RESEARCH_SUPERVISOR',
-        department: 'Bioinformatics & Machine Learning',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-        online: false,
-        lastSeen: 'Active 15m ago',
-        connectionStatus: 'Mutual Connection',
-        sharedInterests: ['Bioinformatics', 'Machine Learning'],
-      },
-      lastMessage: 'I have attached the benchmark dataset for the protein folding trial.',
-      timestamp: 'Yesterday',
-      unreadCount: 0,
-    },
-    {
-      id: 'c3',
-      participant: {
-        id: 'u3',
-        name: 'Maddy S.',
-        role: 'RESEARCH_SCHOLAR',
-        department: 'Computer Applications & VLSI',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        online: true,
-        lastSeen: 'Active now',
-        connectionStatus: 'Follows You',
-        sharedInterests: ['VLSI Design', 'Generative AI'],
-      },
-      lastMessage: 'Shall we schedule the literature review milestone presentation?',
-      timestamp: 'Aug 9',
-      unreadCount: 0,
-    },
-  ]);
+  // Resolved scholar's supervisor details
+  const [supervisorProfile, setSupervisorProfile] = useState<any>(null);
 
-  // ─── MOCK MESSAGES DICTIONARY ───────────────────────────────────────────────
-  const [messagesDict, setMessagesDict] = useState<Record<string, NexusMessage[]>>({
-    c1: [
-      {
-        id: 'm1',
-        senderId: 'u1',
-        senderName: 'Dr. Arun Kumar',
-        content: 'Good morning! Have you finalized the experimental setup for the graph integration model?',
-        timestamp: '10:15 AM',
-        isMine: false,
-        status: 'read',
-      },
-      {
-        id: 'm2',
-        senderId: 'current',
-        senderName: 'You',
-        content: 'Yes Dr. Arun, I completed the baseline tests last night with 94.2% accuracy.',
-        timestamp: '10:20 AM',
-        isMine: true,
-        status: 'read',
-      },
-      {
-        id: 'm3',
-        senderId: 'u1',
-        senderName: 'Dr. Arun Kumar',
-        content: 'Excellent progress. Please review the methodology section in our research proposal PDF.',
-        timestamp: '10:42 AM',
-        isMine: false,
-        status: 'read',
-        attachment: {
-          type: 'pdf',
-          name: 'KnowledgeGraph_Methodology_Draft.pdf',
-          url: '#',
-          size: '2.4 MB',
-        },
-        reactions: [
-          { emoji: '👍', count: 2, userReacted: true },
-          { emoji: '🚀', count: 1, userReacted: false },
-        ],
-      },
-    ],
-    c2: [
-      {
-        id: 'm21',
-        senderId: 'u2',
-        senderName: 'Dr. Jane Du',
-        content: 'I have attached the benchmark dataset for the protein folding trial.',
-        timestamp: 'Yesterday 4:30 PM',
-        isMine: false,
-        status: 'read',
-        attachment: {
-          type: 'docx',
-          name: 'Protein_Folding_Data_2026.docx',
-          url: '#',
-          size: '1.1 MB',
-        },
-      },
-    ],
-    c3: [
-      {
-        id: 'm31',
-        senderId: 'u3',
-        senderName: 'Maddy S.',
-        content: 'Shall we schedule the literature review milestone presentation?',
-        timestamp: 'Aug 9',
-        isMine: false,
-        status: 'read',
-      },
-    ],
-  });
+  // Connection Role Check
+  const isSupervisor = currentUser?.role === 'RESEARCH_SUPERVISOR';
+  const isScholar = currentUser?.role === 'RESEARCH_SCHOLAR';
+  const hasAccess = isSupervisor || isScholar;
 
-  // ─── MOCK WORKSPACES DATA ───────────────────────────────────────────────────
-  const [workspaceList, setWorkspaceList] = useState([
-    {
-      id: 'w1',
-      title: 'AI Medical Imaging Research',
-      description: 'Developing multi-modal neural network architectures for early tumor classification using MRI dataset.',
-      memberCount: 4,
-      lastActivity: '12m ago',
-      progress: 75,
-      members: [
-        { id: 'u1', name: 'Dr. Arun Kumar', role: 'Project Director', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
-        { id: 'u2', name: 'Dr. Jane Du', role: 'Co-Investigator', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
-        { id: 'u3', name: 'Maddy S.', role: 'Lead Scholar', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
-      ],
-      files: [
-        { id: 'f1', name: 'TumorSegmentation_Architecture_V2.pdf', size: '4.8 MB', uploadedBy: 'Dr. Arun Kumar', date: 'Aug 10' },
-        { id: 'f2', name: 'MRI_Training_Set_Summary.xlsx', size: '1.2 MB', uploadedBy: 'Maddy S.', date: 'Aug 08' },
-      ],
-      milestones: [
-        { id: 'ms1', title: 'Literature Review & State of Art', completed: true, dueDate: 'Jul 15' },
-        { id: 'ms2', title: 'MRI Dataset Preprocessing & Cleaning', completed: true, dueDate: 'Aug 01' },
-        { id: 'ms3', title: 'Model Architecture Implementation', completed: false, dueDate: 'Aug 20' },
-        { id: 'ms4', title: 'Journal Manuscript Submission', completed: false, dueDate: 'Sep 15' },
-      ],
-      announcements: [
-        { id: 'a1', title: 'Weekly Progress Review Scheduled', content: 'Our team sync will be held on Thursday at 3:00 PM in Lab 402.', author: 'Dr. Arun Kumar', date: 'Aug 10' },
-      ],
-    },
-    {
-      id: 'w2',
-      title: 'Quantum Silicon Photonics Project',
-      description: 'Next-generation optical inter-connects for low-latency quantum cryptographic key distribution.',
-      memberCount: 3,
-      lastActivity: '2h ago',
-      progress: 40,
-      members: [
-        { id: 'u2', name: 'Dr. Jane Du', role: 'Lead Researcher', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
-      ],
-      files: [
-        { id: 'f3', name: 'Silicon_Interconnect_Design.pdf', size: '6.1 MB', uploadedBy: 'Dr. Jane Du', date: 'Aug 05' },
-      ],
-      milestones: [
-        { id: 'ms21', title: 'Photonic Crystal Waveguide Design', completed: true, dueDate: 'Jul 28' },
-        { id: 'ms22', title: 'Fabrication & Cleanroom Testing', completed: false, dueDate: 'Sep 01' },
-      ],
-      announcements: [
-        { id: 'a2', title: 'Cleanroom Access Granted', content: 'Safety badges have been updated for all lab personnel.', author: 'Dr. Jane Du', date: 'Aug 05' },
-      ],
-    },
-  ]);
+  // Mount Fetching Data
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    fetchWorkspaces();
+    
+    if (isSupervisor) {
+      fetchMyScholars();
+      fetchPendingApprovals();
+    }
+    
+    // Controlled Research Collaborations
+    fetchMyCollaborations();
+    fetchMyCollabRequests();
 
-  // Active Direct Conversation
-  const activeConversation = useMemo(() => {
-    return conversations.find((c) => c.id === selectedConversationId) || conversations[0];
-  }, [conversations, selectedConversationId]);
+    if (isScholar && currentUser.supervisorId) {
+      apiFetch(`/api/users/${currentUser.supervisorId}/profile`)
+        .then((res) => {
+          if (res.ok) return res.json();
+        })
+        .then((data) => {
+          if (data) setSupervisorProfile(data);
+        })
+        .catch((err) => console.error('Failed to fetch supervisor details:', err));
+    }
+  }, [currentUser, isSupervisor, isScholar]);
 
-  // Active Messages
-  const activeMessages = useMemo(() => {
-    return messagesDict[selectedConversationId] || [];
-  }, [messagesDict, selectedConversationId]);
-
-  // Active Workspace
-  const activeWorkspace = useMemo(() => {
-    return workspaceList.find((w) => w.id === selectedWorkspaceId) || workspaceList[0];
-  }, [workspaceList, selectedWorkspaceId]);
-
-  // Filtered Conversations
-  const filteredConversations = useMemo(() => {
-    return conversations.filter((c) => {
-      const matchSearch = c.participant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.participant.department.toLowerCase().includes(searchQuery.toLowerCase());
-      if (filterMode === 'unread') return matchSearch && c.unreadCount > 0;
-      return matchSearch;
+  // Compile Active Collaborations list
+  const activeCollaborations = useMemo(() => {
+    return myCollaborations.map((c) => {
+      const partner = c.requesterId === currentUser?.id ? c.recipient : c.requester;
+      return {
+        id: c.id,
+        type: c.workspaceId ? 'project' : 'collaboration',
+        title: c.thread?.title ? `Collab: ${c.thread.title}` : `Research Collaboration`,
+        partner: partner ? {
+          id: partner.id,
+          name: partner.name,
+          role: partner.role,
+          roleLabel: partner.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar',
+          department: partner.department || 'SRMIST',
+          image: partner.image
+        } : null,
+        description: `Research collaboration focused on institutional research.`,
+        topic: c.thread?.title || 'General Research',
+        objective: 'Improve project-based research synergy and co-author publications.',
+        status: c.status,
+        workspaceId: c.workspaceId,
+        startedAt: new Date(c.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        participants: [
+          { id: currentUser?.id, name: currentUser?.name, role: currentUser?.role, image: currentUser?.image },
+          partner ? { id: partner.id, name: partner.name, role: partner.role, image: partner.image } : null
+        ].filter(Boolean)
+      };
     });
-  }, [conversations, searchQuery, filterMode]);
+  }, [currentUser, myCollaborations]);
 
-  // Filtered Workspaces
-  const filteredWorkspaces = useMemo(() => {
-    return workspaceList.filter((w) => {
-      return w.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.description.toLowerCase().includes(searchQuery.toLowerCase());
+  // Selected Collaboration Object
+  const selectedCollab = useMemo(() => {
+    if (!openedCollabId) return null;
+    return activeCollaborations.find((c) => c.id === openedCollabId) || null;
+  }, [activeCollaborations, openedCollabId]);
+
+  // Sync workspace details when selecting a project collaboration
+  useEffect(() => {
+    if (selectedCollab && selectedCollab.type === 'project' && selectedCollab.workspaceId) {
+      fetchWorkspaceDetails(selectedCollab.workspaceId);
+    }
+  }, [openedCollabId, selectedCollab]);
+
+  // Load actual DB messages
+  useEffect(() => {
+    if (openedCollabId && selectedCollab) {
+      fetchCollabMessages(openedCollabId).then((msgs) => {
+        setMessages(msgs.map((m: any) => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.sender?.name || 'Unknown',
+          senderImage: m.sender?.image || null,
+          content: m.content,
+          timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        })));
+      });
+    } else {
+      setMessages([]);
+    }
+    setReplyingTo(null);
+  }, [openedCollabId, fetchCollabMessages, selectedCollab]);
+
+  // Filtered collaborations list (ONLY searches when collaborations exist)
+  const filteredCollaborations = useMemo(() => {
+    if (activeCollaborations.length === 0) return [];
+    return activeCollaborations.filter((c) => {
+      const q = searchQuery.toLowerCase();
+      return (
+        c.title?.toLowerCase().includes(q) ||
+        c.partner?.name?.toLowerCase().includes(q) ||
+        c.topic?.toLowerCase().includes(q) ||
+        c.partner?.department?.toLowerCase().includes(q)
+      );
     });
-  }, [workspaceList, searchQuery]);
+  }, [activeCollaborations, searchQuery]);
+
+  // Compiled Timeline events dynamically for Research Activity
+  const activityEvents = useMemo(() => {
+    const events: any[] = [];
+    if (!selectedCollab) return events;
+
+    if (selectedCollab.type === 'project' && activeWorkspace) {
+      activeWorkspace.files?.forEach((f: any) => {
+        events.push({
+          id: `file-${f.id}`,
+          text: `${f.uploadedBy?.name || 'Collaborator'} uploaded research document "${f.name}".`,
+          date: new Date(f.uploadedAt),
+          icon: 'file'
+        });
+      });
+      activeWorkspace.announcements?.forEach((a: any) => {
+        events.push({
+          id: `ann-${a.id}`,
+          text: `${a.author?.name || 'Collaborator'} posted research update: "${a.title}".`,
+          date: new Date(a.createdAt),
+          icon: 'announcement'
+        });
+      });
+      activeWorkspace.milestones?.forEach((m: any) => {
+        events.push({
+          id: `ms-${m.id}`,
+          text: `Research milestone "${m.title}" ${m.completed ? 'completed' : 'updated'}.`,
+          date: new Date(m.updatedAt || m.createdAt),
+          icon: 'milestone'
+        });
+      });
+    } else {
+      // Advisory timeline from localStorage files
+      const files = JSON.parse(localStorage.getItem(`curiousbees_files_${selectedCollab.id}`) || '[]');
+      files.forEach((f: any, idx: number) => {
+        events.push({
+          id: `file-advisory-${idx}`,
+          text: `${f.uploadedBy} shared reference document "${f.name}".`,
+          date: new Date(f.date || Date.now()),
+          icon: 'file'
+        });
+      });
+      events.push({
+        id: 'advisory-start',
+        text: 'PhD Research Advisory connection established.',
+        date: new Date(currentUser?.createdAt || Date.now()),
+        icon: 'system'
+      });
+    }
+
+    return events.sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [selectedCollab, activeWorkspace, currentUser]);
+
+  // Statistics calculation based on real backend data
+  const stats = useMemo(() => {
+    const activeCollabsCount = activeCollaborations.length;
+    const activeProjectsCount = workspaces?.length || 0;
+    const pendingCollabsCount = myCollabRequests?.received?.filter((r: any) => r.status === 'PENDING').length || 0;
+    const pendingRequestsCount = (isSupervisor ? (pendingApprovals?.length || 0) : 0) + pendingCollabsCount;
+
+    return {
+      activeCollabsCount,
+      activeProjectsCount,
+      pendingRequestsCount
+    };
+  }, [activeCollaborations, workspaces, pendingApprovals, myCollabRequests, isSupervisor]);
+
+  // Pending Actions
+  const handleApproveScholar = async (scholarId: string) => {
+    try {
+      await approveScholar(scholarId);
+      addToast('Research Scholar connection approved.', 'success');
+      fetchPendingApprovals();
+      fetchMyScholars();
+    } catch (e: any) {
+      addToast(`Approval failed: ${e.message}`, 'error');
+    }
+  };
+
+  const handleDeclineScholar = async (scholarId: string) => {
+    try {
+      await declineScholar(scholarId);
+      addToast('Scholar request declined.', 'info');
+      fetchPendingApprovals();
+    } catch (e: any) {
+      addToast(`Request decline failed: ${e.message}`, 'error');
+    }
+  };
+
+  const handleAcceptCollab = async (reqId: string) => {
+    try {
+      await acceptCollabRequest(reqId);
+      addToast('Collaboration request accepted.', 'success');
+      fetchMyCollabRequests();
+      fetchMyCollaborations();
+    } catch (e: any) {
+      addToast(`Failed to accept request: ${e.message}`, 'error');
+    }
+  };
+
+  const handleDeclineCollab = async (reqId: string) => {
+    try {
+      await declineCollabRequest(reqId);
+      addToast('Collaboration request declined.', 'info');
+      fetchMyCollabRequests();
+    } catch (e: any) {
+      addToast(`Failed to decline request: ${e.message}`, 'error');
+    }
+  };
 
   // Send Message Handler
-  const handleSendMessage = () => {
-    if (!messageInput.trim() && !attachedFile) return;
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageInput.trim() || !openedCollabId || !currentUser) return;
 
-    const newMsg: NexusMessage = {
-      id: `m_${Date.now()}`,
-      senderId: 'current',
-      senderName: currentUser?.name || 'You',
-      content: messageInput,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMine: true,
-      status: 'sent',
-      replyTo: replyingTo ? { id: replyingTo.id, senderName: replyingTo.senderName, content: replyingTo.content } : undefined,
-      attachment: attachedFile || undefined,
-    };
-
-    setMessagesDict((prev) => ({
-      ...prev,
-      [selectedConversationId]: [...(prev[selectedConversationId] || []), newMsg],
-    }));
-
-    // Update conversation last message
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedConversationId
-          ? { ...c, lastMessage: messageInput || attachedFile?.name || 'Sent an attachment', timestamp: 'Just now' }
-          : c
-      )
-    );
-
-    setMessageInput('');
-    setReplyingTo(null);
-    setAttachedFile(null);
+    try {
+      const msg = await sendCollabMessage(openedCollabId, messageInput);
+      setMessages([...messages, {
+        id: msg.id,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderImage: currentUser.image,
+        content: messageInput,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+      setMessageInput('');
+      setReplyingTo(null);
+    } catch (err: any) {
+      addToast(err.message || 'Failed to send message', 'error');
+    }
   };
 
-  // Add Reaction Handler
-  const handleReact = (msgId: string, emoji: string) => {
-    setMessagesDict((prev) => {
-      const list = prev[selectedConversationId] || [];
-      const updated = list.map((msg) => {
-        if (msg.id !== msgId) return msg;
-        const reactions = msg.reactions ? [...msg.reactions] : [];
-        const existing = reactions.find((r) => r.emoji === emoji);
-        if (existing) {
-          if (existing.userReacted) {
-            existing.count -= 1;
-            existing.userReacted = false;
-          } else {
-            existing.count += 1;
-            existing.userReacted = true;
-          }
-        } else {
-          reactions.push({ emoji, count: 1, userReacted: true });
-        }
-        return { ...msg, reactions: reactions.filter((r) => r.count > 0) };
-      });
-      return { ...prev, [selectedConversationId]: updated };
-    });
-  };
+  // Upload Research File Handler
+  const handleUploadFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFileName.trim() || !newFileUrl.trim() || !selectedCollab) return;
 
-  // Toggle Milestone Completion
-  const handleToggleMilestone = (msId: string) => {
-    setWorkspaceList((prev) =>
-      prev.map((w) => {
-        if (w.id !== selectedWorkspaceId) return w;
-        return {
-          ...w,
-          milestones: w.milestones.map((ms) => (ms.id === msId ? { ...ms, completed: !ms.completed } : ms)),
+    setUploading(true);
+    const sizeInBytes = Math.floor(Math.random() * 5 * 1024 * 1024) + 1024 * 1024; // 1MB - 6MB
+
+    try {
+      if (selectedCollab.type === 'project' && selectedCollab.workspaceId) {
+        // Upload to Workspace directly via NestJS API
+        await addWorkspaceFile(selectedCollab.workspaceId, newFileName, newFileUrl, Math.floor(sizeInBytes / 1024));
+        fetchWorkspaceDetails(selectedCollab.workspaceId);
+      } else {
+        // Advisory: Store locally in localStorage
+        const advisoryFilesKey = `curiousbees_files_${selectedCollab.id}`;
+        const existingFiles = JSON.parse(localStorage.getItem(advisoryFilesKey) || '[]');
+        const newFile: CollaborationFile = {
+          name: newFileName,
+          url: newFileUrl,
+          size: `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`,
+          uploadedBy: currentUser?.name || 'You',
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         };
-      })
-    );
+        localStorage.setItem(advisoryFilesKey, JSON.stringify([newFile, ...existingFiles]));
+      }
+
+      addToast(`Shared file "${newFileName}" successfully.`, 'success');
+      setNewFileName('');
+      setNewFileUrl('');
+      setShowUploadModal(false);
+    } catch (err: any) {
+      addToast(`Upload failed: ${err.message}`, 'error');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  return (
-    <div className="w-full h-[calc(100vh-5rem)] bg-[#F8FAFC] font-sans flex overflow-hidden border border-slate-200 rounded-2xl shadow-sm">
-      
-      {/* ─── PANE 1: CONVERSATIONS & WORKSPACES DIRECTORY (LEFT) ─── */}
-      <div className="w-full md:w-80 lg:w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
-        
-        {/* Header Title & CTA */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-              <Network className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-base font-black text-slate-900 tracking-tight leading-none flex items-center gap-1.5">
-                Curious Nexus
-              </h1>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Research Hub</p>
-            </div>
+  // Get Advisory files from LocalStorage fallback
+  const advisoryFilesList = useMemo(() => {
+    if (!selectedCollab || selectedCollab.type !== 'advisory') return [];
+    return JSON.parse(localStorage.getItem(`curiousbees_files_${selectedCollab.id}`) || '[]');
+  }, [selectedCollab, showUploadModal]);
+
+  // Deny Access Screen for General/Unapproved Users
+  if (!hasAccess) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6 bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-md w-full text-center shadow-sm space-y-5 text-left">
+          <div className="w-14 h-14 bg-rose-50 border border-rose-100 text-[#ba1a1a] rounded-2xl flex items-center justify-center mx-auto">
+            <X className="w-6 h-6 stroke-[3.5]" />
           </div>
-
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="p-2 bg-[#3B82F6] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all text-xs font-bold flex items-center gap-1 cursor-pointer"
-            title="Start New Conversation or Workspace"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-          </button>
-        </div>
-
-        {/* Primary Tabs: [ Messages ] [ Workspaces ] ONLY */}
-        <div className="p-2 bg-slate-50 border-b border-slate-100 flex gap-1">
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'messages'
-                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Messages
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('workspaces')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'workspaces'
-                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <FolderOpen className="w-3.5 h-3.5" />
-            Workspaces
-          </button>
-        </div>
-
-        {/* Search & Filter Bar */}
-        <div className="p-3 border-b border-slate-100 space-y-2">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder={activeTab === 'messages' ? 'Search researcher DMs...' : 'Search research workspaces...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-            />
+          <div className="space-y-2 text-center">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Access Restricted</h2>
+            <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+              Only registered Research Supervisors and Research Scholars have access to the Research Collaboration Workspace.
+            </p>
           </div>
-
-          {activeTab === 'messages' && (
-            <div className="flex gap-1">
-              <button
-                onClick={() => setFilterMode('all')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
-                  filterMode === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilterMode('unread')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
-                  filterMode === 'unread' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Unread
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Scrollable List Pane */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          
-          {/* Messages Tab View */}
-          {activeTab === 'messages' && (
-            filteredConversations.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                <MessageSquare className="w-8 h-8 mx-auto opacity-30" />
-                <p className="text-xs font-medium">Your research conversations will appear here.</p>
-              </div>
-            ) : (
-              filteredConversations.map((c) => {
-                const isSelected = selectedConversationId === c.id;
-                return (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedConversationId(c.id);
-                      setConversations(prev => prev.map(item => item.id === c.id ? { ...item, unreadCount: 0 } : item));
-                    }}
-                    className={`p-3 transition-all cursor-pointer flex items-start gap-3 relative ${
-                      isSelected ? 'bg-blue-50/60 border-l-4 border-[#3B82F6]' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div className="relative shrink-0">
-                      <img src={c.participant.avatar} alt={c.participant.name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                      {c.participant.online && (
-                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-                      )}
-                    </div>
-
-                    {/* Meta */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline mb-0.5">
-                        <h3 className="text-xs font-bold text-slate-900 truncate">{c.participant.name}</h3>
-                        <span className="text-[10px] text-slate-400 font-medium shrink-0 ml-1">{c.timestamp}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 font-normal truncate leading-tight">{c.lastMessage}</p>
-                      
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">
-                          {c.participant.connectionStatus}
-                        </span>
-                      </div>
-                    </div>
-
-                    {c.unreadCount > 0 && (
-                      <span className="px-1.5 py-0.5 bg-[#3B82F6] text-white text-[10px] font-bold rounded-full">
-                        {c.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            )
-          )}
-
-          {/* Workspaces Tab View */}
-          {activeTab === 'workspaces' && (
-            filteredWorkspaces.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                <FolderOpen className="w-8 h-8 mx-auto opacity-30" />
-                <p className="text-xs font-medium">Create a workspace to start collaborating on research.</p>
-              </div>
-            ) : (
-              filteredWorkspaces.map((w) => {
-                const isSelected = selectedWorkspaceId === w.id;
-                return (
-                  <div
-                    key={w.id}
-                    onClick={() => setSelectedWorkspaceId(w.id)}
-                    className={`p-3 transition-all cursor-pointer flex items-start gap-3 ${
-                      isSelected ? 'bg-blue-50/60 border-l-4 border-[#3B82F6]' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-                      {w.title.slice(0, 2).toUpperCase()}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline mb-0.5">
-                        <h3 className="text-xs font-bold text-slate-900 truncate">{w.title}</h3>
-                        <span className="text-[10px] text-slate-400 font-medium shrink-0 ml-1">{w.lastActivity}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 font-normal truncate leading-tight">{w.description}</p>
-                      
-                      <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400 font-medium">
-                        <span>{w.memberCount} Researchers</span>
-                        <span className="text-blue-600 font-bold">{w.progress}% Done</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )
-          )}
+          <Link
+            href="/feed"
+            className="block w-full py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white rounded-xl text-xs font-bold transition-all text-center"
+          >
+            Back to Feed
+          </Link>
         </div>
       </div>
+    );
+  }
 
-      {/* ─── PANE 2: ACTIVE CONVERSATION / WORKSPACE VIEW (CENTER) ─── */}
-      <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0">
+  // Render Detail View
+  if (selectedCollab) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6 max-w-7xl mx-auto flex flex-col gap-6 pb-20 select-none text-left">
         
-        {/* DIRECT MESSAGES ACTIVE VIEW */}
-        {activeTab === 'messages' && (
-          <div className="flex-1 flex flex-col h-full min-w-0">
-            
-            {/* Header */}
-            <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-white z-10 shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <img
-                  src={activeConversation.participant.avatar}
-                  alt={activeConversation.participant.name}
-                  className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
-                />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-bold text-slate-900 truncate flex items-center gap-1.5">
-                    {activeConversation.participant.name}
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600 inline" />
-                  </h2>
-                  <p className="text-[11px] text-slate-500 truncate">
-                    {activeConversation.participant.role.replace('_', ' ')} • {activeConversation.participant.lastSeen}
-                  </p>
-                </div>
-              </div>
+        {/* Back Button */}
+        <div>
+          <button
+            onClick={() => setOpenedCollabId(null)}
+            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Collaborations
+          </button>
+        </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowDetailsPane(!showDetailsPane)}
-                  className={`p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-all cursor-pointer ${
-                    showDetailsPane ? 'bg-slate-100 text-slate-900' : ''
-                  }`}
-                  title="Toggle Research Details Panel"
-                >
-                  <Info className="w-4 h-4" />
-                </button>
+        {/* A. Collaboration Header */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 shrink-0">
+              <img src={getProfileImageUrl(selectedCollab.partner)} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 bg-[#0C4DA2]/10 text-[#0C4DA2] border border-[#0C4DA2]/20 rounded-full font-black text-[9px] uppercase tracking-wider">
+                  {selectedCollab.type === 'advisory' ? 'PhD advisory' : 'Research project'}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-bold text-[9px] uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  {selectedCollab.status}
+                </span>
               </div>
+              <h2 className="text-lg font-black text-slate-900 mt-1 truncate leading-snug">
+                {selectedCollab.title}
+              </h2>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                Collaborator: <span className="text-slate-800 font-bold">{selectedCollab.partner?.name}</span> ({selectedCollab.partner?.roleLabel}) • {selectedCollab.partner?.department}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            <Link
+              href={selectedCollab.partner?.id && selectedCollab.partner?.id !== 'system' ? `/researchers/${selectedCollab.partner.id}` : '#'}
+              className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-250 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              View Research Profile <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Content Layout Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* B. Research Discussion (Left Column - Spans 8 cols) */}
+          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl shadow-3xs flex flex-col h-[550px] overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center gap-2 bg-white shrink-0">
+              <MessageSquare className="w-4 h-4 text-[#0C4DA2]" />
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                Research Discussion
+              </h3>
             </div>
 
-            {/* Messages Stream */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F8FAFC]/50">
-              {activeMessages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
-                  <MessageSquare className="w-10 h-10 opacity-30" />
-                  <p className="text-xs font-semibold">Start the conversation with {activeConversation.participant.name}.</p>
-                </div>
-              ) : (
-                activeMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${msg.isMine ? 'items-end' : 'items-start'}`}
-                  >
-                    {/* Sender Name */}
-                    <span className="text-[10px] font-bold text-slate-400 mb-1 px-1">
+            {/* Messages stream */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+              {messages.map((msg: any) => {
+                const isMine = msg.senderId === currentUser?.id;
+                return (
+                  <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                    <span className="text-[10px] font-bold text-slate-400 mb-1 px-1.5">
                       {msg.senderName} • {msg.timestamp}
                     </span>
-
-                    {/* Bubble */}
-                    <div className="group relative max-w-[85%] sm:max-w-[70%]">
-                      
-                      {/* Replying Context */}
+                    <div className={`p-3.5 rounded-2xl text-xs max-w-[80%] leading-relaxed shadow-3xs border ${
+                      isMine 
+                        ? 'bg-[#0C4DA2] text-white border-[#0C4DA2] rounded-tr-none' 
+                        : 'bg-white text-slate-900 border-slate-150 rounded-tl-none'
+                    }`}>
                       {msg.replyTo && (
-                        <div className="mb-1 p-2 bg-slate-100 border-l-2 border-blue-500 rounded text-[11px] text-slate-600">
-                          <span className="font-bold text-blue-600 block">{msg.replyTo.senderName}</span>
-                          <span className="truncate block">{msg.replyTo.content}</span>
+                        <div className="mb-2 p-2 bg-slate-50/70 border-l-2 border-blue-500 rounded text-[10px] text-slate-500 font-medium">
+                          <span className="font-extrabold text-[#0C4DA2] block">Replying to {msg.replyTo.senderName}</span>
+                          <span className="truncate block mt-0.5">"{msg.replyTo.content}"</span>
                         </div>
                       )}
-
-                      <div
-                        className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
-                          msg.isMine
-                            ? 'bg-[#3B82F6] text-white rounded-br-none'
-                            : 'bg-white border border-slate-200 text-slate-900 rounded-bl-none'
-                        }`}
-                      >
-                        {msg.content}
-
-                        {/* Attachment Card */}
-                        {msg.attachment && (
-                          <div className={`mt-2.5 p-2.5 rounded-xl border flex items-center justify-between gap-3 ${
-                            msg.isMine ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
-                          }`}>
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText className="w-5 h-5 shrink-0 opacity-80" />
-                              <div className="min-w-0">
-                                <p className="font-bold text-[11px] truncate">{msg.attachment.name}</p>
-                                <span className="text-[9px] opacity-75">{msg.attachment.size}</span>
-                              </div>
-                            </div>
-                            <a
-                              href={msg.attachment.url}
-                              download
-                              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-all shrink-0"
-                              title="Download Research Document"
-                            >
-                              <FileDown className="w-3.5 h-3.5" />
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Hover Action Bar: Reactions & Reply */}
-                      <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-slate-200 shadow-md rounded-full px-2 py-1 z-20 ${
-                        msg.isMine ? '-left-24' : '-right-24'
-                      }`}>
-                        {['❤️', '👍', '🔥', '🚀', '💡'].map((emoji) => (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReact(msg.id, emoji)}
-                            className="text-xs hover:scale-125 transition-transform cursor-pointer"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setReplyingTo(msg)}
-                          className="p-1 text-slate-400 hover:text-slate-700 transition-colors"
-                          title="Reply"
-                        >
-                          <CornerUpLeft className="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      {/* Displayed Reactions */}
-                      {msg.reactions && msg.reactions.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {msg.reactions.map((r, i) => (
-                            <span
-                              key={i}
-                              onClick={() => handleReact(msg.id, r.emoji)}
-                              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold border cursor-pointer flex items-center gap-1 ${
-                                r.userReacted
-                                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                  : 'bg-white border-slate-200 text-slate-600'
-                              }`}
-                            >
-                              <span>{r.emoji}</span>
-                              <span>{r.count}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <p>{msg.content}</p>
                     </div>
-
-                    {/* Status Double Ticks for Mine */}
-                    {msg.isMine && (
-                      <span className="text-[9px] text-slate-400 mt-0.5 flex items-center gap-0.5">
-                        <CheckCheck className="w-3 h-3 text-blue-500" /> Read
-                      </span>
-                    )}
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
 
-            {/* Composer Bar */}
-            <div className="p-3 border-t border-slate-200 bg-white shrink-0">
-              {/* Replying Banner */}
+            {/* Messages Composer */}
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-white shrink-0 space-y-2">
               {replyingTo && (
-                <div className="mb-2 p-2 bg-slate-50 border-l-2 border-blue-500 rounded text-xs flex justify-between items-center">
-                  <div>
-                    <span className="font-bold text-blue-600 text-[11px] block">Replying to {replyingTo.senderName}</span>
-                    <span className="text-slate-600 text-[11px] truncate block max-w-md">{replyingTo.content}</span>
+                <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-150 text-[11px]">
+                  <div className="truncate">
+                    <span className="font-bold text-[#0C4DA2]">Replying to {replyingTo.senderName}:</span>
+                    <span className="text-slate-650 ml-1">"{replyingTo.content}"</span>
                   </div>
-                  <button onClick={() => setReplyingTo(null)} className="p-1 text-slate-400 hover:text-slate-700">
+                  <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-slate-600">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
 
-              {/* Attached File Banner */}
-              {attachedFile && (
-                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-blue-800 font-medium">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <span>{attachedFile.name} ({attachedFile.size})</span>
-                  </div>
-                  <button onClick={() => setAttachedFile(null)} className="p-1 text-blue-500 hover:text-blue-800">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                {/* File Attachment Button */}
-                <label className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors cursor-pointer shrink-0">
-                  <Paperclip className="w-4 h-4" />
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.docx,.pptx,.xlsx,image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setAttachedFile({
-                          name: file.name,
-                          type: file.type.includes('pdf') ? 'pdf' : 'docx',
-                          url: '#',
-                          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-                        });
-                      }
-                    }}
-                  />
-                </label>
-
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={`Write a research message to ${activeConversation.participant.name}...`}
+                  placeholder={`Discuss methodology, guidelines or updates with ${selectedCollab.partner?.name}...`}
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="flex-1 py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C4DA2] focus:bg-white text-xs font-semibold transition-all"
                 />
-
                 <button
-                  onClick={handleSendMessage}
-                  disabled={!messageInput.trim() && !attachedFile}
-                  className="p-2.5 bg-[#3B82F6] hover:bg-blue-600 disabled:opacity-40 text-white rounded-xl shadow-sm transition-all cursor-pointer shrink-0"
+                  type="submit"
+                  className="p-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
+            </form>
+          </div>
+
+          {/* Right Column (Spans 4 cols) - Activities, References & Metadata */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            
+            {/* E. Collaboration Information */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-1.5">
+                Collaboration Info
+              </h3>
+              <div className="space-y-2.5 text-[11px]">
+                <div>
+                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Research Area</span>
+                  <span className="font-bold text-slate-900 block mt-0.5">{selectedCollab.topic}</span>
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Assigned Members</span>
+                  <span className="font-semibold text-slate-700 block mt-0.5">
+                    {selectedCollab.participants.map((p: any) => p.name).join(' ↔ ')}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Commenced Date</span>
+                  <span className="font-semibold text-slate-700 block mt-0.5">{selectedCollab.startedAt}</span>
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Objective Statement</span>
+                  <span className="font-semibold text-slate-500 block mt-0.5 leading-relaxed">{selectedCollab.objective}</span>
+                </div>
+              </div>
             </div>
 
-          </div>
-        )}
-
-        {/* WORKSPACE ACTIVE VIEW */}
-        {activeTab === 'workspaces' && (
-          <div className="flex-1 flex flex-col h-full min-w-0">
-            
-            {/* Header & Sub-Nav */}
-            <div className="p-4 border-b border-slate-200 bg-white shrink-0">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">{activeWorkspace.title}</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">{activeWorkspace.description}</p>
-                </div>
+            {/* D. Research References (Files List) */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3 flex flex-col min-h-[220px]">
+              <div className="border-b border-slate-100 pb-1.5 flex justify-between items-center shrink-0">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                  Research References
+                </h3>
                 <button
-                  onClick={() => setShowDetailsPane(!showDetailsPane)}
-                  className={`p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-all cursor-pointer ${
-                    showDetailsPane ? 'bg-slate-100 text-slate-900' : ''
-                  }`}
+                  onClick={() => setShowUploadModal(true)}
+                  className="p-1 bg-[#0C4DA2]/10 hover:bg-[#0C4DA2]/20 text-[#0C4DA2] rounded-lg border border-blue-100 cursor-pointer"
+                  title="Reference a Document"
                 >
-                  <Info className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 </button>
               </div>
 
-              {/* Sub-Tabs */}
-              <div className="flex gap-2 border-b border-slate-100 pb-1 text-xs font-bold overflow-x-auto">
-                {[
-                  { id: 'overview', label: 'Overview', icon: Layers },
-                  { id: 'chat', label: 'Project Chat', icon: MessageSquare },
-                  { id: 'members', label: 'Members', icon: Users },
-                  { id: 'files', label: 'Files & PDFs', icon: FileText },
-                  { id: 'milestones', label: 'Milestones', icon: CheckCircle2 },
-                  { id: 'announcements', label: 'Announcements', icon: Megaphone },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setWorkspaceSubTab(tab.id as any)}
-                    className={`py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
-                      workspaceSubTab === tab.id
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'text-slate-500 hover:bg-slate-100'
-                    }`}
-                  >
-                    <tab.icon className="w-3.5 h-3.5" />
-                    {tab.label}
-                  </button>
-                ))}
+              {/* Files scrolling list */}
+              <div className="flex-1 overflow-y-auto space-y-2 max-h-[160px] pr-1">
+                {selectedCollab.type === 'project' ? (
+                  activeWorkspace?.files?.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic text-center py-4">No reference files uploaded.</p>
+                  ) : (
+                    activeWorkspace?.files?.map((file: any) => (
+                      <div key={file.id} className="p-2 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-[11px] text-slate-900 truncate" title={file.name}>{file.name}</p>
+                            <span className="text-[9px] text-slate-400 font-semibold">{file.size ? `${(file.size / 1024).toFixed(1)} MB` : '1.2 MB'}</span>
+                          </div>
+                        </div>
+                        <a href={file.url} download className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    ))
+                  )
+                ) : (
+                  advisoryFilesList.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic text-center py-4">No reference files uploaded.</p>
+                  ) : (
+                    advisoryFilesList.map((file: CollaborationFile, idx: number) => (
+                      <div key={idx} className="p-2 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-[11px] text-slate-900 truncate" title={file.name}>{file.name}</p>
+                            <span className="text-[9px] text-slate-400 font-semibold">{file.size}</span>
+                          </div>
+                        </div>
+                        <a href={file.url} download className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    ))
+                  )
+                )}
               </div>
+
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 mt-2 font-sans"
+              >
+                <UploadCloud className="w-3.5 h-3.5" /> Reference Document
+              </button>
             </div>
 
-            {/* Sub-Tab Content View */}
-            <div className="flex-1 overflow-y-auto p-6 bg-[#F8FAFC]/50">
-              
-              {/* OVERVIEW */}
-              {workspaceSubTab === 'overview' && (
-                <div className="space-y-6 max-w-3xl">
-                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-sm font-bold text-slate-900 mb-2">Research Objective</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">{activeWorkspace.description}</p>
-                    
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-700">Project Completion Status</span>
-                      <span className="text-xs font-black text-blue-600">{activeWorkspace.progress}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2 mt-2">
-                      <div className="bg-[#3B82F6] h-2 rounded-full" style={{ width: `${activeWorkspace.progress}%` }}></div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">ACTIVE MEMBERS</span>
-                      <p className="text-2xl font-black text-slate-900 mt-1">{activeWorkspace.members.length}</p>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">RESEARCH FILES</span>
-                      <p className="text-2xl font-black text-slate-900 mt-1">{activeWorkspace.files.length}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* PROJECT CHAT */}
-              {workspaceSubTab === 'chat' && (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2">
-                  <MessageSquare className="w-10 h-10 opacity-30" />
-                  <p className="text-xs font-medium">Workspace discussion stream active for team members.</p>
-                </div>
-              )}
-
-              {/* MEMBERS */}
-              {workspaceSubTab === 'members' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-                  {activeWorkspace.members.map((m) => (
-                    <div key={m.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center gap-3 shadow-sm">
-                      <img src={m.avatar} alt={m.name} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">{m.name}</h4>
-                        <p className="text-[10px] text-slate-500 font-medium">{m.role}</p>
+            {/* C. Research Activity (Timeline Events) */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3 flex-1 flex flex-col">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-1.5">
+                Research Activity
+              </h3>
+              <div className="flex-1 overflow-y-auto space-y-3 max-h-[220px] pr-1">
+                {activityEvents.length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic text-center py-6">No recent updates recorded.</p>
+                ) : (
+                  activityEvents.map((evt: any) => (
+                    <div key={evt.id} className="flex gap-2.5 items-start">
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                        <Activity className="w-3 h-3 text-[#0C4DA2]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] text-slate-700 font-medium leading-relaxed">{evt.text}</p>
+                        <span className="text-[9px] text-slate-405 font-bold mt-0.5 block">
+                          {evt.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* FILES */}
-              {workspaceSubTab === 'files' && (
-                <div className="space-y-3 max-w-3xl">
-                  {activeWorkspace.files.map((f) => (
-                    <div key={f.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-center justify-between shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900">{f.name}</h4>
-                          <p className="text-[10px] text-slate-400">{f.size} • Uploaded by {f.uploadedBy} on {f.date}</p>
-                        </div>
-                      </div>
-                      <a href="#" className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1">
-                        <FileDown className="w-3.5 h-3.5" /> Download
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* MILESTONES */}
-              {workspaceSubTab === 'milestones' && (
-                <div className="space-y-3 max-w-3xl">
-                  {activeWorkspace.milestones.map((ms) => (
-                    <div
-                      key={ms.id}
-                      onClick={() => handleToggleMilestone(ms.id)}
-                      className={`p-4 bg-white border rounded-2xl flex items-center justify-between cursor-pointer transition-all ${
-                        ms.completed ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input type="checkbox" checked={ms.completed} readOnly className="w-4 h-4 accent-emerald-600 rounded" />
-                        <div>
-                          <h4 className={`text-xs font-bold ${ms.completed ? 'line-through text-slate-400' : 'text-slate-900'}`}>{ms.title}</h4>
-                          <p className="text-[10px] text-slate-400">Due: {ms.dueDate}</p>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ms.completed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                        {ms.completed ? 'Completed' : 'In Progress'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ANNOUNCEMENTS */}
-              {workspaceSubTab === 'announcements' && (
-                <div className="space-y-3 max-w-3xl">
-                  {activeWorkspace.announcements.map((a) => (
-                    <div key={a.id} className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-2">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-xs font-bold text-slate-900">{a.title}</h4>
-                        <span className="text-[10px] text-slate-400">{a.date}</span>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">{a.content}</p>
-                      <p className="text-[10px] text-slate-400 font-bold">Posted by {a.author}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
 
           </div>
-        )}
+
+        </div>
+
+        {/* RESEARCH FILE UPLOAD MODAL */}
+        <AnimatePresence>
+          {showUploadModal && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 text-left"
+              >
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-1.5">
+                    <UploadCloud className="w-4 h-4 text-[#0C4DA2]" /> Reference Research File
+                  </h3>
+                  <button onClick={() => setShowUploadModal(false)} className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUploadFile} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">File Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Methodology_Draft.pdf"
+                      value={newFileName}
+                      onChange={(e) => setNewFileName(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C4DA2] focus:bg-white text-xs font-semibold transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">File URL</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. /files/methodology_v1.pdf"
+                      value={newFileUrl}
+                      onChange={(e) => setNewFileUrl(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C4DA2] focus:bg-white text-xs font-semibold transition-all"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setShowUploadModal(false)}
+                      className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-bold rounded-xl cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={uploading}
+                      className="px-5 py-2 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {uploading ? 'Sharing...' : 'Reference Document'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+      </div>
+    );
+  }
+
+  // Shared Pending Requests Component
+  const pendingRequestsSection = ((isSupervisor && pendingApprovals?.length > 0) || myCollabRequests?.received?.filter((r: any) => r.status === 'PENDING').length > 0) ? (
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-3xs space-y-4 max-w-4xl mx-auto w-full mb-8">
+      <div className="border-b border-slate-100 pb-2">
+        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-1.5">
+          <Clock className="w-4 h-4 text-amber-600" /> Pending Collaboration Requests
+        </h3>
       </div>
 
-      {/* ─── PANE 3: DETAILS & RESEARCH CONTEXT PANEL (RIGHT) ─── */}
-      {showDetailsPane && (
-        <div className="w-72 border-l border-slate-200 bg-slate-50 flex flex-col hidden lg:flex shrink-0 overflow-y-auto p-4 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Scholar Advisor mapping requests */}
+        {pendingApprovals?.map((req: any) => (
+          <div key={req.id} className="p-4 bg-amber-50/20 border border-amber-200/50 rounded-2xl flex flex-col justify-between gap-3 text-left">
+            <div>
+              <h4 className="text-xs font-extrabold text-slate-900">{req.name}</h4>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-0.5">{req.department || 'SRMIST'}</p>
+              <p className="text-[11px] text-slate-600 mt-1 font-semibold">Scholar is requesting supervisor assignment.</p>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => handleApproveScholar(req.id)}
+                className="flex-1 py-2 bg-[#0C4DA2] hover:bg-[#042654] text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5" /> Approve
+              </button>
+              <button
+                onClick={() => handleDeclineScholar(req.id)}
+                className="px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {/* Project proposal requests */}
+        {myCollabRequests?.received?.filter((r: any) => r.status === 'PENDING').map((req: any) => (
+          <div key={req.id} className="p-4 bg-blue-50/15 border border-blue-200/40 rounded-2xl flex flex-col justify-between gap-3 text-left">
+            <div>
+              <div className="flex items-center gap-1 bg-blue-50/60 border border-blue-100 rounded px-1.5 py-0.5 w-max">
+                <Users className="w-3 h-3 text-[#0C4DA2]" />
+                <span className="text-[9px] font-extrabold text-[#0C4DA2] uppercase tracking-wider">Research Collaboration</span>
+              </div>
+              <h4 className="text-xs font-extrabold text-slate-900 mt-2">{req.requester?.name}</h4>
+              <p className="text-[10px] font-bold text-slate-500 truncate mt-0.5">Focus: {req.thread?.title || 'Joint Project'}</p>
+              {req.message && (
+                <p className="text-[10px] text-slate-500 bg-white border border-slate-100 rounded-lg p-2 mt-2 leading-relaxed italic">
+                  "{req.message}"
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => handleAcceptCollab(req.id)}
+                className="flex-1 py-2 bg-[#0C4DA2] hover:bg-[#042654] text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5" /> Accept
+              </button>
+              <button
+                onClick={() => handleDeclineCollab(req.id)}
+                className="px-3 py-2 border border-slate-200 hover:bg-slate-55 text-slate-550 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  // Render Zero Collaborations (Empty State) or Active Collaborations Dashboard
+  return (
+    <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6 max-w-7xl mx-auto flex flex-col gap-6 pb-20 select-none text-left">
+      
+      {activeCollaborations.length === 0 ? (
+        /* ==================================================
+           3. EMPTY STATE — ZERO COLLABORATIONS
+           ================================================== */
+        <div className="w-full max-w-4xl mx-auto py-10 space-y-8 text-left">
           
-          {activeTab === 'messages' ? (
-            <>
-              {/* Profile Card */}
-              <div className="text-center bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                <img
-                  src={activeConversation.participant.avatar}
-                  alt={activeConversation.participant.name}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 mx-auto"
-                />
-                <h3 className="text-sm font-bold text-slate-900 mt-3">{activeConversation.participant.name}</h3>
-                <p className="text-[10px] text-slate-500 font-medium mt-0.5">{activeConversation.participant.role.replace('_', ' ')}</p>
-                <p className="text-[10px] text-slate-400 mt-1">{activeConversation.participant.department}</p>
-                
-                <div className="mt-3 inline-block px-2.5 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full border border-blue-100">
-                  {activeConversation.participant.connectionStatus}
-                </div>
-              </div>
+          {/* Header */}
+          <div className="border-b border-slate-200 pb-4">
+            <span className="text-[11px] font-black tracking-widest text-[#0C4DA2] uppercase">CURIOUS NEXUS</span>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight mt-1">Research Collaboration Workspace</h1>
+            <p className="text-xs text-slate-550 font-semibold mt-1">
+              Your focused workspace for approved research collaborations with supervisors and scholars.
+            </p>
+          </div>
 
-              {/* Research Interests */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
-                <h4 className="text-xs font-bold text-slate-900 flex items-center justify-between">
-                  <span>Shared Research Interests</span>
-                  <span className="text-[10px] text-blue-600 font-bold">{activeConversation.participant.sharedInterests.length} shared</span>
-                </h4>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {activeConversation.participant.sharedInterests.map((interest, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-lg">
-                      {interest}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {/* Compact Statistics Grid */}
+          <div className="grid grid-cols-3 gap-4 font-sans">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs text-center">
+              <span className="text-3xl font-black text-slate-900">{stats.activeCollabsCount}</span>
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mt-1">Active Collaborations</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs text-center">
+              <span className="text-3xl font-black text-slate-900">{stats.activeProjectsCount}</span>
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mt-1">Active Research Projects</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs text-center">
+              <span className="text-3xl font-black text-slate-900">{stats.pendingRequestsCount}</span>
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mt-1">Pending Collaboration Requests</p>
+            </div>
+          </div>
 
-              {/* Shared Files */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
-                <h4 className="text-xs font-bold text-slate-900">Shared Documents & PDFs</h4>
-                <div className="space-y-2">
-                  <div className="p-2 bg-slate-50 rounded-xl flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span className="text-[11px] font-medium text-slate-800 truncate">KnowledgeGraph_Methodology.pdf</span>
+          {/* Pending Requests Prominent Section */}
+          {pendingRequestsSection}
+
+          {/* Central Empty State Card */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-3xs flex flex-col items-center justify-center max-w-2xl mx-auto space-y-4">
+            <div className="w-16 h-16 bg-blue-50 border border-blue-100 text-[#0C4DA2] rounded-2xl flex items-center justify-center shadow-3xs">
+              <Network className="w-8 h-8" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-extrabold text-slate-900">No active research collaborations</h3>
+              <p className="text-xs md:text-sm text-slate-550 leading-relaxed font-semibold max-w-md mx-auto">
+                Once you establish an approved research collaboration, your research discussions, updates and collaboration activity will appear here.
+              </p>
+            </div>
+            <Link
+              href="/researchers"
+              className="px-5 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 font-sans"
+            >
+              Explore Researchers →
+            </Link>
+          </div>
+
+        </div>
+      ) : (
+        /* ==================================================
+           4. ACTIVE COLLABORATIONS STATE
+           ================================================== */
+        <div className="w-full max-w-6xl mx-auto py-6 space-y-8 text-left">
+          
+          {/* Header */}
+          <div className="border-b border-slate-200 pb-4">
+            <span className="text-[11px] font-black tracking-widest text-[#0C4DA2] uppercase">CURIOUS NEXUS</span>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight mt-1">Research Collaboration Workspace</h1>
+            <p className="text-xs text-slate-550 font-semibold mt-1">
+              Your active research collaborations
+            </p>
+          </div>
+
+          {/* Real Statistics Grid */}
+          <div className="grid grid-cols-3 gap-4 font-sans">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs text-center">
+              <span className="text-3xl font-black text-slate-900">{stats.activeCollabsCount}</span>
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mt-1">Active Collaborations</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs text-center">
+              <span className="text-3xl font-black text-slate-900">{stats.activeProjectsCount}</span>
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mt-1">Active Research Projects</p>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs text-center">
+              <span className="text-3xl font-black text-slate-900">{stats.pendingRequestsCount}</span>
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mt-1">Pending Collaboration Requests</p>
+            </div>
+          </div>
+
+          {/* Pending Requests Prominent Section */}
+          {pendingRequestsSection}
+
+          {/* Search bar */}
+          <div className="relative max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search your collaborations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-850 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C4DA2] text-xs font-semibold shadow-3xs transition-all animate-none"
+            />
+          </div>
+
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            {filteredCollaborations.length === 0 ? (
+              <div className="col-span-full py-12 text-center bg-white border border-slate-200 rounded-3xl">
+                <p className="text-xs font-semibold text-slate-450">No matching active collaborations found.</p>
+              </div>
+            ) : (
+              filteredCollaborations.map((collab) => (
+                <div
+                  key={collab.id}
+                  className="bg-white border border-slate-200 hover:border-slate-300 rounded-3xl p-6 shadow-3xs flex flex-col justify-between gap-5 transition-all hover:shadow-2xs"
+                >
+                  <div className="space-y-4">
+                    {/* Header line */}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h3 className="font-sans text-sm font-black text-slate-905 tracking-tight truncate max-w-[70%]">
+                        {collab.title}
+                      </h3>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-250 rounded-full font-black text-[9px] uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse" />
+                        {collab.status}
+                      </span>
                     </div>
-                    <FileDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+
+                    {/* Partner identity */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0">
+                        <img src={getProfileImageUrl(collab.partner)} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-black text-slate-900 leading-tight">
+                          {collab.partner?.name}
+                        </h4>
+                        <p className="text-[10px] font-bold text-[#0C4DA2] uppercase tracking-wider mt-0.5">
+                          {collab.partner?.roleLabel}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Metadata lines */}
+                    <div className="space-y-2.5 text-[10px]">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-slate-400 uppercase tracking-wide shrink-0">Topic:</span>
+                        <span className="font-extrabold text-slate-700 truncate">{collab.topic}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-slate-400 uppercase tracking-wide shrink-0">Research Area:</span>
+                        <span className="font-extrabold text-slate-700 truncate">{collab.partner?.department}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-slate-400 uppercase tracking-wide shrink-0">Started Date:</span>
+                        <span className="font-extrabold text-slate-700">{collab.startedAt}</span>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* CTA button */}
+                  <button
+                    onClick={() => setOpenedCollabId(collab.id)}
+                    className="w-full py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer font-sans"
+                  >
+                    Open Collaboration
+                  </button>
                 </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Workspace Details */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-                <h3 className="text-sm font-bold text-slate-900">{activeWorkspace.title}</h3>
-                <p className="text-xs text-slate-500">{activeWorkspace.description}</p>
-                <div className="pt-2 border-t border-slate-100 flex justify-between text-xs font-bold text-slate-700">
-                  <span>Team Size</span>
-                  <span>{activeWorkspace.members.length} Researchers</span>
-                </div>
-              </div>
-            </>
-          )}
+              ))
+            )}
+          </div>
 
         </div>
       )}
-
-      {/* ─── NEW CONVERSATION / WORKSPACE MODAL ─── */}
-      <AnimatePresence>
-        {showNewModal && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4"
-            >
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-bold text-slate-900">Start Research Conversation</h3>
-                <button onClick={() => setShowNewModal(false)} className="p-1 text-slate-400 hover:text-slate-700">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs text-slate-500">Select a researcher from your mutual network or following connections:</p>
-
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {conversations.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedConversationId(c.id);
-                      setActiveTab('messages');
-                      setShowNewModal(false);
-                    }}
-                    className="p-3 border border-slate-100 hover:border-blue-200 rounded-xl flex items-center justify-between cursor-pointer hover:bg-blue-50/50 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img src={c.participant.avatar} alt={c.participant.name} className="w-8 h-8 rounded-full object-cover" />
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">{c.participant.name}</h4>
-                        <p className="text-[10px] text-slate-400">{c.participant.department}</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                      {c.participant.connectionStatus}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pt-2 flex justify-end">
-                <button
-                  onClick={() => setShowNewModal(false)}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );

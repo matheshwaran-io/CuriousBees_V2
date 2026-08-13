@@ -41,43 +41,47 @@ export function SearchCommand({ isOpen, onClose }: SearchCommandProps) {
   const getFilteredResults = (): SearchResultItem[] => {
     const list: SearchResultItem[] = [];
 
-    threads.forEach((t) => {
+    (threads || []).forEach((t) => {
+      if (!t) return;
       list.push({
         id: `t-${t.id}`,
         title: t.title,
         category: 'Threads',
         url: `/threads/${t.id}`,
-        meta: `By ${t.author?.name || 'Scholar'} · ${t.tags.join(', ')}`,
+        meta: `By ${t.author?.name || 'Scholar'} · ${(t.tags || []).join(', ')}`,
       });
     });
 
-    opportunities.forEach((o) => {
+    (opportunities || []).forEach((o) => {
+      if (!o) return;
       list.push({
         id: `o-${o.id}`,
         title: o.title,
         category: 'Opportunities',
         url: '/opportunities',
-        meta: `${o.department} · PI: ${o.author?.name || 'Faculty Leads'}`,
+        meta: `${o.department || 'Department'} · PI: ${o.author?.name || 'Faculty Leads'}`,
       });
     });
 
-    events.forEach((e) => {
+    (events || []).forEach((e) => {
+      if (!e) return;
       list.push({
         id: `e-${e.id}`,
         title: e.title,
         category: 'Events',
         url: '/events',
-        meta: `${e.date} · ${e.venue}`,
+        meta: `${e.date || ''} · ${e.venue || ''}`,
       });
     });
 
-    collaborators.forEach((c) => {
+    (collaborators || []).forEach((c) => {
+      if (!c) return;
       list.push({
         id: `c-${c.id}`,
         title: c.name || 'Scholar',
         category: 'Researchers',
         url: '/dashboard',
-        meta: `${c.department || 'SRMIST'} · Interests: ${c.interests?.map((i: any) => i.interest?.name || '').filter(Boolean).join(', ') || 'General'}`,
+        meta: `${c.department || 'SRMIST'} · Interests: ${c.interests?.map((i: any) => i.interest?.name || i.name || '').filter(Boolean).join(', ') || 'General'}`,
       });
     });
 

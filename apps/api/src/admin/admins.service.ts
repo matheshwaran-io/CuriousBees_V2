@@ -14,11 +14,56 @@ export class AdminAdminsService {
     private clerkService: ClerkService
   ) {}
 
-  async getAdmins() {
-    return this.prisma.user.findMany({
-      where: { role: Role.INSTITUTE_ADMIN },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getAdmins(query: any = {}) {
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 25);
+    const skip = (page - 1) * limit;
+
+    const where: any = { role: Role.INSTITUTE_ADMIN };
+
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (query.sort) {
+      const order = query.order === 'asc' ? 'asc' : 'desc';
+      if (query.sort === 'name') orderBy = { name: order };
+      else if (query.sort === 'email') orderBy = { email: order };
+      else if (query.sort === 'status') orderBy = { status: order };
+      else if (query.sort === 'createdAt') orderBy = { createdAt: order };
+    }
+
+    const [total, data] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async createAdmin(adminId: string, data: any) {
@@ -72,6 +117,33 @@ export class AdminAdminsService {
     });
 
     await this.logAudit(adminId, 'UPDATE_ADMIN_STATUS', `Changed status to ${status} for admin ${user.email}`);
+    return updated;
+  }
+
+  async updateAdmin(adminId: string, id: string, data: any) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new BadRequestException('Admin not found.');
+    if (user.email.toLowerCase() === SUPERADMIN_EMAIL) {
+      throw new ForbiddenException('The protected superadmin account cannot be modified.');
+    }
+
+    // Extract employeeId from email prefix
+    let employeeId = user.employeeId;
+    if (data.email) {
+      const prefix = data.email.split('@')[0];
+      employeeId = prefix.toUpperCase();
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name,
+        email: data.email?.toLowerCase(),
+        employeeId,
+      },
+    });
+
+    await this.logAudit(adminId, 'UPDATE_ADMIN', `Updated details for admin ${user.email}`);
     return updated;
   }
 

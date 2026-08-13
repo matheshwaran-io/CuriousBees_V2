@@ -124,7 +124,11 @@ export default function VerificationPendingPage() {
             {/* Typography & Content */}
             <div className="space-y-2">
               <h1 className="font-display font-extrabold text-2xl text-black tracking-tight leading-tight">
-                {isRejected ? 'Request Not Approved' : 'Waiting for Supervisor Approval'}
+                {isRejected 
+                  ? 'Request Not Approved' 
+                  : isSupervisorPending 
+                  ? 'Awaiting Administrator Review' 
+                  : 'Waiting for Supervisor Approval'}
               </h1>
               
               {/* Status Badge */}

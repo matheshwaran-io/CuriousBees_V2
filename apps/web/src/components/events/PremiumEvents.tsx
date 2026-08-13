@@ -66,12 +66,10 @@ export function PremiumEvents() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [rsvpList, setRsvpList] = useState<string[]>([]);
 
-  // Fetch events if empty
+  // Fetch events on mount once
   useEffect(() => {
-    if (events.length === 0) {
-      fetchEvents();
-    }
-  }, [events.length, fetchEvents]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   // Form handling
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<EventFormValues>({
@@ -117,9 +115,10 @@ export function PremiumEvents() {
 
   // Filtered Events for calendar view
   const filteredEvents = useMemo(() => {
-    return events.filter((e) => {
+    return (events || []).filter((e) => {
+      if (!e || !e.title) return false;
       const q = searchQuery.toLowerCase();
-      const matchesSearch = !q || e.title.toLowerCase().includes(q) || e.venue.toLowerCase().includes(q);
+      const matchesSearch = !q || e.title.toLowerCase().includes(q) || (e.venue || '').toLowerCase().includes(q);
       const matchesCategory = activeCategory === 'All' || 
         (e.eventType && e.eventType.toLowerCase().includes(activeCategory.toLowerCase().split(' ')[0]));
       return matchesSearch && matchesCategory;

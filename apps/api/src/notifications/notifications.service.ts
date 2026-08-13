@@ -35,8 +35,19 @@ export class NotificationsService {
   async markAllAsRead(userId: string) {
     return this.prisma.notification.updateMany({
       where: { userId, sentStatus: false },
-      data: { sentStatus: true }
+      data: { sentStatus: true, openedStatus: true }
     });
+  }
+
+  async markAsRead(userId: string, id: string) {
+    try {
+      return await this.prisma.notification.updateMany({
+        where: { id, userId },
+        data: { sentStatus: true, openedStatus: true }
+      });
+    } catch (e: any) {
+      return { success: false };
+    }
   }
 
   /**
@@ -72,20 +83,22 @@ export class NotificationsService {
   /**
    * Generic method to create an in-app notification
    */
-  async sendNotification(title: string, body: string, userId: string) {
+  async sendNotification(title: string, body: string, userId: string, type?: string, actionUrl?: string) {
     try {
       await this.prisma.notification.create({
         data: {
           userId,
           title,
           body,
+          type,
+          actionUrl,
           sentStatus: true,
         }
       });
     } catch (e: any) {
       this.logger.error(`Failed to save notification to database: ${e.message}`);
     }
-    return this.sendPushToUser(userId, { title, body });
+    return this.sendPushToUser(userId, { title, body, url: actionUrl });
   }
 
   // --- Notification Hooks for Auth and Approval Workflows ---
@@ -176,7 +189,39 @@ export class NotificationsService {
   }
 
   async notifyNewOpportunity(opportunityId: string, authorId: string) {
-    // TODO: Implement later
+    try {
+      const opp = await this.prisma.opportunity.findUnique({ where: { id: opportunityId }, include: { author: true } });
+      if (opp) {
+        await this.notifyFollowersOfActivity(
+          authorId,
+          'New Research Opportunity',
+          `${opp.author?.name || 'A researcher you follow'} shared: ${opp.title}`
+        );
+      }
+    } catch (e: any) {
+      this.logger.error(`notifyNewOpportunity failed: ${e.message}`);
+    }
+  }
+
+  /**
+   * Dispatches notifications to followers of a researcher who have notificationsEnabled === true
+   */
+  async notifyFollowersOfActivity(authorId: string, title: string, body: string) {
+    try {
+      const follows = await this.prisma.userFollow.findMany({
+        where: {
+          followingId: authorId,
+          notificationsEnabled: true
+        },
+        select: { followerId: true }
+      });
+
+      for (const f of follows) {
+        await this.sendNotification(title, body, f.followerId);
+      }
+    } catch (e: any) {
+      this.logger.error(`notifyFollowersOfActivity failed: ${e.message}`);
+    }
   }
 
   async notifyNewThreadComment(threadId: string, authorId: string, commentId: string) {

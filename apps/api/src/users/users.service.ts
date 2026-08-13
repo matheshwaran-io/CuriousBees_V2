@@ -1,18 +1,21 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileInput } from '@curiousbees/types';
 import { UpdateProfileSchema } from '@curiousbees/shared-utils';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from './mail.service';
 import { Role, UserStatus } from '@prisma/client';
-
+import { ClerkService } from '../auth/clerk.service';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private mailService: MailService,
+    private clerkService: ClerkService,
   ) {}
 
   async getProfile(userId: string) {
@@ -21,14 +24,93 @@ export class UsersService {
       include: {
         interests: {
           include: {
-            interest: true
-          }
-        }
-      }
+            interest: true,
+          },
+        },
+        externalLinks: {
+          orderBy: { createdAt: 'asc' },
+        },
+        supervisorProfile: {
+          include: {
+            department: true,
+            faculty: true,
+          },
+        },
+        scholarProfile: {
+          include: {
+            department: true,
+            faculty: true,
+          },
+        },
+        researchProfile: {
+          include: {
+            milestones: { orderBy: { dueDate: 'asc' } },
+            activities: { take: 10, orderBy: { createdAt: 'desc' } },
+          },
+        },
+        publications: {
+          orderBy: { year: 'desc' },
+        },
+        supervisor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            department: true,
+            role: true,
+            supervisorProfile: {
+              select: { designation: true, researchArea: true },
+            },
+          },
+        },
+        scholars: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            department: true,
+            employeeId: true,
+            role: true,
+            scholarProfile: true,
+            researchProfile: true,
+          },
+        },
+        collaborationsRequested: {
+          where: { status: 'ACTIVE' },
+          include: {
+            recipient: { select: { id: true, name: true, image: true, department: true, role: true } },
+          },
+        },
+        collaborationsReceived: {
+          where: { status: 'ACTIVE' },
+          include: {
+            requester: { select: { id: true, name: true, image: true, department: true, role: true } },
+          },
+        },
+      },
     });
 
     if (!user) {
       throw new BadRequestException('User not found.');
+    }
+
+    // Dynamic Clerk image sync
+    if (user.clerkId) {
+      try {
+        const clerkUser = await this.clerkService.client.users.getUser(user.clerkId);
+        if (clerkUser && clerkUser.imageUrl && clerkUser.imageUrl !== user.image) {
+          this.logger.log(`Dynamic sync of updated profile image for ${user.email} from Clerk API.`);
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { image: clerkUser.imageUrl }
+          });
+          user.image = clerkUser.imageUrl;
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to sync clerk image for user ${user.id}: ${err.message}`);
+      }
     }
 
     return user;
@@ -631,7 +713,10 @@ export class UsersService {
     }
     if (role) {
       where.role = role;
+    } else {
+      where.role = { in: ['RESEARCH_SUPERVISOR', 'RESEARCH_SCHOLAR'] };
     }
+
     if (department) {
       where.department = { equals: department, mode: 'insensitive' };
     }
@@ -658,7 +743,7 @@ export class UsersService {
           bio: true,
           image: true,
           interests: { include: { interest: true } },
-          followers: { where: { followerId: userId }, select: { id: true } }
+          followers: { where: { followerId: userId }, select: { id: true, notificationsEnabled: true } }
         },
         orderBy: { createdAt: 'desc' }
       }),
@@ -675,6 +760,7 @@ export class UsersService {
     const items = users.map(user => {
       const userInterests = user.interests.map(i => i.interest.name);
       const sharedInterests = userInterests.filter(i => myInterests.includes(i));
+      const followRec = user.followers[0];
       return {
         id: user.id,
         name: user.name,
@@ -683,7 +769,8 @@ export class UsersService {
         bio: user.bio,
         image: user.image,
         researchInterests: userInterests,
-        isFollowing: user.followers.length > 0,
+        isFollowing: !!followRec,
+        notificationsEnabled: followRec ? followRec.notificationsEnabled : false,
         sharedInterestCount: sharedInterests.length,
         sharedInterests
       };
@@ -710,14 +797,24 @@ export class UsersService {
     }
 
     try {
-      await this.prisma.userFollow.create({
-        data: {
+      await this.prisma.userFollow.upsert({
+        where: {
+          followerId_followingId: {
+            followerId,
+            followingId
+          }
+        },
+        create: {
           followerId,
-          followingId
+          followingId,
+          notificationsEnabled: true
+        },
+        update: {
+          notificationsEnabled: true
         }
       });
     } catch (e) {
-      // Ignore if already following (Unique constraint violation)
+      // Ignore if already following
     }
 
     return { success: true };
@@ -734,8 +831,22 @@ export class UsersService {
     return { success: true };
   }
 
+  async setFollowNotifications(followerId: string, followingId: string, enabled: boolean) {
+    await this.prisma.userFollow.updateMany({
+      where: {
+        followerId,
+        followingId
+      },
+      data: {
+        notificationsEnabled: enabled
+      }
+    });
+
+    return { success: true, enabled };
+  }
+
   async getFollowStatus(userId: string, targetId: string) {
-    const [isFollowing, followersCount, followingCount] = await Promise.all([
+    const [followRecord, followersCount, followingCount] = await Promise.all([
       this.prisma.userFollow.findUnique({
         where: {
           followerId_followingId: {
@@ -749,7 +860,8 @@ export class UsersService {
     ]);
 
     return {
-      isFollowing: !!isFollowing,
+      isFollowing: !!followRecord,
+      notificationsEnabled: followRecord ? followRecord.notificationsEnabled : false,
       followersCount,
       followingCount
     };
@@ -889,5 +1001,104 @@ export class UsersService {
       followedDomains: domainFollows.map(d => d.domain),
       followedTopics: topicFollows.map(t => t.topic)
     };
+  }
+
+  // ─── EXTERNAL RESEARCH LINKS METHODS ──────────────────────────────────────
+  async getExternalLinks(userId: string) {
+    return this.prisma.researcherExternalLink.findMany({
+      where: { userId, isVisible: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async addExternalLink(userId: string, platform: string, label?: string, url?: string) {
+    if (!url || !url.trim()) {
+      throw new BadRequestException('A valid URL is required.');
+    }
+    const cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      throw new BadRequestException('URL must start with http:// or https://');
+    }
+
+    const cleanPlatform = platform.trim().toUpperCase();
+
+    // Check for existing link for same platform
+    const existing = await this.prisma.researcherExternalLink.findUnique({
+      where: {
+        userId_platform: {
+          userId,
+          platform: cleanPlatform,
+        },
+      },
+    });
+
+    if (existing) {
+      return this.prisma.researcherExternalLink.update({
+        where: { id: existing.id },
+        data: {
+          label: label || null,
+          url: cleanUrl,
+          isVisible: true,
+        },
+      });
+    }
+
+    return this.prisma.researcherExternalLink.create({
+      data: {
+        userId,
+        platform: cleanPlatform,
+        label: label || null,
+        url: cleanUrl,
+        isVisible: true,
+      },
+    });
+  }
+
+  async updateExternalLink(
+    userId: string,
+    linkId: string,
+    label?: string,
+    url?: string,
+    isVisible?: boolean,
+  ) {
+    const existing = await this.prisma.researcherExternalLink.findFirst({
+      where: { id: linkId, userId },
+    });
+
+    if (!existing) {
+      throw new BadRequestException('External link record not found.');
+    }
+
+    const updateData: any = {};
+    if (label !== undefined) updateData.label = label;
+    if (url !== undefined) {
+      const cleanUrl = url.trim();
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        throw new BadRequestException('URL must start with http:// or https://');
+      }
+      updateData.url = cleanUrl;
+    }
+    if (isVisible !== undefined) updateData.isVisible = isVisible;
+
+    return this.prisma.researcherExternalLink.update({
+      where: { id: linkId },
+      data: updateData,
+    });
+  }
+
+  async deleteExternalLink(userId: string, linkId: string) {
+    const existing = await this.prisma.researcherExternalLink.findFirst({
+      where: { id: linkId, userId },
+    });
+
+    if (!existing) {
+      throw new BadRequestException('External link record not found.');
+    }
+
+    await this.prisma.researcherExternalLink.delete({
+      where: { id: linkId },
+    });
+
+    return { success: true };
   }
 }

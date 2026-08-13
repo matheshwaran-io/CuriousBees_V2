@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/clerk.guard';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { Roles } from '../auth/roles/roles.decorator';
@@ -14,8 +14,8 @@ export class AdminSupervisorsController {
   constructor(private readonly supervisorsService: AdminSupervisorsService) {}
 
   @Get()
-  async getSupervisors() {
-    return this.supervisorsService.getSupervisors();
+  async getSupervisors(@Query() query: any) {
+    return this.supervisorsService.getSupervisors(query);
   }
 
   @Post()
@@ -30,6 +30,14 @@ export class AdminSupervisorsController {
   async updateStatus(@Param('id') id: string, @Body('status') status: UserStatus, @Req() req: any) {
     if (!status) throw new BadRequestException('Status is required');
     return this.supervisorsService.updateSupervisorStatus(req.user.id, id, status);
+  }
+
+  @Put(':id')
+  async updateSupervisor(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    if (!body.name || !body.email) {
+      throw new BadRequestException('Name and email are required');
+    }
+    return this.supervisorsService.updateSupervisor(req.user.id, id, body);
   }
 
   @Delete(':id')

@@ -14,16 +14,86 @@ export class AdminScholarsService {
     private clerkService: ClerkService
   ) {}
 
-  async getScholars() {
-    return this.prisma.user.findMany({
-      where: { role: Role.RESEARCH_SCHOLAR },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        departmentRef: true,
-        supervisor: true,
-        scholarProfile: true,
+  async getScholars(query: any = {}) {
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 25);
+    const skip = (page - 1) * limit;
+
+    const where: any = { role: Role.RESEARCH_SCHOLAR };
+
+    if (query.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+        { employeeId: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query.department) {
+      where.OR = [
+        { department: { contains: query.department, mode: 'insensitive' } },
+        { departmentId: query.department }
+      ];
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.supervisorId) {
+      where.supervisorId = query.supervisorId;
+    }
+
+    if (query.access) {
+      if (query.access === 'MATCHED') {
+        where.clerkId = { not: null };
+        where.employeeId = { not: null };
+      } else if (query.access === 'UNMATCHED') {
+        where.clerkId = null;
+      } else if (query.access === 'REQUIRES REVIEW') {
+        where.clerkId = { not: null };
+        where.employeeId = null;
+      }
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (query.sort) {
+      const order = query.order === 'asc' ? 'asc' : 'desc';
+      if (query.sort === 'name') orderBy = { name: order };
+      else if (query.sort === 'employeeId') orderBy = { employeeId: order };
+      else if (query.sort === 'department') orderBy = { department: order };
+      else if (query.sort === 'status') orderBy = { status: order };
+      else if (query.sort === 'createdAt') orderBy = { createdAt: order };
+    }
+
+    const [total, data] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          departmentRef: true,
+          supervisor: true,
+          scholarProfile: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
       },
-    });
+    };
   }
 
   async createScholar(adminId: string, data: any) {
@@ -67,6 +137,7 @@ export class AdminScholarsService {
         status: UserStatus.ACTIVE,
         approved: true,
         onboardingCompleted: true,
+        employeeId: data.employeeId || null,
         scholarProfile: data.departmentId && data.facultyId ? {
           create: {
             facultyId: data.facultyId,
@@ -131,6 +202,45 @@ export class AdminScholarsService {
     });
 
     await this.logAudit(adminId, 'ASSIGN_SUPERVISOR', `Assigned supervisor ${supervisor.email} to scholar ${scholar.email}`);
+  }
+
+  async updateScholar(adminId: string, id: string, data: any) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new BadRequestException('Scholar not found.');
+
+    let departmentName = user.department;
+    if (data.departmentId) {
+      const dept = await this.prisma.department.findUnique({ where: { id: data.departmentId } });
+      if (dept) departmentName = dept.name;
+    }
+
+    let supervisorEmail = user.supervisorEmail;
+    if (data.supervisorId) {
+      const sup = await this.prisma.user.findUnique({ where: { id: data.supervisorId } });
+      if (sup) supervisorEmail = sup.email;
+    }
+
+    // Extract employeeId from email prefix
+    let employeeId = user.employeeId;
+    if (data.email) {
+      const prefix = data.email.split('@')[0];
+      employeeId = prefix.toUpperCase();
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name,
+        email: data.email?.toLowerCase(),
+        department: departmentName,
+        departmentId: data.departmentId || null,
+        supervisorId: data.supervisorId || null,
+        supervisorEmail,
+        employeeId,
+      },
+    });
+
+    await this.logAudit(adminId, 'UPDATE_SCHOLAR', `Updated details for scholar ${user.email}`);
     return updated;
   }
 
