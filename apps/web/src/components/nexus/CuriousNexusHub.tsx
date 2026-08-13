@@ -394,7 +394,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
   // Render Detail View
   if (selectedCollab) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6 max-w-7xl mx-auto flex flex-col gap-6 pb-20 select-none text-left">
+      <div className="h-[calc(100vh-4rem)] p-4 md:p-6 max-w-7xl mx-auto flex flex-col gap-4 select-none text-left overflow-hidden">
         
         {/* Back Button */}
         <div>
@@ -442,10 +442,10 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
         </div>
 
         {/* Content Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="flex-1 min-h-0 flex flex-col">
           
-          {/* B. Research Discussion (Left Column - Spans 8 cols) */}
-          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl shadow-3xs flex flex-col h-[550px] overflow-hidden">
+          {/* B. Research Discussion */}
+          <div className="flex-1 bg-white border border-slate-200 rounded-2xl shadow-3xs flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center gap-2 bg-white shrink-0">
               <MessageSquare className="w-4 h-4 text-[#0C4DA2]" />
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
@@ -458,15 +458,22 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
               {messages.map((msg: any) => {
                 const isMine = msg.senderId === currentUser?.id;
                 return (
-                  <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-                    <span className="text-[10px] font-bold text-slate-400 mb-1 px-1.5">
-                      {msg.senderName} • {msg.timestamp}
-                    </span>
-                    <div className={`p-3.5 rounded-2xl text-xs max-w-[80%] leading-relaxed shadow-3xs border ${
-                      isMine 
-                        ? 'bg-[#0C4DA2] text-white border-[#0C4DA2] rounded-tr-none' 
-                        : 'bg-white text-slate-900 border-slate-150 rounded-tl-none'
-                    }`}>
+                  <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs font-semibold leading-relaxed shadow-sm ${
+                        isMine
+                          ? 'bg-[#0C4DA2] text-white rounded-tr-sm'
+                          : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
+                      }`}
+                    >
+                      <div className="flex justify-between items-end gap-3 mb-1">
+                        <span className={`text-[9px] font-black tracking-wide ${isMine ? 'text-blue-100' : 'text-slate-400'}`}>
+                          {msg.senderName}
+                        </span>
+                        <span className={`text-[8px] font-bold ${isMine ? 'text-blue-200' : 'text-slate-400'}`}>
+                          {msg.timestamp}
+                        </span>
+                      </div>
                       {msg.replyTo && (
                         <div className="mb-2 p-2 bg-slate-50/70 border-l-2 border-blue-500 rounded text-[10px] text-slate-500 font-medium">
                           <span className="font-extrabold text-[#0C4DA2] block">Replying to {msg.replyTo.senderName}</span>
@@ -512,129 +519,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
             </form>
           </div>
 
-          {/* Right Column (Spans 4 cols) - Activities, References & Metadata */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            
-            {/* E. Collaboration Information */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-1.5">
-                Collaboration Info
-              </h3>
-              <div className="space-y-2.5 text-[11px]">
-                <div>
-                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Research Area</span>
-                  <span className="font-bold text-slate-900 block mt-0.5">{selectedCollab.topic}</span>
-                </div>
-                <div>
-                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Assigned Members</span>
-                  <span className="font-semibold text-slate-700 block mt-0.5">
-                    {selectedCollab.participants.map((p: any) => p.name).join(' ↔ ')}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Commenced Date</span>
-                  <span className="font-semibold text-slate-700 block mt-0.5">{selectedCollab.startedAt}</span>
-                </div>
-                <div>
-                  <span className="font-extrabold text-slate-450 block uppercase tracking-wider">Objective Statement</span>
-                  <span className="font-semibold text-slate-500 block mt-0.5 leading-relaxed">{selectedCollab.objective}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* D. Research References (Files List) */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3 flex flex-col min-h-[220px]">
-              <div className="border-b border-slate-100 pb-1.5 flex justify-between items-center shrink-0">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                  Research References
-                </h3>
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="p-1 bg-[#0C4DA2]/10 hover:bg-[#0C4DA2]/20 text-[#0C4DA2] rounded-lg border border-blue-100 cursor-pointer"
-                  title="Reference a Document"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                </button>
-              </div>
-
-              {/* Files scrolling list */}
-              <div className="flex-1 overflow-y-auto space-y-2 max-h-[160px] pr-1">
-                {selectedCollab.type === 'project' ? (
-                  activeWorkspace?.files?.length === 0 ? (
-                    <p className="text-[11px] text-slate-400 italic text-center py-4">No reference files uploaded.</p>
-                  ) : (
-                    activeWorkspace?.files?.map((file: any) => (
-                      <div key={file.id} className="p-2 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-extrabold text-[11px] text-slate-900 truncate" title={file.name}>{file.name}</p>
-                            <span className="text-[9px] text-slate-400 font-semibold">{file.size ? `${(file.size / 1024).toFixed(1)} MB` : '1.2 MB'}</span>
-                          </div>
-                        </div>
-                        <a href={file.url} download className="text-slate-400 hover:text-slate-700 cursor-pointer">
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                    ))
-                  )
-                ) : (
-                  advisoryFilesList.length === 0 ? (
-                    <p className="text-[11px] text-slate-400 italic text-center py-4">No reference files uploaded.</p>
-                  ) : (
-                    advisoryFilesList.map((file: CollaborationFile, idx: number) => (
-                      <div key={idx} className="p-2 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-extrabold text-[11px] text-slate-900 truncate" title={file.name}>{file.name}</p>
-                            <span className="text-[9px] text-slate-400 font-semibold">{file.size}</span>
-                          </div>
-                        </div>
-                        <a href={file.url} download className="text-slate-400 hover:text-slate-700 cursor-pointer">
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                    ))
-                  )
-                )}
-              </div>
-
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 mt-2 font-sans"
-              >
-                <UploadCloud className="w-3.5 h-3.5" /> Reference Document
-              </button>
-            </div>
-
-            {/* C. Research Activity (Timeline Events) */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs space-y-3 flex-1 flex flex-col">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-1.5">
-                Research Activity
-              </h3>
-              <div className="flex-1 overflow-y-auto space-y-3 max-h-[220px] pr-1">
-                {activityEvents.length === 0 ? (
-                  <p className="text-[11px] text-slate-400 italic text-center py-6">No recent updates recorded.</p>
-                ) : (
-                  activityEvents.map((evt: any) => (
-                    <div key={evt.id} className="flex gap-2.5 items-start">
-                      <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                        <Activity className="w-3 h-3 text-[#0C4DA2]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-slate-700 font-medium leading-relaxed">{evt.text}</p>
-                        <span className="text-[9px] text-slate-405 font-bold mt-0.5 block">
-                          {evt.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-          </div>
 
         </div>
 
