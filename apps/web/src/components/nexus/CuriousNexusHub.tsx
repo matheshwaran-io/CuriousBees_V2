@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { getProfileImageUrl } from '@/lib/avatar';
 import { 
@@ -29,7 +29,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, API_URL } from '@/lib/api-client';
+import { io } from 'socket.io-client';
+import { useAuth } from '@clerk/nextjs';
 
 interface CollaborationFile {
   name: string;
@@ -74,6 +76,15 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
   const [messageInput, setMessageInput] = useState('');
   const [replyingTo, setReplyingTo] = useState<any | null>(null);
   
+  const { getToken } = useAuth();
+  const [socket, setSocket] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+  
   // File Upload Modal States
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
@@ -114,6 +125,59 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
         .catch((err) => console.error('Failed to fetch supervisor details:', err));
     }
   }, [currentUser, isSupervisor, isScholar]);
+
+  // Initialize WebSockets
+  useEffect(() => {
+    let activeSocket: any;
+
+    const initSocket = async () => {
+      const token = await getToken();
+      if (!token) return;
+
+      activeSocket = io(API_URL, {
+        auth: { token },
+      });
+
+      activeSocket.on('connect', () => {
+        console.log('Connected to real-time chat');
+      });
+
+      activeSocket.on('newMessage', (message: any) => {
+        setMessages((prev) => {
+          // Prevent duplicates
+          if (prev.find(m => m.id === message.id)) return prev;
+          
+          return [...prev, {
+            id: message.id,
+            senderId: message.senderId,
+            senderName: message.sender?.name || 'Unknown',
+            senderImage: message.sender?.image || getProfileImageUrl(message.sender?.name || 'User'),
+            content: message.content,
+            timestamp: new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }];
+        });
+      });
+
+      setSocket(activeSocket);
+    };
+
+    initSocket();
+
+    return () => {
+      if (activeSocket) activeSocket.disconnect();
+    };
+  }, [getToken]);
+
+  // Handle Room joining
+  useEffect(() => {
+    if (socket && openedCollabId) {
+      socket.emit('joinCollaboration', openedCollabId);
+      
+      return () => {
+        socket.emit('leaveCollaboration', openedCollabId);
+      };
+    }
+  }, [socket, openedCollabId]);
 
   // Compile Active Collaborations list
   const activeCollaborations = useMemo(() => {
@@ -452,6 +516,13 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
                 Research Discussion
               </h3>
             </div>
+            {/* Transparency Caution */}
+            <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2 shrink-0">
+              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <p className="text-[10px] font-semibold text-amber-700">
+                <span className="font-black">Caution:</span> All chats are transparent and may be reviewed by supervisors &amp; administrators.
+              </p>
+            </div>
 
             {/* Messages stream */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
@@ -485,6 +556,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Messages Composer */}

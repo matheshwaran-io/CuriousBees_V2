@@ -21,8 +21,8 @@ graph LR
 
 1. Create a free PostgreSQL project on [Supabase](https://supabase.com).
 2. Retrieve your connection strings from **Settings > Database > Connection Strings**:
-   * **Transaction Connection Pooler (port 6543)**: Set this as `DATABASE_URL` (ensure `?pgbouncer=true` is appended).
-   * **Direct Connection (port 5432)**: Set this as `DIRECT_URL`.
+   - **Transaction Connection Pooler (port 6543)**: Set this as `DATABASE_URL` (ensure `?pgbouncer=true` is appended).
+   - **Direct Connection (port 5432)**: Set this as `DIRECT_URL`.
 3. Apply migrations and seed mockup database records locally:
    ```bash
    # Run migrations and seed data on the remote Supabase database
@@ -33,8 +33,8 @@ graph LR
 
 1. Create a service on [Railway](https://railway.app) or [Render](https://render.com) linking your GitHub repository.
 2. Configure the deployment settings:
-   * **Builder**: Select **Docker** (it will automatically pick up [Dockerfile.api](./Dockerfile.api) located in the monorepo root).
-   * **Port**: Configure port mapping to `4000`.
+   - **Builder**: Select **Docker** (it will automatically pick up [Dockerfile.api](./Dockerfile.api) located in the monorepo root).
+   - **Port**: Configure port mapping to `4000`.
 3. Configure the following environment variables:
    ```env
    NODE_ENV=production
@@ -51,8 +51,8 @@ graph LR
 
 1. Import your repository into [Vercel](https://vercel.app).
 2. Configure project parameters:
-   * **Framework Preset**: Next.js.
-   * **Root Directory**: `apps/web`.
+   - **Framework Preset**: Next.js.
+   - **Root Directory**: `apps/web`.
 3. Configure the build environment variables:
    ```env
    NEXT_PUBLIC_API_URL="https://your-api-project.railway.app"
@@ -70,6 +70,6 @@ Once deployed, sharing and testing with your team is extremely simple:
 2. **Access Portal**: The app opens directly without requiring Google or Firebase logins due to `NEXT_PUBLIC_DEVELOPMENT_MODE=true`.
 3. **Switch Roles**: Use the **Dev Override Switcher** on the bottom-right corner of the page to switch roles dynamically (Research Scholar, Faculty Supervisor, or Institution Admin).
 4. **Test Features**: Walk through:
-   * **Scholar View**: Submit progress logs under `/reports`, view vacancies under `/opportunities`, log a DOI under `/publications`, or start discussions at `/threads`.
-   * **Supervisor View**: Access supervisor controls at `/my-scholars` to grade reports, schedule notices, or post positions.
-   * **Admin View**: Access settings at `/admin/users` or department catalogs at `/admin/departments`.
+   - **Scholar View**: Submit progress logs under `/reports`, view vacancies under `/opportunities`, log a DOI under `/publications`, or start discussions at `/threads`.
+   - **Supervisor View**: Access supervisor controls at `/my-scholars` to grade reports, schedule notices, or post positions.
+   - **Admin View**: Access settings at `/admin/users` or department catalogs at `/admin/departments`.

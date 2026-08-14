@@ -45,6 +45,7 @@ import helmet from 'helmet';
 import * as compression from 'compression';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 // ─── Shared app bootstrap ────────────────────────────────────────────────────
 
@@ -104,6 +105,9 @@ async function createApp(expressInstance?: express.Express) {
 
   // Graceful Shutdown Hooks
   app.enableShutdownHooks();
+
+  // WebSockets Adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // CORS — supports local dev + all Vercel preview/production deployments
   const parseCommaSeparated = (val?: string): string[] => {
@@ -189,3 +193,4 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 if (process.env.VERCEL !== '1') {
   bootstrap();
 }
+

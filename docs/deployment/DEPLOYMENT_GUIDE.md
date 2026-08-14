@@ -19,7 +19,7 @@ cd CuriousBees_V2
 npm run reset
 ```
 
-*Note: The `npm run reset` command uses `rimraf` and `cross-env` which guarantees compatibility across all Windows shells (PowerShell, Command Prompt, Git Bash) as well as macOS and Linux.*
+_Note: The `npm run reset` command uses `rimraf` and `cross-env` which guarantees compatibility across all Windows shells (PowerShell, Command Prompt, Git Bash) as well as macOS and Linux._
 
 ### Running Services Locally
 
@@ -78,16 +78,17 @@ CuriousBees V2 can be deployed to serverless frontends and server backends with 
 
 1. Create a free project on [Supabase](https://supabase.com).
 2. Go to **Project Settings > Database** and copy the Connection String (URI).
-   * **Transaction Mode (Session/Pooling)**: Set `DATABASE_URL` to the connection pooling URL (usually port `6543` with `pgbouncer=true`).
-   * **Direct Mode (Migrations)**: Set `DIRECT_URL` to the direct session connection string (port `5432`).
+   - **Transaction Mode (Session/Pooling)**: Set `DATABASE_URL` to the connection pooling URL (usually port `6543` with `pgbouncer=true`).
+   - **Direct Mode (Migrations)**: Set `DIRECT_URL` to the direct session connection string (port `5432`).
 3. Run migrations and database seeds:
+
    ```bash
    # Generate Prisma client locally
    npm run db:generate
-   
+
    # Apply database migrations to Supabase Postgres
    npm run db:migrate
-   
+
    # Seed departments, scholars, and opportunities
    npm run db:seed
    ```

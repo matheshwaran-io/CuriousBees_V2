@@ -1,12 +1,14 @@
 import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatGateway } from '../chat/chat.gateway';
 
 @Injectable()
 export class CollaborationsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private chatGateway: ChatGateway,
   ) {}
 
   // ─── VALIDATION HELPERS ────────────────────────────────────────────────────
@@ -383,6 +385,9 @@ export class CollaborationsService {
         sender: { select: { id: true, name: true, role: true, image: true } },
       },
     });
+
+    // Broadcast real-time message via WebSockets
+    this.chatGateway.broadcastNewMessage(collabId, message);
 
     // Update last activity
     await this.prisma.researchCollaboration.update({
