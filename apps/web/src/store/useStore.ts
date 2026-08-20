@@ -209,6 +209,8 @@ interface AppState {
   updateEvent: (id: string, title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
   signInWithGoogle: (redirectTo?: string) => Promise<void>;
+  signInWithOtp: (email: string, redirectTo?: string) => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
   logout: () => void;
 
   // Supervisor Approvals & Requests
@@ -1259,6 +1261,37 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (error) {
       console.error('[AuthStore] Supabase Google OAuth error:', error);
+      throw error;
+    }
+  },
+
+  signInWithOtp: async (email: string, redirectTo?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const targetRedirect = redirectTo || '/feed';
+    const callbackUrl = `${origin}/auth/callback?redirectTo=${encodeURIComponent(targetRedirect)}`;
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: callbackUrl,
+      },
+    });
+
+    if (error) {
+      console.error('[AuthStore] Supabase OTP error:', error);
+      throw error;
+    }
+  },
+
+  verifyOtp: async (email: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: token.trim(),
+      type: 'email',
+    });
+
+    if (error) {
+      console.error('[AuthStore] Supabase Verify OTP error:', error);
       throw error;
     }
   },
