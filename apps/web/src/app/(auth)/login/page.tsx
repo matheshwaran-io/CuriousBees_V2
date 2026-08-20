@@ -8,6 +8,33 @@ import {
   ShieldCheck, AlertCircle, Info, Loader2, Award, Zap, Network,
   Mail, ArrowRight, CheckCircle2, KeyRound
 } from 'lucide-react';
+import Logo from '@/components/Logo';
+
+const getFriendlyErrorMessage = (error: any): string => {
+  const msg = (error?.message || '').toLowerCase();
+  const code = error?.code || error?.status || '';
+
+  if (
+    msg.includes('invalid') ||
+    msg.includes('incorrect') ||
+    msg.includes('token') ||
+    msg.includes('verify') ||
+    code === 'otp_expired' ||
+    code === 'validation_failed'
+  ) {
+    return 'Invalid verification code. Please check the code and try again.';
+  }
+  if (msg.includes('expired') || code === 'bad_oauth_state' || code === 'session_expired') {
+    return 'Your verification code has expired. Please request a new code.';
+  }
+  if (msg.includes('rate limit') || msg.includes('too many requests') || msg.includes('spam') || msg.includes('cooldown')) {
+    return 'Too many verification attempts. Please wait a few minutes before trying again.';
+  }
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('connect') || msg.includes('cors')) {
+    return 'Network connection issue. Please check your internet connection and try again.';
+  }
+  return error?.message || 'Unable to send the verification code. Please try again.';
+};
 
 function LoginContent() {
   const router = useRouter();
@@ -26,6 +53,14 @@ function LoginContent() {
   const [emailInput, setEmailInput] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   useEffect(() => {
     // Check if session is already active
@@ -70,12 +105,30 @@ function LoginContent() {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      await signInWithOtp(email, redirectTo);
+      await signInWithOtp(email);
+      setOtpCode('');
       setOtpSent(true);
       setMode('otp_verify');
+      setResendCooldown(30);
     } catch (err: any) {
       console.error('[LOGIN] OTP Error:', err);
-      setErrorMessage(err?.message || 'Could not send verification code.');
+      setErrorMessage(getFriendlyErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!emailInput.trim() || resendCooldown > 0) return;
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      await signInWithOtp(emailInput.trim().toLowerCase());
+      setOtpCode('');
+      setResendCooldown(30);
+    } catch (err: any) {
+      console.error('[LOGIN] Resend OTP Error:', err);
+      setErrorMessage(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -83,12 +136,18 @@ function LoginContent() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otpCode.trim()) return;
+    const cleanOtp = otpCode.trim();
+    if (!cleanOtp) return;
+
+    if (cleanOtp.length !== 6 || !/^\d+$/.test(cleanOtp)) {
+      setErrorMessage('Please enter a valid 6-digit code.');
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage('');
     try {
-      await verifyOtp(emailInput, otpCode);
+      await verifyOtp(emailInput, cleanOtp);
       const user = await syncUserSession({ force: true });
       if (user) {
         router.push(redirectTo);
@@ -97,7 +156,7 @@ function LoginContent() {
       }
     } catch (err: any) {
       console.error('[LOGIN] Verify OTP Error:', err);
-      setErrorMessage(err?.message || 'Invalid or expired code.');
+      setErrorMessage(getFriendlyErrorMessage(err));
       setIsLoading(false);
     }
   };
@@ -150,16 +209,8 @@ function LoginContent() {
             <div className="absolute -bottom-1/4 -left-1/4 w-80 h-80 bg-[#B88608]/15 rounded-full blur-[60px] pointer-events-none" />
 
             {/* Top header */}
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
-                  <ShieldCheck className="w-5 h-5 text-[#FFC828]" />
-                </div>
-                <div>
-                  <span className="font-display font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-white to-white/80 bg-clip-text text-transparent">CuriousBees</span>
-                  <p className="text-[10px] text-white/50 tracking-wider uppercase font-semibold">SRMIST Research Portal</p>
-                </div>
-              </div>
+            <div className="relative z-10 bg-white/10 p-4.5 rounded-2xl border border-white/15 backdrop-blur-md">
+              <Logo size={44} />
             </div>
 
             {/* Middle visual showcase */}
@@ -342,8 +393,11 @@ function LoginContent() {
                       <KeyRound className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
                       <input
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
                         value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="123456"
                         required
                         className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 tracking-widest font-mono text-center font-bold focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]/40"
@@ -353,19 +407,29 @@ function LoginContent() {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full h-11 rounded-xl bg-[#0C4DA2] hover:bg-[#003370] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-60"
+                    disabled={isLoading || otpCode.length !== 6}
+                    className="w-full h-11 rounded-xl bg-[#0C4DA2] hover:bg-[#003370] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Verify & Access Portal</span>}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => { setErrorMessage(''); setMode('otp'); }}
-                    className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors pt-1 cursor-pointer"
-                  >
-                    Change Email Address
-                  </button>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={resendCooldown > 0 || isLoading}
+                      onClick={handleResendOtp}
+                      className="w-full text-center text-xs font-bold text-[#0C4DA2] hover:text-[#042654] disabled:opacity-40 disabled:hover:text-[#0C4DA2] transition-colors cursor-pointer"
+                    >
+                      {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setErrorMessage(''); setOtpCode(''); setOtpSent(false); setMode('otp'); }}
+                      className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                    >
+                      Change Email Address
+                    </button>
+                  </div>
                 </form>
               )}
 

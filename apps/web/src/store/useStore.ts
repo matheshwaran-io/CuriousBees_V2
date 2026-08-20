@@ -1280,15 +1280,11 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  signInWithOtp: async (email: string, redirectTo?: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const targetRedirect = redirectTo || '/feed';
-    const callbackUrl = `${origin}/auth/callback?redirectTo=${encodeURIComponent(targetRedirect)}`;
-
+  signInWithOtp: async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: callbackUrl,
+        shouldCreateUser: true,
       },
     });
 
