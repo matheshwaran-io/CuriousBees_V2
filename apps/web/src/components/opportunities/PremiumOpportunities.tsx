@@ -86,8 +86,12 @@ const APPLICATION_METHODS = [
 ];
 
 export function PremiumOpportunities() {
-  const { opportunities, createOpportunity, currentUser, fetchData, addToast } = useStore();
+  const { opportunities, fetchOpportunities, createOpportunity, currentUser, addToast } = useStore();
   
+  // Data Loading & Error States
+  const [loading, setLoading] = useState(opportunities.length === 0);
+  const [error, setError] = useState<string | null>(null);
+
   // Drawer & Modal States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
@@ -109,10 +113,23 @@ export function PremiumOpportunities() {
   const [customDomainInput, setCustomDomainInput] = useState('');
   const [eligibilityTags, setEligibilityTags] = useState<string[]>(['PhD Scholars']);
 
-  // Fetch opportunities on mount
+  // Fetch opportunities reliably
+  const loadOpportunities = React.useCallback(async (showLoading = true) => {
+    if (showLoading && opportunities.length === 0) setLoading(true);
+    setError(null);
+    try {
+      await fetchOpportunities();
+    } catch (e: any) {
+      console.error('Failed to load opportunities:', e);
+      setError(e.message || 'Unable to load research opportunities');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchOpportunities, opportunities.length]);
+
   useEffect(() => {
-    fetchData(true);
-  }, [fetchData]);
+    loadOpportunities(opportunities.length === 0);
+  }, [loadOpportunities]);
 
   // Lock background body scroll when drawer or detail modal is open
   useEffect(() => {
@@ -267,7 +284,7 @@ export function PremiumOpportunities() {
       setDomainTags([]);
       setEligibilityTags(['PhD Scholars']);
 
-      fetchData(true);
+      fetchOpportunities();
     } catch (e: any) {
       addToast(e.message || 'Failed to publish opportunity', 'error');
     }
@@ -604,7 +621,47 @@ export function PremiumOpportunities() {
           {/* RIGHT OPPORTUNITY CARDS LIST */}
           <div className="flex-1 min-w-0 w-full">
             <AnimatePresence mode="popLayout">
-              {filteredOpps.length === 0 ? (
+              {loading && opportunities.length === 0 ? (
+                /* ── LOADING SKELETON ── */
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 w-full animate-pulse">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-white/80 rounded-[28px] p-6 border border-slate-200/80 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-5 bg-slate-200 rounded-full" />
+                        <div className="w-16 h-5 bg-slate-100 rounded-full" />
+                      </div>
+                      <div className="w-3/4 h-6 bg-slate-200 rounded-lg" />
+                      <div className="w-full h-12 bg-slate-100 rounded-lg" />
+                      <div className="flex items-center gap-2 pt-2">
+                        <div className="w-8 h-8 rounded-full bg-slate-200" />
+                        <div className="w-32 h-4 bg-slate-200 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : error && opportunities.length === 0 ? (
+                /* ── ERROR RECOVERY STATE ── */
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-white/90 backdrop-blur-xl border border-rose-200/80 p-12 text-center rounded-[32px] shadow-sm flex flex-col items-center justify-center min-h-[360px] w-full"
+                >
+                  <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 mb-4">
+                    <Briefcase className="w-7 h-7" />
+                  </div>
+                  <h4 className="text-slate-900 font-extrabold text-lg">Unable to load opportunities</h4>
+                  <p className="text-slate-500 text-xs max-w-md mx-auto mt-2 leading-relaxed font-medium">
+                    {error || 'A network error occurred while connecting to the research repository.'}
+                  </p>
+                  <button
+                    onClick={() => loadOpportunities(true)}
+                    className="mt-6 px-6 py-3 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer"
+                  >
+                    Retry Loading
+                  </button>
+                </motion.div>
+              ) : filteredOpps.length === 0 ? (
                 /* ── EMPTY STATE ── */
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}

@@ -1,11 +1,11 @@
 import { Controller, Get, Put, Patch, Post, Body, Query, UseGuards, Req, BadRequestException, Param, Delete } from '@nestjs/common';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from '@curiousbees/types';
 import { Public } from '../auth/public.decorator';
 
 @Controller('users')
-@UseGuards(ClerkAuthGuard)
+@UseGuards(SupabaseAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

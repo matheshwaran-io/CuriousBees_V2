@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
 import { CollaborationsService } from './collaborations.service';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 
 @Controller('collaborations')
-@UseGuards(ClerkAuthGuard, ApprovedGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard)
 export class CollaborationsController {
   constructor(private readonly collaborationsService: CollaborationsService) {}
 

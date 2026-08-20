@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { EventsService } from './events.service';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { EventStatus, Prisma } from '@prisma/client';
 
 @Controller('events')
-@UseGuards(ClerkAuthGuard, ApprovedGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard)
 export class EventsController {
   constructor(
     private readonly eventsService: EventsService

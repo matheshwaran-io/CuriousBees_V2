@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Put, Body, UseGuards, Req, Param, BadRequestException } from '@nestjs/common';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { WorkspacesService } from './workspaces.service';
 
 @Controller('workspaces')
-@UseGuards(ClerkAuthGuard, ApprovedGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard)
 export class WorkspacesController {
   constructor(private readonly workspacesService: WorkspacesService) {}
 

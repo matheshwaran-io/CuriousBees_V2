@@ -29,9 +29,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiFetch, API_URL } from '@/lib/api-client';
+import { apiFetch, API_URL, getSupabaseToken } from '@/lib/api-client';
 import { io } from 'socket.io-client';
-import { useAuth } from '@clerk/nextjs';
 
 interface CollaborationFile {
   name: string;
@@ -76,7 +75,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
   const [messageInput, setMessageInput] = useState('');
   const [replyingTo, setReplyingTo] = useState<any | null>(null);
   
-  const { getToken } = useAuth();
+
   const [socket, setSocket] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -99,39 +98,46 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
   const isScholar = currentUser?.role === 'RESEARCH_SCHOLAR';
   const hasAccess = isSupervisor || isScholar;
 
-  // Mount Fetching Data
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    fetchWorkspaces();
-    
-    if (isSupervisor) {
-      fetchMyScholars();
-      fetchPendingApprovals();
-    }
-    
-    // Controlled Research Collaborations
-    fetchMyCollaborations();
-    fetchMyCollabRequests();
+  // Data Loading & Error States
+  const [initialLoading, setInitialLoading] = useState(myCollaborations.length === 0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-    if (isScholar && currentUser.supervisorId) {
-      apiFetch(`/api/users/${currentUser.supervisorId}/profile`)
-        .then((res) => {
-          if (res.ok) return res.json();
-        })
-        .then((data) => {
-          if (data) setSupervisorProfile(data);
-        })
-        .catch((err) => console.error('Failed to fetch supervisor details:', err));
+  // Mount Fetching Data
+  const loadNexusData = React.useCallback(async (showLoading = true) => {
+    if (!currentUser) return;
+    if (showLoading && myCollaborations.length === 0) setInitialLoading(true);
+    setLoadError(null);
+    try {
+      await Promise.allSettled([
+        fetchWorkspaces(),
+        isSupervisor ? fetchMyScholars() : Promise.resolve(),
+        isSupervisor ? fetchPendingApprovals() : Promise.resolve(),
+        fetchMyCollaborations(),
+        fetchMyCollabRequests(),
+        isScholar && currentUser.supervisorId
+          ? apiFetch(`/api/users/${currentUser.supervisorId}/profile`)
+              .then((res) => (res.ok ? res.json() : null))
+              .then((data) => { if (data) setSupervisorProfile(data); })
+          : Promise.resolve(),
+      ]);
+    } catch (e: any) {
+      console.error('Failed to load Nexus data:', e);
+      setLoadError('Unable to load collaboration workspace.');
+    } finally {
+      setInitialLoading(false);
     }
-  }, [currentUser, isSupervisor, isScholar]);
+  }, [currentUser, isSupervisor, isScholar, fetchWorkspaces, fetchMyScholars, fetchPendingApprovals, fetchMyCollaborations, fetchMyCollabRequests, myCollaborations.length]);
+
+  useEffect(() => {
+    loadNexusData(myCollaborations.length === 0);
+  }, [loadNexusData]);
 
   // Initialize WebSockets
   useEffect(() => {
     let activeSocket: any;
 
     const initSocket = async () => {
-      const token = await getToken();
+      const token = await getSupabaseToken();
       if (!token) return;
 
       activeSocket = io(API_URL, {
@@ -166,7 +172,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
     return () => {
       if (activeSocket) activeSocket.disconnect();
     };
-  }, [getToken]);
+  }, []);
 
   // Handle Room joining
   useEffect(() => {
@@ -736,11 +742,49 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
     </div>
   ) : null;
 
-  // Render Zero Collaborations (Empty State) or Active Collaborations Dashboard
+  // Render Loading / Error / Zero Collaborations (Empty State) or Active Collaborations Dashboard
   return (
     <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6 max-w-7xl mx-auto flex flex-col gap-6 pb-20 select-none text-left">
       
-      {activeCollaborations.length === 0 ? (
+      {initialLoading && activeCollaborations.length === 0 ? (
+        /* ==================================================
+           LOADING SKELETON
+           ================================================== */
+        <div className="w-full max-w-4xl mx-auto py-10 space-y-8 animate-pulse text-left">
+          <div className="border-b border-slate-200 pb-4 space-y-2">
+            <div className="w-28 h-4 bg-slate-200 rounded" />
+            <div className="w-80 h-8 bg-slate-200 rounded-lg" />
+            <div className="w-96 h-4 bg-slate-100 rounded" />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="h-24 bg-white border border-slate-200/80 rounded-2xl" />
+            <div className="h-24 bg-white border border-slate-200/80 rounded-2xl" />
+            <div className="h-24 bg-white border border-slate-200/80 rounded-2xl" />
+          </div>
+          <div className="h-64 bg-white border border-slate-200/80 rounded-3xl" />
+        </div>
+      ) : loadError && activeCollaborations.length === 0 ? (
+        /* ==================================================
+           ERROR STATE
+           ================================================== */
+        <div className="w-full max-w-md mx-auto py-16 text-center space-y-4">
+          <div className="bg-white border border-rose-200 rounded-3xl p-8 shadow-sm space-y-4">
+            <div className="w-14 h-14 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <Network className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Unable to load Curious Nexus</h3>
+              <p className="text-xs text-slate-500 mt-1">{loadError}</p>
+            </div>
+            <button
+              onClick={() => loadNexusData(true)}
+              className="w-full py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              Retry Loading
+            </button>
+          </div>
+        </div>
+      ) : activeCollaborations.length === 0 ? (
         /* ==================================================
            3. EMPTY STATE — ZERO COLLABORATIONS
            ================================================== */

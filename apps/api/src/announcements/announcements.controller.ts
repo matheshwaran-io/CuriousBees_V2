@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { AnnouncementsService } from './announcements.service';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 
 @Controller('announcements')
 export class AnnouncementsController {
@@ -12,7 +12,7 @@ export class AnnouncementsController {
   }
 
   @Get('admin')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   async getAnnouncementsForAdmin(@Req() req: any) {
     if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can view all announcements.');
@@ -21,7 +21,7 @@ export class AnnouncementsController {
   }
 
   @Post()
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   async createAnnouncement(@Body() body: any, @Req() req: any) {
     if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can create announcements.');
@@ -36,7 +36,7 @@ export class AnnouncementsController {
   }
 
   @Put(':id')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   async updateAnnouncement(@Req() req: any, @Param('id') id: string, @Body() body: any) {
     if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can update announcements.');
@@ -45,7 +45,7 @@ export class AnnouncementsController {
   }
 
   @Delete(':id')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   async deleteAnnouncement(@Req() req: any, @Param('id') id: string) {
     if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can delete announcements.');
@@ -54,7 +54,7 @@ export class AnnouncementsController {
   }
 
   @Post(':id/publish')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   async publishAnnouncement(@Req() req: any, @Param('id') id: string) {
     if (req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only administrators can publish announcements.');

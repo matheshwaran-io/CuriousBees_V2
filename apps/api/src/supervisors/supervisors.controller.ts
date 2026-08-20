@@ -1,13 +1,13 @@
 import { Controller, Get, Put, Query, Param, UseGuards, Req } from '@nestjs/common';
 import { SupervisorsService } from './supervisors.service';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { SupervisorGuard } from '../auth/guards/supervisor.guard';
 
 @Controller()
 export class SupervisorsController {
   constructor(private readonly supervisorsService: SupervisorsService) {}
 
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   @Get('supervisors')
   async getSupervisors(
     @Query('departmentId') departmentId?: string,
@@ -17,19 +17,19 @@ export class SupervisorsController {
     return this.supervisorsService.getSupervisors(departmentId, facultyId, search);
   }
 
-  @UseGuards(ClerkAuthGuard, SupervisorGuard)
+  @UseGuards(SupabaseAuthGuard, SupervisorGuard)
   @Get('supervisor/pending-scholars')
   async getPendingScholars(@Req() req: any) {
     return this.supervisorsService.getPendingScholars(req.user.id);
   }
 
-  @UseGuards(ClerkAuthGuard, SupervisorGuard)
+  @UseGuards(SupabaseAuthGuard, SupervisorGuard)
   @Put('supervisor/approve/:id')
   async approveScholar(@Req() req: any, @Param('id') scholarId: string) {
     return this.supervisorsService.approveScholar(req.user.id, scholarId);
   }
 
-  @UseGuards(ClerkAuthGuard, SupervisorGuard)
+  @UseGuards(SupabaseAuthGuard, SupervisorGuard)
   @Put('supervisor/reject/:id')
   async rejectScholar(@Req() req: any, @Param('id') scholarId: string) {
     return this.supervisorsService.rejectScholar(req.user.id, scholarId);

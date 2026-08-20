@@ -98,8 +98,8 @@ export default function PortalLayout({
         router.push('/account-suspended');
         return;
       }
-      console.warn('[PortalLayout] Unauthenticated access detected. Redirecting to /sign-in.');
-      router.push('/sign-in');
+      console.warn('[PortalLayout] Unauthenticated access detected. Redirecting to /login.');
+      router.push('/login');
       return;
     }
 
@@ -170,17 +170,17 @@ export default function PortalLayout({
               <button
                 onClick={() => {
                   setAuthTimedOut(false);
-                  window.location.reload();
+                  syncUserSession({ force: true });
                 }}
-                className="w-full mt-2 py-2 px-4 bg-[#0c4da2] hover:bg-[#0c4da2] text-white rounded-lg text-xs font-bold transition-all shadow cursor-pointer border border-[#0c4da2]"
+                className="w-full mt-2 py-2 px-4 bg-[#0c4da2] hover:bg-[#0c4da2]/90 text-white rounded-lg text-xs font-bold transition-all shadow cursor-pointer border border-[#0c4da2]"
               >
                 Retry Authentication
               </button>
             </div>
           ) : (
             <>
-              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Verifying Intranet Security Credentials...</p>
+              <div className="w-8 h-8 rounded-full border-3 border-[#0C4DA2] border-t-transparent animate-spin" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Preparing your research workspace...</p>
             </>
           )}
         </div>

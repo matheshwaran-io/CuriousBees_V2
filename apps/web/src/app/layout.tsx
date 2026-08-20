@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
 import QueryProvider from '@/components/QueryProvider';
 import './globals.css';
 
@@ -31,7 +30,6 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  console.log('[CLERK TRACE] Document head script executing, process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY present:', !!'${process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}');
                   document.documentElement.classList.add('light');
                   document.documentElement.classList.remove('dark');
                   localStorage.setItem('curiousbees-theme', 'light');
@@ -43,13 +41,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-darkBg text-textPrimary relative min-h-screen">
         <QueryProvider>
-          <ClerkProvider>
-            {/* Global 3% noise texture overlay */}
-            <div className="noise-overlay" />
-            {/* Clerk Smart CAPTCHA anchor for Custom Flows */}
-            <div id="clerk-captcha" />
-            {children}
-          </ClerkProvider>
+          {/* Global 3% noise texture overlay */}
+          <div className="noise-overlay" />
+          {children}
         </QueryProvider>
       </body>
     </html>

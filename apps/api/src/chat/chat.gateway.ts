@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
-import { ClerkService } from '../auth/clerk.service';
+import { SupabaseService } from '../auth/supabase.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @WebSocketGateway({
@@ -24,7 +24,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ChatGateway.name);
 
   constructor(
-    private readonly clerkService: ClerkService,
+    private readonly supabaseService: SupabaseService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -40,16 +40,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // Verify token
-      const decoded = await this.clerkService.verifyToken(token);
-      if (!decoded || !decoded.sub) {
+      const decoded = await this.supabaseService.verifyToken(token);
+      if (!decoded || !decoded.id) {
         throw new Error('Invalid token');
       }
 
       // Get user from database
-      const user = await this.prisma.user.findUnique({
-        where: { clerkId: decoded.sub },
+      let user = await this.prisma.user.findUnique({
+        where: { supabaseAuthId: decoded.id },
         select: { id: true, name: true, role: true, email: true },
       });
+
+      if (!user && decoded.email) {
+        user = await this.prisma.user.findUnique({
+          where: { email: decoded.email },
+          select: { id: true, name: true, role: true, email: true },
+        });
+      }
 
       if (!user) {
         throw new Error('User not found in database');

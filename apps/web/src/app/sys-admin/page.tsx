@@ -129,7 +129,7 @@ export default function AdminDashboard() {
         className="flex items-center gap-2 py-3 px-4 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-700 font-medium"
       >
         <Zap className="w-3.5 h-3.5" />
-        Admin panel is active — all operations bypass Clerk authentication
+        Admin panel is active — PIN secured direct management
       </motion.div>
     </div>
   );

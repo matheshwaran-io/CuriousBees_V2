@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, apiGet } from '@/lib/api-client';
 
 export function useFollowStatus(userId: string) {
   return useQuery({
     queryKey: ['followStatus', userId],
     queryFn: async () => {
       if (!userId) return null;
-      return apiFetch(`/api/users/${userId}/follow-status`);
+      return apiGet<any>(`/api/users/${userId}/follow-status`);
     },
     enabled: !!userId,
   });

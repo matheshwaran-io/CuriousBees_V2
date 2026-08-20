@@ -5,7 +5,6 @@ import { UpdateProfileSchema } from '@curiousbees/shared-utils';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from './mail.service';
 import { Role, UserStatus } from '@prisma/client';
-import { ClerkService } from '../auth/clerk.service';
 
 @Injectable()
 export class UsersService {
@@ -15,7 +14,6 @@ export class UsersService {
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
     private mailService: MailService,
-    private clerkService: ClerkService,
   ) {}
 
   async getProfile(userId: string) {
@@ -94,23 +92,6 @@ export class UsersService {
 
     if (!user) {
       throw new BadRequestException('User not found.');
-    }
-
-    // Dynamic Clerk image sync
-    if (user.clerkId) {
-      try {
-        const clerkUser = await this.clerkService.client.users.getUser(user.clerkId);
-        if (clerkUser && clerkUser.imageUrl && clerkUser.imageUrl !== user.image) {
-          this.logger.log(`Dynamic sync of updated profile image for ${user.email} from Clerk API.`);
-          await this.prisma.user.update({
-            where: { id: user.id },
-            data: { image: clerkUser.imageUrl }
-          });
-          user.image = clerkUser.imageUrl;
-        }
-      } catch (err: any) {
-        this.logger.warn(`Failed to sync clerk image for user ${user.id}: ${err.message}`);
-      }
     }
 
     return user;

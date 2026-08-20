@@ -40,6 +40,8 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(adminUsers.length === 0);
+  const [error, setError] = useState<string | null>(null);
 
   // 1. Guard against non-admin access
   useEffect(() => {
@@ -48,17 +50,27 @@ export default function AdminPage() {
     }
   }, [currentUser, router]);
 
-  const hasFetched = React.useRef(false);
-
-  // 2. Fetch admin data
-  useEffect(() => {
-    if (currentUser?.role === 'INSTITUTE_ADMIN' && !hasFetched.current) {
-      hasFetched.current = true;
-      fetchAdminUsers();
-      fetchAdminAuditLogs();
+  // 2. Fetch admin data reliably
+  const loadAdminData = React.useCallback(async (showLoading = true) => {
+    if (currentUser?.role !== 'INSTITUTE_ADMIN') return;
+    if (showLoading && adminUsers.length === 0) setLoading(true);
+    setError(null);
+    try {
+      await Promise.allSettled([
+        fetchAdminUsers(),
+        fetchAdminAuditLogs(),
+      ]);
+    } catch (e: any) {
+      console.error('Failed to load admin data:', e);
+      setError('Unable to load administration panel.');
+    } finally {
+      setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  }, [currentUser?.role, fetchAdminUsers, fetchAdminAuditLogs, adminUsers.length]);
+
+  useEffect(() => {
+    loadAdminData(adminUsers.length === 0);
+  }, [loadAdminData]);
 
   if (currentUser?.role !== 'INSTITUTE_ADMIN') {
     return (

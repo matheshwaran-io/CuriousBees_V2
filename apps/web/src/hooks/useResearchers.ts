@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiGet } from '@/lib/api-client';
 
 export interface ResearcherQuery {
   q?: string;
@@ -22,7 +22,7 @@ export function useResearchers(query: ResearcherQuery) {
   return useQuery({
     queryKey: ['researchers', query],
     queryFn: async () => {
-      return apiFetch(`/api/users/researchers?${queryParams.toString()}`);
+      return apiGet<any>(`/api/users/researchers?${queryParams.toString()}`);
     }
   });
 }
@@ -31,8 +31,9 @@ export function useResearcherProfile(id: string) {
   return useQuery({
     queryKey: ['researcher', id],
     queryFn: async () => {
-      return apiFetch(`/api/users/${id}/profile`);
+      return apiGet<any>(`/api/users/${id}/profile`);
     },
     enabled: !!id,
   });
 }
+

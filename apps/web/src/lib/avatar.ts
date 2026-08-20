@@ -1,8 +1,8 @@
 /**
- * Resolves the primary profile image url using authenticated Clerk/Google data fallback.
+ * Resolves the primary profile image url using authenticated Supabase/Google data fallback.
  * 
  * Image Priority:
- * 1. Clerk user imageUrl / DB synced image
+ * 1. Supabase / Google OAuth user image / DB synced image
  * 2. Fallback to ui-avatars initials generator (never broken)
  */
 export function getProfileImageUrl(user: {
@@ -18,7 +18,7 @@ export function getProfileImageUrl(user: {
     return 'https://ui-avatars.com/api/?name=User&background=0C4DA2&color=fff&size=128';
   }
 
-  // Clerk's standard dynamic imageUrl / DB cached Clerk image
+  // Supabase / Google OAuth dynamic imageUrl / DB cached image
   const primaryUrl = user.imageUrl || user.image || user.avatarUrl;
   if (primaryUrl) {
     return primaryUrl;

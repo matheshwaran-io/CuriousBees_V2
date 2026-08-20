@@ -11,8 +11,10 @@ export const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url('NEXT_PUBLIC_API_URL must be a valid URL'),
   FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL'),
   ALLOWED_ORIGINS: z.string().optional(),
-  CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
+  CLERK_SECRET_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
+  SUPABASE_URL: z.string().optional(),
   AUTH_MODE: z.string().optional(),
 });
 

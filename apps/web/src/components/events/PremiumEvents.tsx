@@ -55,6 +55,9 @@ type EventFormValues = z.infer<typeof EventFormSchema>;
 
 export function PremiumEvents() {
   const { events, fetchEvents, createEvent, updateEvent, deleteEvent, currentUser } = useStore();
+  const [loading, setLoading] = useState(events.length === 0);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<PrismaEvent | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -66,10 +69,23 @@ export function PremiumEvents() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [rsvpList, setRsvpList] = useState<string[]>([]);
 
-  // Fetch events on mount once
+  // Fetch events reliably
+  const loadEvents = React.useCallback(async (showLoading = true) => {
+    if (showLoading && events.length === 0) setLoading(true);
+    setError(null);
+    try {
+      await fetchEvents();
+    } catch (e: any) {
+      console.error('Failed to load events:', e);
+      setError('Unable to retrieve academic events.');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchEvents, events.length]);
+
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    loadEvents(events.length === 0);
+  }, [loadEvents]);
 
   // Form handling
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<EventFormValues>({
@@ -253,13 +269,43 @@ export function PremiumEvents() {
 
         {/* ─── 3. FULL-WIDTH CALENDAR CONTENT ─── */}
         <div className="w-full">
-          <PremiumCalendarWidget 
-            events={filteredEvents} 
-            onEventClick={(evt) => setSelectedEvent(evt as PrismaEvent)} 
-            view={calendarView}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-          />
+          {loading && events.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-8 min-h-[450px] animate-pulse flex flex-col justify-between space-y-6">
+              <div className="flex justify-between items-center">
+                <div className="w-48 h-8 bg-slate-200 rounded-xl" />
+                <div className="w-64 h-8 bg-slate-100 rounded-xl" />
+              </div>
+              <div className="grid grid-cols-7 gap-3 flex-1">
+                {[...Array(28)].map((_, i) => (
+                  <div key={i} className="h-20 bg-slate-50 border border-slate-100 rounded-xl" />
+                ))}
+              </div>
+            </div>
+          ) : error && events.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-rose-200 p-12 text-center max-w-md mx-auto space-y-4 shadow-sm">
+              <div className="w-14 h-14 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-center mx-auto text-rose-600">
+                <Calendar className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Unable to load events</h3>
+                <p className="text-xs text-slate-500 mt-1">{error}</p>
+              </div>
+              <button
+                onClick={() => loadEvents(true)}
+                className="px-6 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+              >
+                Retry Loading
+              </button>
+            </div>
+          ) : (
+            <PremiumCalendarWidget 
+              events={filteredEvents} 
+              onEventClick={(evt) => setSelectedEvent(evt as PrismaEvent)} 
+              view={calendarView}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+            />
+          )}
         </div>
 
       </div>

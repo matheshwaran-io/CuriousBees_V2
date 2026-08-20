@@ -11,7 +11,7 @@ import {
   UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { Roles } from '../auth/roles/roles.decorator';
 import { Role } from '../auth/roles/role.enum';
@@ -20,7 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Role as PrismaRole, UserStatus } from '@prisma/client';
 
 @Controller('admin/users')
-@UseGuards(ClerkAuthGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(Role.INSTITUTE_ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}

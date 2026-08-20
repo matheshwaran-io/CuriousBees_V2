@@ -19,6 +19,8 @@ export default function PublicationsPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPub, setEditingPub] = useState<any | null>(null);
+  const [loading, setLoading] = useState(publications.length === 0);
+  const [error, setError] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -31,11 +33,23 @@ export default function PublicationsPage() {
   const isSupervisor = currentUser?.role === 'RESEARCH_SUPERVISOR';
   const isAdmin = currentUser?.role === 'INSTITUTE_ADMIN';
 
-  useEffect(() => {
-    // If scholar, fetch only their own publications. If supervisor/admin, fetch all.
+  const loadPublications = React.useCallback(async (showLoading = true) => {
     const targetUserId = isSupervisor || isAdmin ? undefined : currentUser?.id;
-    fetchPublications(targetUserId);
-  }, [currentUser, isSupervisor, isAdmin, fetchPublications]);
+    if (showLoading && publications.length === 0) setLoading(true);
+    setError(null);
+    try {
+      await fetchPublications(targetUserId);
+    } catch (e: any) {
+      console.error('Failed to load publications:', e);
+      setError('Unable to load publications directory.');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser?.id, isSupervisor, isAdmin, fetchPublications, publications.length]);
+
+  useEffect(() => {
+    loadPublications(publications.length === 0);
+  }, [loadPublications]);
 
   const handleOpenCreate = () => {
     setEditingPub(null);
@@ -151,7 +165,33 @@ export default function PublicationsPage() {
 
       {/* 🚀 List */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredPubs.length === 0 ? (
+        {loading && publications.length === 0 ? (
+          <div className="space-y-4 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="cb-card p-5 bg-white/95 backdrop-blur-md space-y-3">
+                <div className="w-24 h-4 bg-slate-200 rounded-full" />
+                <div className="w-3/4 h-5 bg-slate-200 rounded" />
+                <div className="w-1/2 h-4 bg-slate-100 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : error && publications.length === 0 ? (
+          <div className="cb-card p-12 text-center bg-white/95 backdrop-blur-md max-w-md mx-auto space-y-4">
+            <div className="w-14 h-14 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-center mx-auto text-rose-600">
+              <BookOpen className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Unable to load publications</h3>
+              <p className="text-xs text-slate-500 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={() => loadPublications(true)}
+              className="px-6 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              Retry Loading
+            </button>
+          </div>
+        ) : filteredPubs.length === 0 ? (
           <div className="cb-card p-12 text-center bg-white/95 backdrop-blur-md">
             <BookOpen className="w-8 h-8 text-slate-300 mx-auto mb-3" />
             <h3 className="text-slate-900 font-bold text-sm">No Publications Logged</h3>

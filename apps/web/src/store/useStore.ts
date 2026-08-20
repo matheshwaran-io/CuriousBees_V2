@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification, ResearchCollaboration, CollaborationMessage, ResearchCollabRequest, CollaborationStatusResponse } from '@curiousbees/types';
-// Clerk is used for authentication
+import { supabase } from '@/lib/supabase/client';
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@curiousbees/constants';
 import { apiFetch, getAuthHeaders, readApiError, API_URL, resetAuthPromise } from '@/lib/api-client';
@@ -172,7 +172,7 @@ interface AppState {
   toggleTheme: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
 
-  // Live REST API Actions (Integrates Clerk Bearer JWT)
+  // Live REST API Actions (Integrates Supabase Bearer JWT)
   syncUserSession: (options?: { throwOnError?: boolean; force?: boolean }) => Promise<User | null>;
   fetchData: (skipThreads?: boolean) => Promise<void>;
   fetchFeedThreads: (search?: string, type?: string, sort?: 'latest' | 'top') => Promise<void>;
@@ -199,6 +199,7 @@ interface AppState {
   fetchSuggestedPeers: () => Promise<any[]>;
   connectWithPeer: (peerId: string) => Promise<'connect' | 'pending' | 'connected' | null>;
   searchFeed: (query: string) => Promise<{ threads: Thread[], publications: Publication[], users: User[] }>;
+  fetchOpportunities: () => Promise<Opportunity[]>;
   createOpportunity: (titleOrPayload: string | any, description?: string, department?: string, researchDomain?: string, extraData?: any) => Promise<Opportunity>;
   fetchProfile: () => Promise<any>;
   updateProfile: (data: { name?: string; department?: string; bio?: string; role?: UserRole; interests?: string[] }) => Promise<User>;
@@ -207,6 +208,7 @@ interface AppState {
   createEvent: (title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
   updateEvent: (id: string, title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
+  signInWithGoogle: (redirectTo?: string) => Promise<void>;
   logout: () => void;
 
   // Supervisor Approvals & Requests
@@ -644,37 +646,34 @@ export const useStore = create<AppState>((set, get) => ({
   fetchData: async (skipThreads?: boolean) => {
     set({ isLoading: true });
     try {
-      const promises = [
-        apiFetch('/api/opportunities'),
-        apiFetch('/api/events')
-      ];
-      if (!skipThreads) {
-        promises.push(apiFetch('/api/threads'));
-      }
+      const oppsPromise = apiFetch('/api/opportunities');
+      const eventsPromise = apiFetch('/api/events');
+      const threadsPromise = !skipThreads ? apiFetch('/api/threads') : Promise.resolve(null);
 
-      const results = await Promise.all(promises);
-      const oppsRes = results[0];
-      const eventsRes = results[1];
-      const threadsRes = !skipThreads ? results[2] : null;
+      const [oppsSettled, eventsSettled, threadsSettled] = await Promise.allSettled([
+        oppsPromise,
+        eventsPromise,
+        threadsPromise
+      ]);
 
-      if (oppsRes.ok) {
-        const data = await oppsRes.json();
+      if (oppsSettled.status === 'fulfilled' && oppsSettled.value && oppsSettled.value.ok) {
+        const data = await oppsSettled.value.json();
         set({ opportunities: Array.isArray(data) ? data : [] });
       }
 
-      if (eventsRes.ok) {
-        const data = await eventsRes.json();
+      if (eventsSettled.status === 'fulfilled' && eventsSettled.value && eventsSettled.value.ok) {
+        const data = await eventsSettled.value.json();
         set({ events: Array.isArray(data) ? data : [] });
       }
 
-      if (threadsRes && threadsRes.ok) {
-        const data = await threadsRes.json();
+      if (threadsSettled.status === 'fulfilled' && threadsSettled.value && threadsSettled.value.ok) {
+        const data = await threadsSettled.value.json();
         set({ threads: Array.isArray(data) ? data : [] });
       }
 
       // Fetch notifications & follow state concurrently
-      get().fetchNotifications();
-      get().fetchFollowState();
+      get().fetchNotifications().catch(() => {});
+      get().fetchFollowState().catch(() => {});
     } catch (e) {
       console.error('Failed to load data:', e);
     } finally {
@@ -1081,6 +1080,22 @@ export const useStore = create<AppState>((set, get) => ({
     return { threads: [], publications: [], users: [] };
   },
 
+  fetchOpportunities: async () => {
+    try {
+      const res = await apiFetch('/api/opportunities');
+      if (res.ok) {
+        const data = await res.json();
+        const opps = Array.isArray(data) ? data : [];
+        set({ opportunities: opps });
+        return opps;
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to fetch opportunities:', e);
+      return [];
+    }
+  },
+
   // 6. Publish a research opportunity (Hiring/Collaboration)
   createOpportunity: async (titleOrPayload: any, description?: string, department?: string, researchDomain?: string, extraData?: any) => {
     set({ isLoading: true });
@@ -1226,18 +1241,40 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  signInWithGoogle: async (redirectTo?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const targetRedirect = redirectTo || '/feed';
+    const callbackUrl = `${origin}/auth/callback?redirectTo=${encodeURIComponent(targetRedirect)}`;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: callbackUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      console.error('[AuthStore] Supabase Google OAuth error:', error);
+      throw error;
+    }
+  },
+
   logout: () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('curiousbees-mock-token');
       localStorage.removeItem('dev_role');
     }
     deleteCookie(ROLE_COOKIE_NAME);
-    // Reset the auth promise singleton so re-login initializes a fresh auth listener
     resetAuthPromise();
-    if (typeof window !== 'undefined' && window.Clerk) {
-      window.Clerk.signOut().catch(() => { });
+    supabase.auth.signOut().catch((err) => console.warn('[AuthStore] signOut error:', err));
+    set({ currentUser: null, dashboardRoute: '/feed', roleOverride: 'RESEARCH_SCHOLAR', notProvisioned: false, isSuspended: false });
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
     }
-    set({ currentUser: null, dashboardRoute: '/feed', roleOverride: 'RESEARCH_SCHOLAR' });
   },
 
   fetchPendingApprovals: async () => {

@@ -2,10 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { SignInButton, Show, UserButton } from '@clerk/nextjs';
+import { useStore } from '@/store/useStore';
 import Logo from '../Logo';
 
 export default function MarketingNavbar() {
+  const { currentUser } = useStore();
+
   return (
     <header className="bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 fixed top-0 w-full z-50 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -29,21 +31,24 @@ export default function MarketingNavbar() {
         </nav>
         
         <div className="flex items-center gap-4">
-          <Show when="signed-out">
-            <SignInButton>
+          {currentUser ? (
+            <div className="flex items-center gap-4">
+              <Link href="/feed" className="text-sm font-semibold text-[#0C4DA2] hover:text-[#0c4da2]/80 transition-colors">
+                Portal Feed
+              </Link>
+              <Link href="/profile">
+                <div className="w-8 h-8 rounded-full bg-[#0C4DA2] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                  {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+                </div>
+              </Link>
+            </div>
+          ) : (
+            <Link href="/login">
               <button className="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer">
                 Sign In
               </button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
-            <div className="flex items-center gap-4">
-              <Link href="/sign-in" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-                Dashboard
-              </Link>
-              <UserButton />
-            </div>
-          </Show>
+            </Link>
+          )}
         </div>
       </div>
     </header>

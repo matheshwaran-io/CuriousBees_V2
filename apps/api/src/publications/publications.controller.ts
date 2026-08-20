@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { PublicationsService } from './publications.service';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 
 @Controller('publications')
-@UseGuards(ClerkAuthGuard, ApprovedGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard)
 export class PublicationsController {
   constructor(private readonly publicationsService: PublicationsService) {}
 

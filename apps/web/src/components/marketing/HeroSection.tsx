@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Activity, Users, BookOpen, LineChart, FileText } from 'lucide-react';
-import { Show, SignUpButton } from '@clerk/nextjs';
 import { HeroGeometric } from '@/components/ui/hero-geometric';
 
 export default function HeroSection() {
@@ -68,22 +67,12 @@ export default function HeroSection() {
           transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
           className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-20"
         >
-          <Show when="signed-out">
-            <SignUpButton>
-              <button className="w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800 px-8 py-3.5 rounded-full text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 group cursor-pointer font-semibold">
-                Start Collaborating
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </SignUpButton>
-          </Show>
-          <Show when="signed-in">
-            <Link href="/sign-in">
-              <button className="w-full sm:w-auto bg-slate-900 text-white hover:bg-slate-800 px-8 py-3.5 rounded-full text-sm font-medium transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 group font-semibold">
-                Go to Dashboard
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-          </Show>
+          <Link href="/login">
+            <button className="w-full sm:w-auto bg-[#0C4DA2] hover:bg-[#003370] text-white px-8 py-3.5 rounded-full text-sm font-semibold transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 group cursor-pointer">
+              Start Collaborating
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </Link>
           <Link href="/about">
             <button className="w-full sm:w-auto bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-8 py-3.5 rounded-full text-sm font-medium transition-all active:scale-95 flex items-center justify-center gap-2 group">
               Learn More

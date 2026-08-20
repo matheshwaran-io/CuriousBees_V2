@@ -19,7 +19,7 @@ if (envPath) {
 }
 
 // Startup Validation Layer - Non-fatal warnings to avoid boot crashes on Railway
-const requiredEnvVars = ['DATABASE_URL', 'CLERK_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
 if (missingEnvVars.length > 0) {
   console.warn('\n================================================================');

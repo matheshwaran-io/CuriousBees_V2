@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { useStore } from '@/store/useStore';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -28,7 +28,7 @@ import { apiFetch, apiMutate } from '@/lib/api-client';
 import { getProfileImageUrl } from '@/lib/avatar';
 
 // --- MAIN PORTAL WORKSHEET SHELL ---
-export default function UserManagementPage() {
+function UserManagementContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -1243,9 +1243,9 @@ function ScholarsManagement({
                           <td className="px-5 py-3 font-mono font-bold text-slate-550">{s.email}</td>
                           <td className="px-5 py-3 font-semibold text-slate-700">{s.supervisor ? s.supervisor.name : <span className="text-slate-400 italic">Unassigned</span>}</td>
                           <td className="px-5 py-3">
-                            {!!s.clerkId && !!s.employeeId ? (
+                            {!!(s.supabaseAuthId || s.clerkId) && !!s.employeeId ? (
                               <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-black text-[9px] uppercase tracking-wider">Matched</span>
-                            ) : !!s.clerkId ? (
+                            ) : !!(s.supabaseAuthId || s.clerkId) ? (
                               <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full font-black text-[9px] uppercase tracking-wider">Requires Review</span>
                             ) : (
                               <span className="px-2.5 py-0.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-full font-black text-[9px] uppercase tracking-wider">Unmatched</span>
@@ -1543,9 +1543,9 @@ function SupervisorsManagement({
                           <td className="px-5 py-3 font-mono font-bold text-slate-550">{item.email}</td>
                           <td className="px-5 py-3 font-extrabold text-[#0C4DA2]">{item.scholarCount || 0} Scholars</td>
                           <td className="px-5 py-3">
-                            {!!item.clerkId && !!item.employeeId ? (
+                            {!!(item.supabaseAuthId || item.clerkId) && !!item.employeeId ? (
                               <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-black text-[9px] uppercase tracking-wider">Matched</span>
-                            ) : !!item.clerkId ? (
+                            ) : !!(item.supabaseAuthId || item.clerkId) ? (
                               <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full font-black text-[9px] uppercase tracking-wider">Requires Review</span>
                             ) : (
                               <span className="px-2.5 py-0.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-full font-black text-[9px] uppercase tracking-wider">Unmatched</span>
@@ -1934,5 +1934,13 @@ function LazyPaginationFooter({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UserManagementPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-xs font-bold text-slate-400 animate-pulse">Loading Member Workspace...</div>}>
+      <UserManagementContent />
+    </Suspense>
   );
 }

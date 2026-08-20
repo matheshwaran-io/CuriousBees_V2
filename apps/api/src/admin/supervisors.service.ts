@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClerkService } from '../auth/clerk.service';
+import { SupabaseService } from '../auth/supabase.service';
 import { Role, UserStatus } from '@prisma/client';
 import * as xlsx from 'xlsx';
 
@@ -10,7 +10,7 @@ export class AdminSupervisorsService {
 
   constructor(
     private prisma: PrismaService,
-    private clerkService: ClerkService
+    private supabaseService: SupabaseService
   ) {}
 
   async getSupervisors(query: any = {}) {
@@ -41,12 +41,19 @@ export class AdminSupervisorsService {
 
     if (query.access) {
       if (query.access === 'MATCHED') {
-        where.clerkId = { not: null };
+        where.OR = [
+          { supabaseAuthId: { not: null } },
+          { clerkId: { not: null } }
+        ];
         where.employeeId = { not: null };
       } else if (query.access === 'UNMATCHED') {
+        where.supabaseAuthId = null;
         where.clerkId = null;
       } else if (query.access === 'REQUIRES REVIEW') {
-        where.clerkId = { not: null };
+        where.OR = [
+          { supabaseAuthId: { not: null } },
+          { clerkId: { not: null } }
+        ];
         where.employeeId = null;
       }
     }
@@ -157,13 +164,12 @@ export class AdminSupervisorsService {
     await this.logAudit(adminId, 'CREATE_SUPERVISOR', `Created supervisor ${email}`);
 
     try {
-      await this.clerkService.client.invitations.createInvitation({
-        emailAddress: email,
-        ignoreExisting: true,
-      });
-      this.logger.log(`Sent Clerk B2B invitation to supervisor ${email}`);
+      if (this.supabaseService.client) {
+        await this.supabaseService.client.auth.admin.inviteUserByEmail(email);
+        this.logger.log(`Sent Supabase invitation to supervisor ${email}`);
+      }
     } catch (err: any) {
-      this.logger.warn(`Failed to send Clerk invitation to ${email}: ${err.message}`);
+      this.logger.warn(`Pre-provisioned supervisor ${email} without direct Supabase invite email: ${err.message}`);
     }
 
     return supervisor;
@@ -323,14 +329,13 @@ export class AdminSupervisorsService {
           }
         });
 
-        // Send Clerk invitation for imported user
+        // Send Supabase invitation for imported user if admin configured
         try {
-          await this.clerkService.client.invitations.createInvitation({
-            emailAddress: email,
-            ignoreExisting: true,
-          });
+          if (this.supabaseService.client) {
+            await this.supabaseService.client.auth.admin.inviteUserByEmail(email);
+          }
         } catch (invErr: any) {
-          this.logger.warn(`Failed to invite imported supervisor ${email}: ${invErr.message}`);
+          this.logger.debug(`Pre-provisioned imported supervisor ${email}`);
         }
 
         userEmails.add(email);

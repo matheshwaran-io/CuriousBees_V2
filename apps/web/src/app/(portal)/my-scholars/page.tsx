@@ -50,6 +50,10 @@ function SupervisionPanelContent() {
     addToast
   } = useStore();
 
+  // Supervision Data Loading & Error States
+  const [loading, setLoading] = useState(myScholars.length === 0);
+  const [error, setError] = useState<string | null>(null);
+
   // Active Supervision tab state: scholars, requests, reports
   const [activeTab, setActiveTab] = useState<'scholars' | 'requests' | 'reports'>('scholars');
 
@@ -80,16 +84,30 @@ function SupervisionPanelContent() {
     }
   }, [tabParam]);
 
-  // Load backend data
-  useEffect(() => {
-    if (currentUser?.role === 'RESEARCH_SUPERVISOR') {
-      fetchMyScholars();
-      fetchWorkspaces();
-      fetchReports();
-      fetchPendingApprovals();
-      fetchCollaborationRequests();
+  // Load backend data reliably
+  const loadSupervisionData = React.useCallback(async (showLoading = true) => {
+    if (currentUser?.role !== 'RESEARCH_SUPERVISOR') return;
+    if (showLoading && myScholars.length === 0) setLoading(true);
+    setError(null);
+    try {
+      await Promise.allSettled([
+        fetchMyScholars(),
+        fetchWorkspaces(),
+        fetchReports(),
+        fetchPendingApprovals(),
+        fetchCollaborationRequests(),
+      ]);
+    } catch (e: any) {
+      console.error('Failed to load supervision data:', e);
+      setError('Unable to load supervision panel data.');
+    } finally {
+      setLoading(false);
     }
-  }, [currentUser, fetchMyScholars, fetchWorkspaces, fetchReports, fetchPendingApprovals, fetchCollaborationRequests]);
+  }, [currentUser?.role, fetchMyScholars, fetchWorkspaces, fetchReports, fetchPendingApprovals, fetchCollaborationRequests, myScholars.length]);
+
+  useEffect(() => {
+    loadSupervisionData(myScholars.length === 0);
+  }, [loadSupervisionData]);
 
   if (currentUser?.role !== 'RESEARCH_SUPERVISOR') {
     return null;

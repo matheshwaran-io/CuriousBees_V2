@@ -1,10 +1,10 @@
 import { Controller, Get, UseGuards, Req } from '@nestjs/common';
-import { ClerkAuthGuard } from './clerk.guard';
+import { SupabaseAuthGuard } from './supabase.guard';
 
 @Controller('auth')
 export class AuthController {
   @Get('me')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(SupabaseAuthGuard)
   getMe(@Req() req: any) {
     if (!req.user) {
       return {

@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { AuthController } from './auth.controller';
-import { ClerkService } from './clerk.service';
-import { ClerkAuthGuard } from './clerk.guard';
+import { SupabaseService } from './supabase.service';
+import { SupabaseAuthGuard } from './supabase.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Global()
@@ -9,12 +9,13 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [AuthController],
   providers: [
-    ClerkService,
-    ClerkAuthGuard,
+    SupabaseService,
+    SupabaseAuthGuard,
   ],
   exports: [
-    ClerkService,
-    ClerkAuthGuard,
+    SupabaseService,
+    SupabaseAuthGuard,
   ],
 })
 export class AuthModule {}
+

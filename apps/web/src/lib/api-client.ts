@@ -1,101 +1,42 @@
-/**
- * Centralized API Client for CuriousBees V2
- *
- * All API requests MUST go through here. This module:
- *   1. Resolves the backend base URL from the env variable.
- *   2. Automatically attaches the Clerk ID token as a Bearer header.
- *   3. Safely parses JSON and never tries to parse HTML error pages.
- *   4. Provides verbose console logging for debugging.
- */
-
-declare global {
-  interface Window {
-    Clerk?: {
-      session?: {
-        getToken: () => Promise<string | null>;
-      };
-      signOut: () => Promise<void>;
-    };
-  }
-}
+import { supabase } from '@/lib/supabase/client';
 
 // Backend base URL — set in apps/web/.env.local
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 /**
- * Robust helper to wait for the Clerk global client to load and fetch the session JWT.
+ * Helper to fetch the Supabase session JWT access token.
  */
-/** Helper: finds an active session from any known Clerk global location */
-function getActiveClerkSession(): { getToken: () => Promise<string | null> } | null {
-  const w = window as any;
-  // v7 location
-  if (w.Clerk?.session?.getToken) return w.Clerk.session;
-  // v6 client location
-  const active = w.Clerk?.client?.activeSessions?.[0];
-  if (active?.getToken) return active;
-  // sessions array fallback
-  const first = w.Clerk?.client?.sessions?.[0];
-  if (first?.getToken) return first;
-  return null;
-}
-
-async function getClerkToken(): Promise<string | null> {
-  if (typeof window === 'undefined') return null;
-
-  // Wait up to 1.5s total for both Clerk to load AND a session to exist
-  await new Promise<void>((resolve) => {
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      const ready = !!(window as any).Clerk && !!getActiveClerkSession();
-      if (ready || attempts > 15) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, 100);
-  });
-
-  const session = getActiveClerkSession();
-  if (!session) {
-    console.warn('[APIClient] No active Clerk session found after waiting.');
-    return null;
-  }
-
+export async function getSupabaseToken(): Promise<string | null> {
   try {
-    // Race getToken() against a 2s timeout to prevent hanging on JWT refresh
-    const tokenPromise = session.getToken();
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
-    const token = await Promise.race([tokenPromise, timeoutPromise]);
-    if (!token) {
-      console.warn('[APIClient] getToken() timed out or returned null.');
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) {
+      return null;
     }
-    return token;
+    return session.access_token;
   } catch (err) {
-    console.warn('[APIClient] Failed to retrieve token from Clerk:', err);
+    console.warn('[APIClient] Failed to retrieve session from Supabase:', err);
     return null;
   }
 }
-
-
 
 export function resetAuthPromise() {
-  console.info('[APIClient] Resetting auth promise (no-op for Clerk).');
+  console.info('[APIClient] Resetting auth promise (no-op for Supabase).');
 }
 
 // ─── Token helper ────────────────────────────────────────────────────────────
 
 /**
- * Returns the Clerk Bearer token for the currently authenticated user.
+ * Returns the Supabase Bearer token for the currently authenticated user.
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const token = await getClerkToken();
+  const token = await getSupabaseToken();
   if (token) {
-    console.debug('[APIClient] Attaching Clerk bearer token. tokenLength =', token.length);
+    console.debug('[APIClient] Attaching Supabase bearer token. tokenLength =', token.length);
     return { Authorization: `Bearer ${token}` };
   }
 
-  console.warn('[APIClient] No authenticated Clerk user — request will be unauthenticated.');
+  console.warn('[APIClient] No authenticated Supabase user — request will be unauthenticated.');
   return {};
 }
 
@@ -150,7 +91,7 @@ export interface ApiRequestInit extends Omit<RequestInit, 'headers'> {
 /**
  * Drop-in replacement for `fetch` that:
  *   • Prepends API_URL to relative paths
- *   • Injects the Clerk Bearer token
+ *   • Injects the Supabase Bearer token
  *   • Logs the request and response for debugging
  */
 export async function apiFetch(

@@ -17,7 +17,7 @@ export default function ResearcherProfilePage() {
   const { currentUser } = useStore();
   const id = params.id as string;
 
-  const { data: researcher, isLoading: isLoadingProfile } = useResearcherProfile(id);
+  const { data: researcher, isLoading: isLoadingProfile, isError: isProfileError, refetch: refetchProfile } = useResearcherProfile(id);
   const { data: followStatus, isLoading: isLoadingFollow } = useFollowStatus(id);
   
   const followMutation = useFollowUser();
@@ -31,6 +31,20 @@ export default function ResearcherProfilePage() {
       <div className="min-h-screen flex items-center justify-center gap-2 text-slate-500">
         <Loader2 className="w-8 h-8 text-[#0C4DA2] animate-spin" />
         <span className="text-sm font-bold">Loading profile...</span>
+      </div>
+    );
+  }
+
+  if (isProfileError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
+        <h2 className="text-xl font-bold text-slate-900">Unable to load researcher profile</h2>
+        <button 
+          onClick={() => refetchProfile()} 
+          className="px-6 py-2.5 bg-[#0C4DA2] text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer"
+        >
+          Retry
+        </button>
       </div>
     );
   }

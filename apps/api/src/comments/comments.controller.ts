@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { CommentsService } from './comments.service';
 import { CreateCommentInput } from '@curiousbees/types';
 
 @Controller('comments')
-@UseGuards(ClerkAuthGuard, ApprovedGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard)
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 

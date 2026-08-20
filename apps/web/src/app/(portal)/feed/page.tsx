@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -87,12 +87,12 @@ const TYPE_FILTERS = [
   { label: 'Notices', value: 'ANNOUNCEMENT', icon: Bell }
 ];
 
-export default function ScholarFeedPage() {
+function ScholarFeedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentType = searchParams.get('type') || 'ALL';
-  const urlSearch = searchParams.get('q') || '';
-  const currentSort = (searchParams.get('sort') as 'latest' | 'top') || 'latest';
+  const currentType = searchParams?.get('type') || 'ALL';
+  const urlSearch = searchParams?.get('q') || '';
+  const currentSort = (searchParams?.get('sort') as 'latest' | 'top') || 'latest';
 
   const { 
     threads, feedCounts, feedError, searchQuery, setSearchQuery, activeTag, setActiveTag, 
@@ -518,5 +518,13 @@ export default function ScholarFeedPage() {
       {/* Bottom padding for mobile nav */}
       <div className="h-20 md:hidden" />
     </div>
+  );
+}
+
+export default function ScholarFeedPage() {
+  return (
+    <Suspense fallback={<FeedSkeleton />}>
+      <ScholarFeedContent />
+    </Suspense>
   );
 }

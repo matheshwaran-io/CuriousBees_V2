@@ -68,7 +68,6 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
       { name: 'Events', href: '/events', icon: CalendarIcon },
       { name: 'Researcher Network', href: '/researchers', icon: Users },
       { name: 'Curious Nexus', href: '/nexus', icon: Network },
-      { name: 'Supervision Panel', href: '/my-scholars', icon: GraduationCap },
       { name: 'Publications', href: '/publications', icon: BookOpen },
     ];
   }
@@ -220,14 +219,22 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           <Link
             href="/my-scholars"
             onClick={onClose}
-            className="p-2.5 rounded-full bg-[#0C4DA2]/10 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] transition-all flex items-center gap-3 border border-[#0C4DA2]/25 mb-2 cursor-pointer"
+            className={cn(
+              "p-2.5 rounded-full transition-all flex items-center gap-3 border mb-2 cursor-pointer",
+              isActive('/my-scholars')
+                ? "bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-sm shadow-[#0C4DA2]/25"
+                : "bg-[#0C4DA2]/10 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] border-[#0C4DA2]/25"
+            )}
           >
-            <div className="w-9 h-9 rounded-full bg-[#0C4DA2] text-white flex items-center justify-center shrink-0 shadow-sm">
+            <div className={cn(
+              "w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm transition-colors",
+              isActive('/my-scholars') ? "bg-white text-[#0C4DA2]" : "bg-[#0C4DA2] text-white"
+            )}>
               <GraduationCap className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-xs font-black text-[#0C4DA2]">Supervision Panel</p>
-              <p className="text-[10px] font-bold text-blue-650/80 mt-0.5">Manage Scholars & Advisory</p>
+              <p className={cn("text-xs font-black leading-tight", isActive('/my-scholars') ? "text-white" : "text-[#0C4DA2]")}>Supervision Panel</p>
+              <p className={cn("text-[10px] font-bold mt-0.5", isActive('/my-scholars') ? "text-blue-100" : "text-blue-650/80")}>Manage Scholars & Advisory</p>
             </div>
           </Link>
         )}

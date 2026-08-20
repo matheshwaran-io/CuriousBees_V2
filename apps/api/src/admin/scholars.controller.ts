@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req } from '@nestjs/common';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { Roles } from '../auth/roles/roles.decorator';
 import { Role } from '../auth/roles/role.enum';
@@ -8,7 +8,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UserStatus } from '@prisma/client';
 
 @Controller('admin/scholars')
-@UseGuards(ClerkAuthGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(Role.INSTITUTE_ADMIN)
 export class AdminScholarsController {
   constructor(private readonly scholarsService: AdminScholarsService) {}

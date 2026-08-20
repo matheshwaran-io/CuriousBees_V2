@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, Query, Param, UseGuards, Req, Put, Delete, NotFoundException } from '@nestjs/common';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { ThreadsService } from './threads.service';
 import { CreateThreadInput } from '@curiousbees/types';
 
 @Controller('threads')
-@UseGuards(ClerkAuthGuard, ApprovedGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard)
 export class ThreadsController {
   constructor(private readonly threadsService: ThreadsService) {}
 

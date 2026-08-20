@@ -135,7 +135,7 @@ export default function ScholarHelpPage() {
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-slate-900">Institutional Tech Support</h4>
                 <p className="text-[11px] text-slate-500 font-medium leading-normal">
-                  Experiencing system login errors, Clerk synchronizing timeouts, or API route issues? Contact IT administrator.
+                  Experiencing system login errors, Google authentication timeouts, or API route issues? Contact IT administrator.
                 </p>
                 <button 
                   onClick={() => alert('Support ticket logged. Institutional IT will respond via email.')}

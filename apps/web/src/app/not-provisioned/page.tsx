@@ -1,12 +1,12 @@
 'use client';
 
-import { useClerk } from '@clerk/nextjs';
+import { useStore } from '@/store/useStore';
 import { useRouter } from 'next/navigation';
 import { ShieldAlert, LogOut, ArrowRight, Mail } from 'lucide-react';
 import Image from 'next/image';
 
 export default function NotProvisionedPage() {
-  const { signOut } = useClerk();
+  const { logout } = useStore();
   const router = useRouter();
 
   return (
@@ -51,7 +51,7 @@ export default function NotProvisionedPage() {
         {/* Sign Out Button */}
         <button
           onClick={() => {
-            signOut(() => router.push('/sign-in'));
+            logout();
           }}
           className="w-full bg-[#0C4DA2] hover:bg-[#003370] text-white font-extrabold text-sm py-4 px-6 rounded-2xl transition-all shadow-md shadow-blue-900/20 flex items-center justify-center gap-2 group cursor-pointer"
         >

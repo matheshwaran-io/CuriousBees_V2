@@ -1,14 +1,20 @@
 'use client';
 
-import { AuthenticateWithRedirectCallback } from '@clerk/nextjs';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SsoCallbackPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/feed');
+  }, [router]);
+
   return (
-    <div className="min-h-screen bg-[#070b14] flex items-center justify-center text-white font-sans">
+    <div className="min-h-screen bg-[#e6e6fa] flex items-center justify-center font-sans">
       <div className="text-center space-y-4">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <p className="text-sm text-white/60">Completing secure authentication...</p>
-        <AuthenticateWithRedirectCallback />
+        <div className="w-10 h-10 border-4 border-[#0C4DA2] border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="text-sm text-slate-600 font-medium">Completing secure authentication...</p>
       </div>
     </div>
   );

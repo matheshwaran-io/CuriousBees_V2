@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClerkService } from '../auth/clerk.service';
+import { SupabaseService } from '../auth/supabase.service';
 import { Role, UserStatus } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { SUPERADMIN_EMAIL } from './admin.constants';
@@ -11,7 +11,7 @@ export class AdminAdminsService {
 
   constructor(
     private prisma: PrismaService,
-    private clerkService: ClerkService
+    private supabaseService: SupabaseService
   ) {}
 
   async getAdmins(query: any = {}) {
@@ -88,13 +88,12 @@ export class AdminAdminsService {
     await this.logAudit(adminId, 'CREATE_ADMIN', `Created institute admin ${email}`);
 
     try {
-      await this.clerkService.client.invitations.createInvitation({
-        emailAddress: email,
-        ignoreExisting: true,
-      });
-      this.logger.log(`Sent Clerk B2B invitation to admin ${email}`);
+      if (this.supabaseService.client) {
+        await this.supabaseService.client.auth.admin.inviteUserByEmail(email);
+        this.logger.log(`Sent Supabase invitation to admin ${email}`);
+      }
     } catch (err: any) {
-      this.logger.warn(`Failed to send Clerk invitation to ${email}: ${err.message}`);
+      this.logger.warn(`Pre-provisioned admin ${email} without direct Supabase invite email: ${err.message}`);
     }
 
     return admin;
@@ -217,12 +216,11 @@ export class AdminAdminsService {
         });
 
         try {
-          await this.clerkService.client.invitations.createInvitation({
-            emailAddress: email,
-            ignoreExisting: true,
-          });
+          if (this.supabaseService.client) {
+            await this.supabaseService.client.auth.admin.inviteUserByEmail(email);
+          }
         } catch (invErr: any) {
-          this.logger.warn(`Failed to invite imported admin ${email}: ${invErr.message}`);
+          this.logger.debug(`Pre-provisioned imported admin ${email}`);
         }
 
         userEmails.add(email);

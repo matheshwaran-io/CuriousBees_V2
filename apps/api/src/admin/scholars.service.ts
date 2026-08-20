@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClerkService } from '../auth/clerk.service';
+import { SupabaseService } from '../auth/supabase.service';
 import { Role, UserStatus } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { SUPERADMIN_EMAIL } from './admin.constants';
@@ -11,7 +11,7 @@ export class AdminScholarsService {
 
   constructor(
     private prisma: PrismaService,
-    private clerkService: ClerkService
+    private supabaseService: SupabaseService
   ) {}
 
   async getScholars(query: any = {}) {
@@ -46,12 +46,19 @@ export class AdminScholarsService {
 
     if (query.access) {
       if (query.access === 'MATCHED') {
-        where.clerkId = { not: null };
+        where.OR = [
+          { supabaseAuthId: { not: null } },
+          { clerkId: { not: null } }
+        ];
         where.employeeId = { not: null };
       } else if (query.access === 'UNMATCHED') {
+        where.supabaseAuthId = null;
         where.clerkId = null;
       } else if (query.access === 'REQUIRES REVIEW') {
-        where.clerkId = { not: null };
+        where.OR = [
+          { supabaseAuthId: { not: null } },
+          { clerkId: { not: null } }
+        ];
         where.employeeId = null;
       }
     }
@@ -156,13 +163,12 @@ export class AdminScholarsService {
     await this.logAudit(adminId, 'CREATE_SCHOLAR', `Created scholar ${email}`);
 
     try {
-      await this.clerkService.client.invitations.createInvitation({
-        emailAddress: email,
-        ignoreExisting: true,
-      });
-      this.logger.log(`Sent Clerk B2B invitation to scholar ${email}`);
+      if (this.supabaseService.client) {
+        await this.supabaseService.client.auth.admin.inviteUserByEmail(email);
+        this.logger.log(`Sent Supabase invitation to scholar ${email}`);
+      }
     } catch (err: any) {
-      this.logger.warn(`Failed to send Clerk invitation to ${email}: ${err.message}`);
+      this.logger.warn(`Pre-provisioned scholar ${email} without direct Supabase invite email: ${err.message}`);
     }
 
     return scholar;
@@ -347,12 +353,11 @@ export class AdminScholarsService {
         });
 
         try {
-          await this.clerkService.client.invitations.createInvitation({
-            emailAddress: email,
-            ignoreExisting: true,
-          });
+          if (this.supabaseService.client) {
+            await this.supabaseService.client.auth.admin.inviteUserByEmail(email);
+          }
         } catch (invErr: any) {
-          this.logger.warn(`Failed to invite imported scholar ${email}: ${invErr.message}`);
+          this.logger.debug(`Pre-provisioned imported scholar ${email}`);
         }
 
         userEmails.add(email);

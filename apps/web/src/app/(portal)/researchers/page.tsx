@@ -30,7 +30,7 @@ export default function ResearchersDiscoveryPage() {
   const [selectedRole, setSelectedRole] = useState('');
 
   // Fetch from backend API
-  const { data, isLoading } = useResearchers({
+  const { data, isLoading, isError, error, refetch } = useResearchers({
     q: searchQuery,
     department: selectedDept,
     role: selectedRole,
@@ -204,9 +204,39 @@ export default function ResearchersDiscoveryPage() {
 
         {/* ─── 4. DIRECTORY GRID ─── */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 text-[#0C4DA2] animate-spin" />
-            <p className="text-sm font-bold text-slate-500">Loading researcher network...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-pulse">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-2xs">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 rounded-full bg-slate-200 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="w-24 h-4 bg-slate-200 rounded" />
+                    <div className="w-16 h-3 bg-slate-100 rounded" />
+                    <div className="w-20 h-3 bg-slate-100 rounded" />
+                  </div>
+                </div>
+                <div className="w-full h-8 bg-slate-100 rounded-lg" />
+                <div className="w-full h-8 bg-slate-200 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : isError ? (
+          <div className="bg-white border border-rose-200 rounded-3xl p-12 text-center max-w-md mx-auto space-y-4 shadow-sm">
+            <div className="w-14 h-14 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <Network className="w-7 h-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">Unable to load researchers</h3>
+              <p className="text-xs text-slate-500">
+                {(error as any)?.message || 'An error occurred while connecting to the academic directory.'}
+              </p>
+            </div>
+            <button
+              onClick={() => refetch()}
+              className="px-6 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              Retry Loading
+            </button>
           </div>
         ) : researchers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

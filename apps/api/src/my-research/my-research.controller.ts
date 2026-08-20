@@ -9,7 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { MyResearchService } from './my-research.service';
-import { ClerkAuthGuard } from '../auth/clerk.guard';
+import { SupabaseAuthGuard } from '../auth/supabase.guard';
 import { ApprovedGuard } from '../auth/approved.guard';
 import { RolesGuard } from '../auth/roles/roles.guard';
 import { Roles } from '../auth/roles/roles.decorator';
@@ -17,7 +17,7 @@ import { Role } from '../auth/roles/role.enum';
 import { ResearchStatus, ResearchStage, MilestoneStatus, MilestonePriority } from '@prisma/client';
 
 @Controller('my-research')
-@UseGuards(ClerkAuthGuard, ApprovedGuard, RolesGuard)
+@UseGuards(SupabaseAuthGuard, ApprovedGuard, RolesGuard)
 @Roles(Role.RESEARCH_SCHOLAR)
 export class MyResearchController {
   constructor(private readonly myResearchService: MyResearchService) {}

@@ -1,108 +1,93 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextRequest, NextResponse, NextFetchEvent } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
 // 1. Define Public Routes
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  // Marketing / public pages — no login required
-  '/about(.*)',
-  '/research(.*)',
-  '/education(.*)',
-  '/institution(.*)',
-  '/contact(.*)',
-  '/features(.*)',
-  '/privacy-policy(.*)',
-  '/terms-of-service(.*)',
-  '/ethics-framework(.*)',
-  // Auth flow
-  '/auth/denied(.*)',
-  '/approval-pending(.*)',
-  '/awaiting-supervisor-approval(.*)',
-  '/account-rejected(.*)',
-  '/access-denied(.*)',
-  '/account-suspended(.*)',
-  '/not-provisioned(.*)',
-  '/sso-callback(.*)',
-  '/error(.*)',
-  // Admin panel uses its own PIN-based auth — bypass Clerk entirely
-  '/sys-admin-login(.*)',
-  '/sys-admin(.*)',
-]);
+const PUBLIC_PATH_PREFIXES = [
+  '/login',
+  '/sign-in',
+  '/sign-up',
+  '/auth/callback',
+  '/auth/denied',
+  '/about',
+  '/research',
+  '/education',
+  '/institution',
+  '/contact',
+  '/features',
+  '/privacy-policy',
+  '/terms-of-service',
+  '/ethics-framework',
+  '/approval-pending',
+  '/awaiting-supervisor-approval',
+  '/account-rejected',
+  '/access-denied',
+  '/account-suspended',
+  '/not-provisioned',
+  '/sso-callback',
+  '/sys-admin-login',
+  '/sys-admin',
+  '/error',
+];
 
-// 2. Define the core Clerk Middleware logic
-const coreMiddleware = clerkMiddleware(async (auth, request) => {
-  const { userId, sessionClaims } = await auth();
-  
-  console.log(`[MIDDLEWARE INFO] Path: ${request.nextUrl.pathname}`);
-  console.log(`[MIDDLEWARE INFO] Authenticated: ${!!userId}`);
-  
-  // Enforce SRMIST email domain restriction
-  if (userId && sessionClaims) {
-    const email = (sessionClaims as any).email || 
-                  (sessionClaims as any).primary_email_address || 
-                  (sessionClaims as any).primary_email || 
-                  '';
-    
-    const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in')
-      .split(',')
-      .map((d) => d.trim().toLowerCase());
-    const isAllowedDomain = email && allowedDomains.some((domain) => email.toLowerCase().endsWith('@' + domain));
+function isPublicPath(pathname: string): boolean {
+  if (pathname === '/') return true;
+  return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
 
-    if (email && !isAllowedDomain) {
-      if (!request.nextUrl.pathname.startsWith('/auth/denied')) {
-        console.warn(`[MIDDLEWARE SECURITY] Blocking non-allowed email: ${email}`);
-        return NextResponse.redirect(new URL('/auth/denied', request.url));
-      }
-    }
-  }
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
-});
-
-// 3. Export a resilient Edge wrapper around clerkMiddleware
-export default async function middleware(request: NextRequest, event: NextFetchEvent) {
   try {
-    // Graceful configuration check
-    if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
-      console.error("[MIDDLEWARE FATAL] Missing Clerk environment variables (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY or CLERK_SECRET_KEY).");
-      if (request.nextUrl.pathname !== '/error') {
-        return NextResponse.redirect(new URL('/error', request.url));
-      }
-      return NextResponse.next();
+    // 1. Refresh Supabase session and get authenticated user
+    const { supabaseResponse, user } = await updateSession(request);
+
+    // 2. If authenticated user visits login/sign-in pages, redirect to /feed
+    if (user && (pathname === '/login' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up'))) {
+      return NextResponse.redirect(new URL('/feed', request.url));
     }
 
-    // Execute Clerk Middleware
-    return await coreMiddleware(request, event);
+    // 3. If public path, allow through with refreshed session cookies
+    if (isPublicPath(pathname)) {
+      return supabaseResponse;
+    }
 
+    // 4. Protected Route: Require authenticated Supabase user
+    if (!user) {
+      console.log(`[MIDDLEWARE] Unauthenticated access to ${pathname}. Redirecting to /login`);
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirectTo', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // 5. Enforce SRMIST & Gmail allowed domain restriction
+    const email = user.email?.toLowerCase().trim() || '';
+    const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in,gmail.com')
+      .split(',')
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean);
+
+    const isAllowedDomain = allowedDomains.some((domain) => email.endsWith('@' + domain));
+
+    if (!isAllowedDomain) {
+      console.warn(`[MIDDLEWARE SECURITY] Blocking non-allowed email: ${email}`);
+      return NextResponse.redirect(new URL('/access-denied', request.url));
+    }
+
+    return supabaseResponse;
   } catch (error: any) {
     // Next.js Redirect errors should not be swallowed
     if (error && error.message && error.message.includes('NEXT_REDIRECT')) {
       throw error;
     }
 
-    // Safely catch edge runtime crashes
-    console.error(`[MIDDLEWARE EXCEPTION] Path: ${request.nextUrl.pathname}`, error);
-    
-    // Prevent infinite redirect loops
-    if (request.nextUrl.pathname !== '/error') {
-      return NextResponse.redirect(new URL('/error', request.url));
-    }
+    console.error(`[MIDDLEWARE EXCEPTION] Path: ${pathname}`, error);
     return NextResponse.next();
   }
 }
 
-// 4. Safe Matcher Configuration
+// Match all application paths except Next.js internals, API routes, and static assets
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.[0-9a-zA-Z]+$).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
-    // Always run for Clerk proxy path
-    '/__clerk/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)',
   ],
 };
