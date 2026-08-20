@@ -103,27 +103,9 @@ export default function PortalLayout({
       return;
     }
 
-    if (!activeUser.onboardingCompleted || (activeUser.role === 'RESEARCH_SUPERVISOR' && !activeUser.departmentId)) {
+    if (!activeUser.onboardingCompleted) {
       console.warn('[PortalLayout] User has not completed onboarding. Redirecting to /onboarding.');
       router.push('/onboarding');
-      return;
-    }
-
-    if (activeUser.role === 'RESEARCH_SCHOLAR' && !activeUser.supervisorId) {
-      console.warn('[PortalLayout] Scholar has no supervisor assigned. Redirecting to /onboarding.');
-      router.push('/onboarding');
-      return;
-    }
-
-    if (activeUser.status === 'REJECTED' && activeUser.role === 'RESEARCH_SCHOLAR') {
-      console.warn('[PortalLayout] Scholar request was rejected. Redirecting to /verification-pending.');
-      router.push('/verification-pending');
-      return;
-    }
-
-    if (activeUser.status === 'REJECTED') {
-      console.warn('[PortalLayout] User account was rejected. Redirecting to /access-denied.');
-      router.push('/access-denied');
       return;
     }
 
@@ -133,12 +115,30 @@ export default function PortalLayout({
       return;
     }
 
+    if (activeUser.status === 'REJECTED') {
+      console.warn('[PortalLayout] User account was rejected. Redirecting to /verification-pending.');
+      router.push('/verification-pending');
+      return;
+    }
+
     if (
       activeUser.status === 'PENDING' ||
       activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
       activeUser.status === 'PENDING_ADMIN_APPROVAL'
     ) {
       console.warn('[PortalLayout] User is pending approval. Redirecting to /verification-pending.');
+      router.push('/verification-pending');
+      return;
+    }
+
+    if (activeUser.role === 'RESEARCH_SCHOLAR' && (!activeUser.approved || !activeUser.supervisorId)) {
+      console.warn('[PortalLayout] Scholar is awaiting supervisor approval or assignment. Redirecting to /verification-pending.');
+      router.push('/verification-pending');
+      return;
+    }
+
+    if (activeUser.role === 'RESEARCH_SUPERVISOR' && !activeUser.approved) {
+      console.warn('[PortalLayout] Supervisor is awaiting admin approval. Redirecting to /verification-pending.');
       router.push('/verification-pending');
       return;
     }

@@ -13,6 +13,33 @@ export class OnboardingService {
     private mailService: MailService,
   ) {}
 
+  private async syncInterests(tx: any, userId: string, researchArea?: string, interests?: string[]) {
+    const rawList = Array.isArray(interests) && interests.length > 0
+      ? interests
+      : researchArea
+      ? researchArea.split(',').map(s => s.trim())
+      : [];
+
+    const cleanList = Array.from(new Set(rawList.filter(Boolean)));
+    if (cleanList.length === 0) return;
+
+    await tx.userInterest.deleteMany({ where: { userId } });
+
+    for (const name of cleanList) {
+      const interestObj = await tx.researchInterest.upsert({
+        where: { name },
+        update: {},
+        create: { name }
+      });
+      await tx.userInterest.create({
+        data: {
+          userId,
+          interestId: interestObj.id
+        }
+      });
+    }
+  }
+
   async onboardSupervisor(
     userId: string,
     data: {
@@ -86,7 +113,7 @@ export class OnboardingService {
     }
 
     // Start transaction to create profile and update user
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const profile = await tx.supervisorProfile.upsert({
         where: { userId },
         create: {
@@ -108,6 +135,8 @@ export class OnboardingService {
         },
       });
 
+      await this.syncInterests(tx, userId, data.researchArea, (data as any).interests);
+
       return tx.user.update({
         where: { id: userId },
         data: {
@@ -122,9 +151,12 @@ export class OnboardingService {
         },
         include: {
           supervisorProfile: true,
+          interests: { include: { interest: true } },
         },
       });
     });
+
+    return updated;
   }
 
   async onboardScholar(
@@ -206,6 +238,8 @@ export class OnboardingService {
         }
       });
 
+      await this.syncInterests(tx, userId, data.researchArea, (data as any).interests);
+
       if (data.supervisorId) {
         await tx.scholarSupervisorRequest.create({
           data: {
@@ -229,6 +263,7 @@ export class OnboardingService {
         },
         include: {
           scholarProfile: true,
+          interests: { include: { interest: true } },
         },
       });
 
@@ -267,6 +302,19 @@ export class OnboardingService {
       });
 
       return updatedUser;
+    });
+  }
+
+  async resetOnboarding(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        onboardingCompleted: false,
+        status: UserStatus.ACTIVE,
+        approved: false,
+        supervisorId: null,
+        supervisorEmail: null,
+      },
     });
   }
 }

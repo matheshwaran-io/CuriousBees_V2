@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useStore } from '@/store/useStore';
+import SRMLogo from '@/components/SRMLogo';
 import { ShieldAlert, LogOut, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -56,11 +57,8 @@ export default function AccountSuspendedPage() {
         </motion.div>
 
         {/* Footer Branding */}
-        <div className="mt-8 flex items-center gap-2.5 opacity-60">
-          <div className="w-6 h-6 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20">
-            <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
-          </div>
-          <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase">SRMIST Research Portal</span>
+        <div className="mt-8 flex items-center justify-center opacity-80">
+          <SRMLogo size={26} variant="full" />
         </div>
       </div>
     </div>

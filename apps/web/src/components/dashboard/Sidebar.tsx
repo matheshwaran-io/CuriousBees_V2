@@ -35,7 +35,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProfileImageUrl } from '@/lib/avatar';
-import Logo from '../Logo';
+import Logo from '@/components/Logo';
+import SRMLogo from '@/components/SRMLogo';
 import { RoleBadge } from '../shared/role-badge';
 import type { UserRole } from '@curiousbees/types';
 
@@ -62,11 +63,11 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
   if (role === 'RESEARCH_SUPERVISOR') {
     return [
       { name: 'Research Feed', href: '/feed', icon: MessageSquare },
+      { name: 'Publications', href: '/publications', icon: BookOpen },
       { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
+      { name: 'Curious Nexus', href: '/nexus', icon: Network },
       { name: 'Events', href: '/events', icon: CalendarIcon },
       { name: 'Researchers', href: '/researchers', icon: Users },
-      { name: 'Curious Nexus', href: '/nexus', icon: Network },
-      { name: 'Publications', href: '/publications', icon: BookOpen },
       { name: 'Integrations', href: '/settings/integrations', icon: Layers },
     ];
   }
@@ -74,12 +75,12 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
   // Default: Research Scholar
   return [
     { name: 'Research Feed', href: '/feed', icon: MessageSquare },
+    { name: 'Publications', href: '/publications', icon: BookOpen },
     { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
+    { name: 'My Research', href: '/my-research', icon: BookMarked },
+    { name: 'Curious Nexus', href: '/nexus', icon: Network },
     { name: 'Events', href: '/events', icon: CalendarIcon },
     { name: 'Researchers', href: '/researchers', icon: Users },
-    { name: 'Curious Nexus', href: '/nexus', icon: Network },
-    { name: 'My Research', href: '/my-research', icon: BookMarked },
-    { name: 'Publications', href: '/publications', icon: BookOpen },
     { name: 'Integrations', href: '/settings/integrations', icon: Layers },
   ];
 };
@@ -248,6 +249,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           <LogOut className="w-4 h-4 shrink-0" />
           <span>Exit Portal</span>
         </button>
+
+        {/* SRM Institutional Branding */}
+        <div className="mt-3 pt-3 border-t border-slate-100/80 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity">
+          <SRMLogo variant="full" theme="dark" size={32} />
+        </div>
       </div>
     </div>
   );

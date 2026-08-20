@@ -457,6 +457,7 @@ export class RequestsService {
           approved: false,
           supervisorId: null,
           supervisorEmail: null,
+          onboardingCompleted: false,
         },
       });
 
@@ -473,5 +474,72 @@ export class RequestsService {
     }).catch(() => {});
 
     return updatedReq;
+  }
+
+  async reassignScholar(actorUserId: string, actorRole: string, scholarId: string, newSupervisorId: string, notes?: string) {
+    const scholar = await this.prisma.user.findUnique({
+      where: { id: scholarId }
+    });
+    if (!scholar) {
+      throw new NotFoundException('Scholar user not found.');
+    }
+
+    if (actorRole !== Role.INSTITUTE_ADMIN && scholar.supervisorId !== actorUserId) {
+      throw new ForbiddenException('Only the current supervisor or Institute Admin can reassign this scholar.');
+    }
+
+    const newSupervisor = await this.prisma.user.findUnique({
+      where: { id: newSupervisorId }
+    });
+    if (!newSupervisor || newSupervisor.role !== Role.RESEARCH_SUPERVISOR || !newSupervisor.approved) {
+      throw new BadRequestException('Target new supervisor is invalid or inactive.');
+    }
+
+    if (newSupervisor.id === scholar.supervisorId) {
+      throw new BadRequestException('Scholar is already assigned to this supervisor.');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedScholar = await tx.user.update({
+        where: { id: scholarId },
+        data: {
+          supervisorId: newSupervisor.id,
+          supervisorEmail: newSupervisor.email,
+          approved: true,
+          status: UserStatus.ACTIVE,
+        }
+      });
+
+      const req = await tx.scholarSupervisorRequest.create({
+        data: {
+          scholarId,
+          supervisorId: newSupervisor.id,
+          status: RequestStatus.APPROVED,
+          message: notes ? `Reassigned from previous supervisor: ${notes}` : `Reassigned from previous supervisor`,
+          respondedAt: new Date(),
+        }
+      });
+
+      return { scholar: updatedScholar, request: req };
+    });
+
+    if (newSupervisor.email) {
+      this.mailService.sendScholarSupervisionApprovedAlert({
+        scholarEmail: newSupervisor.email,
+        scholarName: newSupervisor.name || newSupervisor.email,
+        supervisorName: newSupervisor.name || 'Research Supervisor',
+        department: newSupervisor.department || 'SRMIST',
+      }).catch(() => {});
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        userId: actorUserId,
+        action: 'SCHOLAR_REASSIGNED_SUPERVISOR',
+        details: JSON.stringify({ scholarId, previousSupervisorId: scholar.supervisorId, newSupervisorId: newSupervisor.id, notes }),
+      }
+    }).catch(() => {});
+
+    return result;
   }
 }

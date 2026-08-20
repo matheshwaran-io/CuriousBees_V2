@@ -215,9 +215,10 @@ interface AppState {
 
   // Supervisor Approvals & Requests
   fetchPendingApprovals: () => Promise<User[]>;
-  approveScholar: (scholarId: string) => Promise<User>;
-  declineScholar: (scholarId: string) => Promise<User>;
-  requestSupervisor: (supervisorId: string, message?: string) => Promise<User>;
+  approveScholar: (id: string) => Promise<any>;
+  declineScholar: (id: string) => Promise<any>;
+  reassignScholar: (scholarId: string, newSupervisorId: string, notes?: string) => Promise<any>;
+  requestSupervisor: (supervisorId: string, message?: string) => Promise<any>;
 
   // Admin Supervisor Approvals
   fetchPendingSupervisors: () => Promise<User[]>;
@@ -1358,15 +1359,17 @@ export const useStore = create<AppState>((set, get) => ({
   approveScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
-      // scholarId here is actually the request ID from the new supervisor-requests API
-      // The approval-queue now passes _requestId
-      const res = await apiFetch(`/api/supervisor-requests/${scholarId}/approve`, {
+      const state: any = get();
+      const match = state.pendingApprovals.find((s: any) => s._requestId === scholarId || s.id === scholarId);
+      const targetRequestId = match?._requestId || scholarId;
+
+      const res = await apiFetch(`/api/supervisor-requests/${targetRequestId}/approve`, {
         method: 'PUT',
       });
       if (!res.ok) throw new Error(await readApiError(res));
       const updatedRequest = await res.json();
       set(state => ({
-        pendingApprovals: state.pendingApprovals.filter((s: any) => (s._requestId || s.id) !== scholarId),
+        pendingApprovals: state.pendingApprovals.filter((s: any) => (s._requestId || s.id) !== scholarId && s.id !== match?.id),
       }));
       get().addToast('Scholar approved successfully', 'success');
       return updatedRequest;
@@ -1381,19 +1384,45 @@ export const useStore = create<AppState>((set, get) => ({
   declineScholar: async (scholarId: string) => {
     set({ isLoading: true });
     try {
-      // scholarId here is actually the request ID
-      const res = await apiFetch(`/api/supervisor-requests/${scholarId}/reject`, {
+      const state: any = get();
+      const match = state.pendingApprovals.find((s: any) => s._requestId === scholarId || s.id === scholarId);
+      const targetRequestId = match?._requestId || scholarId;
+
+      const res = await apiFetch(`/api/supervisor-requests/${targetRequestId}/reject`, {
         method: 'PUT',
       });
       if (!res.ok) throw new Error(await readApiError(res));
       set(state => ({
-        pendingApprovals: state.pendingApprovals.filter((s: any) => (s._requestId || s.id) !== scholarId)
+        pendingApprovals: state.pendingApprovals.filter((s: any) => (s._requestId || s.id) !== scholarId && s.id !== match?.id)
       }));
       get().addToast('Scholar request declined', 'info');
       const updatedRequest = await res.json();
       return updatedRequest;
     } catch (err: any) {
       get().addToast(err.message, 'error');
+      throw err;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  reassignScholar: async (scholarId: string, newSupervisorId: string, notes?: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch('/api/supervisor-requests/reassign', {
+        method: 'PUT',
+        body: JSON.stringify({ scholarId, newSupervisorId, notes }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const result = await res.json();
+      set(state => ({
+        myScholars: state.myScholars.filter((s: any) => s.id !== scholarId)
+      }));
+      get().addToast('Scholar reassigned to new supervisor successfully.', 'success');
+      get().fetchMyScholars();
+      return result;
+    } catch (err: any) {
+      get().addToast(err.message || 'Failed to reassign scholar.', 'error');
       throw err;
     } finally {
       set({ isLoading: false });

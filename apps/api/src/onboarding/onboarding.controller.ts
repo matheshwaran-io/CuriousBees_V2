@@ -40,4 +40,9 @@ export class OnboardingController {
     }
     return this.onboardingService.onboardScholar(req.user.id, body);
   }
+
+  @Post('reset')
+  async resetOnboarding(@Req() req: any) {
+    return this.onboardingService.resetOnboarding(req.user.id);
+  }
 }

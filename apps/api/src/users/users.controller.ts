@@ -100,7 +100,7 @@ export class UsersController {
 
   @Get('approvals')
   async getApprovals(@Req() req: any) {
-    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only faculty supervisors can fetch pending approvals.');
     }
     return this.usersService.getApprovals(req.user.id);
@@ -108,7 +108,7 @@ export class UsersController {
 
   @Put('approve-scholar')
   async approveScholar(@Req() req: any, @Body('scholarId') scholarId: string) {
-    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only faculty supervisors can approve scholars.');
     }
     if (!scholarId) {
@@ -141,7 +141,7 @@ export class UsersController {
 
   @Put('decline-scholar')
   async declineScholar(@Req() req: any, @Body('scholarId') scholarId: string) {
-    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only faculty supervisors can decline scholars.');
     }
     if (!scholarId) {
@@ -163,7 +163,7 @@ export class UsersController {
 
   @Get('my-scholars')
   async getMyScholars(@Req() req: any) {
-    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
+    if (req.user.role !== 'SUPERVISOR' && req.user.role !== 'RESEARCH_SUPERVISOR' && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE_ADMIN') {
       throw new BadRequestException('Only supervisors can view their assigned scholars.');
     }
     return this.usersService.getMyScholars(req.user.id);

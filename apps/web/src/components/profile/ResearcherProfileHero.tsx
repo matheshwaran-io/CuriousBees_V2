@@ -44,9 +44,15 @@ export function ResearcherProfileHero({
   const designation = isAdmin ? 'Institute Administrator' : isSupervisor ? (user?.supervisorProfile?.designation || 'Professor') : 'Ph.D. Scholar';
 
   // Interests tags
-  const interests: string[] = Array.isArray(user?.interests)
+  const rawInterests = Array.isArray(user?.interests) && user.interests.length > 0
     ? user.interests.map((i: any) => i.interest?.name || i.name || i)
-    : user?.researchInterests || ['Artificial Intelligence', 'Machine Learning', 'Research Collaboration'];
+    : user?.scholarProfile?.researchArea
+    ? user.scholarProfile.researchArea.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : user?.supervisorProfile?.researchArea
+    ? user.supervisorProfile.researchArea.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : user?.researchInterests || [];
+
+  const interests: string[] = Array.isArray(rawInterests) ? rawInterests : [];
 
   return (
     <div className="bg-white border border-[#E4E9F2] rounded-2xl overflow-hidden shadow-xs relative">

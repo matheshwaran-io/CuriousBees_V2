@@ -52,6 +52,20 @@ export class RequestsController {
     @Param('id') requestId: string,
     @Body('rejectionReason') rejectionReason?: string,
   ) {
-    return this.requestsService.rejectRequest(req.user.id, requestId, rejectionReason);
+    return this.requestsService.rejectRequest(req.user.id, req.user.role, rejectionReason);
+  }
+
+  @Put('reassign')
+  @Roles(Role.RESEARCH_SUPERVISOR, Role.INSTITUTE_ADMIN)
+  async reassignScholar(
+    @Req() req: any,
+    @Body('scholarId') scholarId: string,
+    @Body('newSupervisorId') newSupervisorId: string,
+    @Body('notes') notes?: string,
+  ) {
+    if (!scholarId || !newSupervisorId) {
+      throw new BadRequestException('scholarId and newSupervisorId are required.');
+    }
+    return this.requestsService.reassignScholar(req.user.id, req.user.role, scholarId, newSupervisorId, notes);
   }
 }

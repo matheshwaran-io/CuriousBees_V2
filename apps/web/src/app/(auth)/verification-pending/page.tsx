@@ -21,10 +21,12 @@ import {
   XCircle,
   FileText,
   Copy,
-  Check
+  Check,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/Logo';
+import SRMLogo from '@/components/SRMLogo';
 
 export default function VerificationPendingPage() {
   const router = useRouter();
@@ -47,9 +49,21 @@ export default function VerificationPendingPage() {
     const checkStatus = async () => {
       setLastCheckedAt(new Date());
       const user = await syncUserSession({ force: true });
-      if (user && (user.status === 'ACTIVE' || user.approved)) {
-        const route = user.role === 'INSTITUTE_ADMIN' ? '/admin/dashboard' : useStore.getState().dashboardRoute;
-        router.replace(route);
+      if (user) {
+        if (user.role === 'INSTITUTE_ADMIN') {
+          router.replace('/admin/dashboard');
+          return;
+        }
+
+        if (user.role === 'RESEARCH_SUPERVISOR' && user.status === 'ACTIVE' && user.approved) {
+          router.replace('/supervisor');
+          return;
+        }
+
+        if (user.role === 'RESEARCH_SCHOLAR' && user.status === 'ACTIVE' && user.approved && user.supervisorId) {
+          router.replace('/feed');
+          return;
+        }
       }
     };
     
@@ -59,7 +73,9 @@ export default function VerificationPendingPage() {
   }, [syncUserSession, router]);
 
   const isSupervisorPending = currentUser?.role === 'RESEARCH_SUPERVISOR';
-  const isRejected = currentUser?.status === 'REJECTED';
+  const latestRequest = requests[0];
+  const isRejected = currentUser?.status === 'REJECTED' || latestRequest?.status === 'REJECTED';
+  const isNoSupervisorAssigned = !isSupervisorPending && !latestRequest && currentUser?.role === 'RESEARCH_SCHOLAR' && !currentUser?.supervisorId;
 
   // Fetch current scholar supervision request details
   useEffect(() => {
@@ -83,8 +99,6 @@ export default function VerificationPendingPage() {
     }
   }, [currentUser]);
 
-  const latestRequest = requests[0];
-
   const handleCancelRequest = async () => {
     if (!latestRequest?.id) return;
     setCancelling(true);
@@ -94,6 +108,7 @@ export default function VerificationPendingPage() {
         method: 'DELETE',
       });
       if (res.ok) {
+        await apiFetch('/api/users/onboarding/reset', { method: 'POST' }).catch(() => {});
         await syncUserSession({ force: true });
         setShowCancelModal(false);
         router.replace('/onboarding');
@@ -102,6 +117,18 @@ export default function VerificationPendingPage() {
       console.error('Failed to cancel request:', e);
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleSelectAnotherSupervisor = async () => {
+    try {
+      const { apiFetch } = await import('@/lib/api-client');
+      await apiFetch('/api/users/onboarding/reset', { method: 'POST' }).catch(() => {});
+      await syncUserSession({ force: true });
+      router.replace('/onboarding');
+    } catch (e) {
+      console.error('Failed to reset onboarding:', e);
+      router.replace('/onboarding');
     }
   };
 
@@ -119,16 +146,21 @@ export default function VerificationPendingPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[550px] h-[550px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
 
-      {/* Floating Sign Out Trigger */}
-      <motion.button 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        onClick={() => { logout(); router.push('/sign-in'); }}
-        className="fixed top-5 right-5 flex items-center space-x-2 px-4 py-2 border border-white/15 rounded-full text-xs font-bold text-white/80 hover:text-yellow-400 hover:bg-white/10 hover:border-yellow-400/40 transition-all duration-300 cursor-pointer z-30 backdrop-blur-md shadow-lg"
-      >
-        <LogOut className="w-3.5 h-3.5" />
-        <span>Sign Out</span>
-      </motion.button>
+      {/* Top Header Bar with SRM Logo */}
+      <div className="fixed top-5 left-5 right-5 flex items-center justify-between z-30 pointer-events-none">
+        <div className="pointer-events-auto">
+          <SRMLogo size={42} variant="full" theme="light" />
+        </div>
+        <motion.button 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => { logout(); router.push('/sign-in'); }}
+          className="pointer-events-auto flex items-center space-x-2 px-4 py-2 border border-white/15 rounded-full text-xs font-bold text-white/80 hover:text-yellow-400 hover:bg-white/10 hover:border-yellow-400/40 transition-all duration-300 cursor-pointer backdrop-blur-md shadow-lg"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
+        </motion.button>
+      </div>
 
       {/* Main Glassmorphic Card Container */}
       <motion.main 
@@ -156,6 +188,8 @@ export default function VerificationPendingPage() {
               <span className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border shadow-xs ${
                 isRejected 
                   ? 'bg-rose-50 border-rose-200 text-rose-700'
+                  : isNoSupervisorAssigned
+                  ? 'bg-blue-50 border-blue-200 text-blue-800'
                   : isSupervisorPending
                   ? 'bg-blue-50 border-blue-200 text-blue-800'
                   : 'bg-amber-50/90 border-amber-200 text-amber-800'
@@ -163,12 +197,16 @@ export default function VerificationPendingPage() {
                 <span className={`w-2 h-2 rounded-full ${
                   isRejected 
                     ? 'bg-rose-500' 
+                    : isNoSupervisorAssigned
+                    ? 'bg-blue-600'
                     : isSupervisorPending 
                     ? 'bg-blue-600 animate-pulse' 
                     : 'bg-amber-500 animate-ping'
                 }`} />
                 {isRejected 
-                  ? 'Request Declined' 
+                  ? 'Request Declined / Cancelled' 
+                  : isNoSupervisorAssigned
+                  ? 'Supervisor Selection Pending'
                   : isSupervisorPending 
                   ? 'Admin Review in Progress' 
                   : 'Pending Supervisor Approval'}
@@ -178,6 +216,8 @@ export default function VerificationPendingPage() {
             <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight leading-snug">
               {isRejected 
                 ? 'Supervision Request Declined' 
+                : isNoSupervisorAssigned
+                ? 'Select a Research Supervisor'
                 : isSupervisorPending 
                 ? 'Awaiting Institutional Review' 
                 : 'Waiting for Supervisor Approval'}
@@ -185,15 +225,17 @@ export default function VerificationPendingPage() {
 
             <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed max-w-md mx-auto">
               {isRejected 
-                ? 'Your supervision request was not approved. You can select another research faculty guide to initiate a fresh request.'
+                ? 'Your supervision request was not approved or has been withdrawn. You can select another research faculty guide to initiate a fresh request.'
+                : isNoSupervisorAssigned
+                ? 'You have not designated a Research Supervisor yet. Please complete your supervisor selection to activate your research portal.'
                 : isSupervisorPending 
                 ? 'Your registration as a Research Supervisor is currently pending validation by University Administration.'
                 : 'Your research profile has been dispatched to your designated supervisor. You will be automatically granted portal access once approved.'}
             </p>
           </div>
 
-          {/* Supervisor Card (Scholar view) */}
-          {!isSupervisorPending && latestRequest?.supervisor && (
+          {/* Supervisor Card (Scholar view with active request) */}
+          {!isSupervisorPending && latestRequest?.supervisor && !isRejected && (
             <div className="w-full bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 sm:p-5 text-left space-y-3.5 shadow-inner">
               <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
                 <div className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
@@ -253,22 +295,20 @@ export default function VerificationPendingPage() {
                   <span>View Details</span>
                 </button>
                 
-                {!isRejected && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    disabled={cancelling}
-                    className="px-3.5 py-2 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold rounded-xl transition-all shadow-3xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                    <span>Cancel Request</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  disabled={cancelling}
+                  className="px-3.5 py-2 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold rounded-xl transition-all shadow-3xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Cancel Request</span>
+                </button>
               </div>
             </div>
           )}
 
           {/* Workflow Progress Steps */}
-          {!isRejected && (
+          {!isRejected && !isNoSupervisorAssigned && (
             <div className="w-full bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 text-left space-y-3">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
                 Approval Lifecycle
@@ -304,31 +344,31 @@ export default function VerificationPendingPage() {
             </div>
           )}
 
-          {/* Rejection State Callout */}
-          {isRejected && (
+          {/* Rejection or No Supervisor Callout */}
+          {(isRejected || isNoSupervisorAssigned) && (
             <div className="w-full space-y-3">
-              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-left space-y-1 text-xs">
-                <span className="font-extrabold text-rose-900 block flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-rose-600" />
-                  Supervisor Capacity or Domain Mismatch
+              <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-left space-y-1.5 text-xs">
+                <span className="font-extrabold text-blue-950 block flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-[#0C4DA2]" />
+                  Designate Your Research Supervisor
                 </span>
-                <p className="text-rose-700 text-[11px] font-medium leading-relaxed">
-                  Your selected supervisor was unable to accept this request at this time. You can choose another supervisor with available capacity.
+                <p className="text-slate-600 text-[11px] font-medium leading-relaxed">
+                  Choose a verified faculty supervisor from your department to initiate supervision approval and unlock your full research workspace.
                 </p>
               </div>
 
               <button
-                onClick={() => router.push('/onboarding')}
-                className="w-full py-3.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg"
+                onClick={handleSelectAnotherSupervisor}
+                className="w-full py-3.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg active:scale-98"
               >
-                <span>Select Another Supervisor</span>
+                <span>Select a Research Supervisor</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           )}
 
           {/* Live Sync Status Pill */}
-          {!isRejected && (
+          {!isRejected && !isNoSupervisorAssigned && (
             <div className="w-full flex items-center justify-between text-[11px] font-bold text-slate-400 px-2 pt-1 border-t border-slate-100">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

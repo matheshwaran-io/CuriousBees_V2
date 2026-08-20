@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
+import SRMLogo from '@/components/SRMLogo';
 import { MAX_SCHOLARS_PER_SUPERVISOR } from '@curiousbees/constants';
 
 
@@ -166,12 +167,31 @@ export default function OnboardingPage() {
         if (r.includes('SUPERVISOR') && !currentUser.departmentId) {
           return;
         }
-        
-        const route = 
-          currentUser.status === 'ACTIVE' 
-            ? useStore.getState().dashboardRoute
-            : '/verification-pending';
-        router.replace(route);
+
+        if (currentUser.role === 'RESEARCH_SCHOLAR') {
+          if (currentUser.approved && currentUser.supervisorId && currentUser.status === 'ACTIVE') {
+            router.replace('/feed');
+          } else {
+            router.replace('/verification-pending');
+          }
+          return;
+        }
+
+        if (currentUser.role === 'RESEARCH_SUPERVISOR') {
+          if (currentUser.approved && currentUser.status === 'ACTIVE') {
+            router.replace('/supervisor');
+          } else {
+            router.replace('/verification-pending');
+          }
+          return;
+        }
+
+        if (currentUser.role === 'INSTITUTE_ADMIN') {
+          router.replace('/admin/dashboard');
+          return;
+        }
+
+        router.replace('/verification-pending');
       }
     }
   }, [currentUser, router]);
@@ -404,14 +424,19 @@ export default function OnboardingPage() {
       {/* Decorative background grid pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
 
-      {/* Floating Sign Out Trigger */}
-      <button 
-        onClick={() => { logout(); router.push('/sign-in'); }}
-        className="fixed top-6 right-6 flex items-center space-x-1.5 px-4 py-2 border border-white/10 rounded-full text-xs font-bold text-white/70 hover:text-yellow-400 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-300 cursor-pointer z-30 backdrop-blur-sm"
-      >
-        <LogOut className="w-3.5 h-3.5" />
-        <span>Sign Out</span>
-      </button>
+      {/* Top Header Bar with SRM Logo */}
+      <div className="fixed top-6 left-6 right-6 flex items-center justify-between z-30 pointer-events-none">
+        <div className="pointer-events-auto">
+          <SRMLogo size={42} variant="full" theme="light" />
+        </div>
+        <button 
+          onClick={() => { logout(); router.push('/sign-in'); }}
+          className="pointer-events-auto flex items-center space-x-1.5 px-4 py-2 border border-white/10 rounded-full text-xs font-bold text-white/70 hover:text-yellow-400 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-300 cursor-pointer backdrop-blur-sm shadow-md"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
+        </button>
+      </div>
 
       {/* Centered Glass Container Card */}
       <main className="w-full max-w-lg relative z-10">
@@ -650,23 +675,7 @@ export default function OnboardingPage() {
                 </button>
               </div>
 
-              {/* Locked Admin Banner */}
-              {hasAssignedRole && role === 'SCHOLAR' ? (
-                <div className="p-3.5 bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700/50 rounded-xl flex items-center justify-between w-full shadow-inner">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-400 text-blue-950 rounded-lg shrink-0 shadow-sm">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-200/80 block mb-0.5">Assigned Role</span>
-                      <span className="text-xs font-extrabold text-white">Research Scholar</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-extrabold bg-blue-950/50 text-yellow-400 px-2.5 py-1 rounded-full border border-yellow-400/20 shrink-0">
-                    Admin Provisioned
-                  </span>
-                </div>
-              ) : null}
+
 
               {role && (
                 <div className="space-y-4">
