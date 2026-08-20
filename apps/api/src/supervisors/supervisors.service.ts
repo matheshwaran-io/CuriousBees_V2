@@ -10,23 +10,58 @@ export class SupervisorsService {
   constructor(private prisma: PrismaService) {}
 
   async getSupervisors(departmentId?: string, facultyId?: string, search?: string) {
+    let deptName: string | undefined;
+    let effectiveFacultyId = facultyId;
+
+    if (departmentId) {
+      const dept = await this.prisma.department.findUnique({
+        where: { id: departmentId },
+      });
+      if (dept) {
+        deptName = dept.name;
+        if (!effectiveFacultyId) effectiveFacultyId = dept.facultyId;
+      }
+    }
+
+    const where: any = {
+      role: 'RESEARCH_SUPERVISOR',
+      status: 'ACTIVE',
+    };
+
+    if (departmentId || deptName) {
+      where.OR = [
+        ...(departmentId ? [{ departmentId }] : []),
+        ...(departmentId ? [{ supervisorProfile: { departmentId } }] : []),
+        ...(deptName ? [{ department: { equals: deptName, mode: 'insensitive' } }] : []),
+      ];
+    } else if (effectiveFacultyId) {
+      where.OR = [
+        { supervisorProfile: { facultyId: effectiveFacultyId } },
+        { departmentRef: { facultyId: effectiveFacultyId } },
+      ];
+    }
+
+    if (search) {
+      const searchCondition = {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { department: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      };
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          searchCondition,
+        ];
+        delete where.OR;
+      } else {
+        where.OR = searchCondition.OR;
+      }
+    }
+
     const supervisors = await this.prisma.user.findMany({
-      where: {
-        role: 'RESEARCH_SUPERVISOR',
-        status: 'ACTIVE',
-        ...(departmentId || facultyId ? {
-          supervisorProfile: {
-            ...(departmentId && { departmentId }),
-            ...(facultyId && { facultyId }),
-          }
-        } : {}),
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { department: { contains: search, mode: 'insensitive' } },
-          ],
-        }),
-      },
+      where,
       include: {
         supervisorProfile: true,
         _count: {

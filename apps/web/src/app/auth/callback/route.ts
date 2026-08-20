@@ -11,12 +11,26 @@ export async function GET(request: Request) {
     next = '/feed';
   }
 
-  if (code) {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const token_hash = searchParams.get('token_hash');
+  const type = searchParams.get('type') as any;
 
-    if (!error && data?.user) {
-      const email = data.user.email?.toLowerCase().trim() || '';
+  if (code || (token_hash && type)) {
+    const supabase = await createClient();
+    let authUser: any = null;
+    let authError: any = null;
+
+    if (code) {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      authUser = data?.user;
+      authError = error;
+    } else if (token_hash && type) {
+      const { data, error } = await supabase.auth.verifyOtp({ token_hash, type });
+      authUser = data?.user;
+      authError = error;
+    }
+
+    if (!authError && authUser) {
+      const email = authUser.email?.toLowerCase().trim() || '';
 
       // Check allowed domains (enforcing SRMIST & Gmail during this stage)
       const allowedDomains = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS || 'srmist.edu.in,gmail.com')
@@ -44,7 +58,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
     } else {
-      console.error('[AUTH CALLBACK] Error exchanging code for session:', error?.message);
+      console.error('[AUTH CALLBACK] Error exchanging credentials for session:', authError?.message);
     }
   }
 

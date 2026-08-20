@@ -54,11 +54,8 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
       { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
       { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
       { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
-      { name: 'Notification Logs', href: '/notifications', icon: MessageSquare },
+      { name: 'Announcements', href: '/admin/announcements', icon: MessageSquare },
       { name: 'System Settings', href: '/admin/settings', icon: Shield },
-      { name: 'Researchers', href: '/researchers', icon: Users },
-      { name: 'Curious Nexus', href: '/nexus', icon: Network },
-      { name: 'Integrations', href: '/settings/integrations', icon: Layers },
     ];
   }
 
@@ -213,7 +210,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2]">{currentUser.name || 'Researcher'}</p>
-              <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{currentUser.department || (role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar')}</p>
+              <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
+                {currentUser.department || (role === 'INSTITUTE_ADMIN' ? 'Institute Admin' : role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar')}
+              </p>
             </div>
           </Link>
         )}

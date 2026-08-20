@@ -5,36 +5,20 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, AlertCircle, Info, Loader2, Award, Zap, Network,
-  Mail, ArrowRight, CheckCircle2, KeyRound
+  AlertCircle,
+  Loader2,
+  Award,
+  Zap,
+  Network,
+  Mail,
+  ArrowRight,
+  CheckCircle2,
+  RotateCcw,
+  Sparkles,
+  ShieldCheck,
+  Building
 } from 'lucide-react';
 import Logo from '@/components/Logo';
-
-const getFriendlyErrorMessage = (error: any): string => {
-  const msg = (error?.message || '').toLowerCase();
-  const code = error?.code || error?.status || '';
-
-  if (
-    msg.includes('invalid') ||
-    msg.includes('incorrect') ||
-    msg.includes('token') ||
-    msg.includes('verify') ||
-    code === 'otp_expired' ||
-    code === 'validation_failed'
-  ) {
-    return 'Invalid verification code. Please check the code and try again.';
-  }
-  if (msg.includes('expired') || code === 'bad_oauth_state' || code === 'session_expired') {
-    return 'Your verification code has expired. Please request a new code.';
-  }
-  if (msg.includes('rate limit') || msg.includes('too many requests') || msg.includes('spam') || msg.includes('cooldown')) {
-    return 'Too many verification attempts. Please wait a few minutes before trying again.';
-  }
-  if (msg.includes('network') || msg.includes('fetch') || msg.includes('connect') || msg.includes('cors')) {
-    return 'Network connection issue. Please check your internet connection and try again.';
-  }
-  return error?.message || 'Unable to send the verification code. Please try again.';
-};
 
 function LoginContent() {
   const router = useRouter();
@@ -42,25 +26,18 @@ function LoginContent() {
   const redirectTo = searchParams?.get('redirectTo') || '/feed';
   const queryError = searchParams?.get('error');
 
-  const { currentUser, syncUserSession, signInWithGoogle, signInWithOtp, verifyOtp } = useStore();
+  const { syncUserSession, signInWithGoogle, signInWithMagicLink } = useStore();
+  
+  const [email, setEmail] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(
     queryError === 'auth_callback_failed'
-      ? 'Authentication callback failed. Please try signing in again.'
+      ? 'Authentication callback failed. Please request a new magic link.'
       : ''
   );
-  const [mode, setMode] = useState<'oauth' | 'otp' | 'otp_verify'>('oauth');
-  const [emailInput, setEmailInput] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     // Check if session is already active
@@ -71,98 +48,60 @@ function LoginContent() {
     });
   }, [router, redirectTo, syncUserSession]);
 
-  const handleGoogleSignIn = async () => {
+  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !email.includes('@')) {
+      setErrorMessage('Please enter a valid institutional email address.');
+      return;
+    }
+
     setIsLoading(true);
+    setErrorMessage('');
+    setResendSuccess(false);
+
+    try {
+      await signInWithMagicLink(email, redirectTo);
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error('[LOGIN] Magic Link Error:', err);
+      setErrorMessage(err?.message || 'Unable to send magic link. Please check your email and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendMagicLink = async () => {
+    if (isLoading || !email) return;
+    setIsLoading(true);
+    setErrorMessage('');
+    setResendSuccess(false);
+
+    try {
+      await signInWithMagicLink(email, redirectTo);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 4000);
+    } catch (err: any) {
+      console.error('[LOGIN] Resend Magic Link Error:', err);
+      setErrorMessage(err?.message || 'Failed to resend magic link. Please try again in a moment.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
     setErrorMessage('');
     try {
       await signInWithGoogle(redirectTo);
     } catch (err: any) {
       console.error('[LOGIN] Google Sign-In Error:', err);
-      const msg = err?.message || err?.error_description || '';
-      if (msg.includes('Unsupported provider') || msg.includes('not enabled')) {
-        setErrorMessage(
-          'Google Provider is not yet enabled in your Supabase Dashboard. Enable it under Authentication > Providers > Google, or sign in below via Institutional Email.'
-        );
-        setMode('otp');
-      } else {
-        setErrorMessage(msg || 'Google authentication could not be initiated.');
-      }
-      setIsLoading(false);
-    }
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailInput.trim()) return;
-
-    const email = emailInput.trim().toLowerCase();
-    const isAllowed = email.endsWith('@srmist.edu.in') || email.endsWith('@gmail.com');
-    if (!isAllowed) {
-      setErrorMessage('Please use your official @srmist.edu.in or @gmail.com email address.');
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMessage('');
-    try {
-      await signInWithOtp(email);
-      setOtpCode('');
-      setOtpSent(true);
-      setMode('otp_verify');
-      setResendCooldown(30);
-    } catch (err: any) {
-      console.error('[LOGIN] OTP Error:', err);
-      setErrorMessage(getFriendlyErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (!emailInput.trim() || resendCooldown > 0) return;
-    setIsLoading(true);
-    setErrorMessage('');
-    try {
-      await signInWithOtp(emailInput.trim().toLowerCase());
-      setOtpCode('');
-      setResendCooldown(30);
-    } catch (err: any) {
-      console.error('[LOGIN] Resend OTP Error:', err);
-      setErrorMessage(getFriendlyErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanOtp = otpCode.trim();
-    if (!cleanOtp) return;
-
-    if (cleanOtp.length !== 6 || !/^\d+$/.test(cleanOtp)) {
-      setErrorMessage('Please enter a valid 6-digit code.');
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMessage('');
-    try {
-      await verifyOtp(emailInput, cleanOtp);
-      const user = await syncUserSession({ force: true });
-      if (user) {
-        router.push(redirectTo);
-      } else {
-        router.push('/feed');
-      }
-    } catch (err: any) {
-      console.error('[LOGIN] Verify OTP Error:', err);
-      setErrorMessage(getFriendlyErrorMessage(err));
-      setIsLoading(false);
+      setErrorMessage(err?.message || 'Google authentication could not be initiated.');
+      setIsGoogleLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#e6e6fa]">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#e6e6fa] selection:bg-yellow-400 selection:text-blue-950">
       {/* Background gradients and mesh blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 honeycomb-bg opacity-[0.25] mix-blend-multiply" />
@@ -200,7 +139,7 @@ function LoginContent() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl flex flex-col md:flex-row min-h-[580px]"
+          className="w-full rounded-3xl overflow-hidden bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl flex flex-col md:flex-row min-h-[600px]"
         >
           {/* Left branding panel */}
           <div className="w-full md:w-1/2 bg-gradient-to-br from-[#0C4DA2] to-[#042654] p-10 flex flex-col justify-between relative overflow-hidden text-white">
@@ -209,8 +148,10 @@ function LoginContent() {
             <div className="absolute -bottom-1/4 -left-1/4 w-80 h-80 bg-[#B88608]/15 rounded-full blur-[60px] pointer-events-none" />
 
             {/* Top header */}
-            <div className="relative z-10 bg-white/10 p-4.5 rounded-2xl border border-white/15 backdrop-blur-md">
-              <Logo size={44} />
+            <div className="relative z-10 flex">
+              <div className="inline-flex items-center gap-3 bg-white p-3 rounded-2xl shadow-xl border border-white/15">
+                <Logo size={32} />
+              </div>
             </div>
 
             {/* Middle visual showcase */}
@@ -264,49 +205,122 @@ function LoginContent() {
               <h3 className="font-display font-medium text-lg text-white leading-snug">
                 Elevating academic excellence through collaborative innovation.
               </h3>
-              <p className="text-xs text-white/40 mt-2">
+              <p className="text-xs text-white/50 mt-2">
                 A unified research environment for scholars, supervisors, and institutions.
               </p>
             </div>
           </div>
 
           {/* Right authentication panel */}
-          <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-between bg-white/50 backdrop-blur-xl relative border-l border-white/20">
+          <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-between bg-white/60 backdrop-blur-xl relative border-l border-white/30">
             <div className="my-auto flex flex-col justify-center w-full max-w-sm mx-auto space-y-6">
               
+              {/* Header Badge */}
               <div>
-                <span className="text-[10px] font-extrabold text-[#0C4DA2] tracking-widest uppercase bg-[#0C4DA2]/10 px-2.5 py-1 rounded-full">SRMIST RESEARCH</span>
-                <h2 className="text-2xl font-display font-extrabold text-slate-900 tracking-tight mt-2.5">Welcome to CuriousBees</h2>
-                <p className="text-slate-500 text-sm mt-1.5 leading-relaxed font-sans">
-                  Sign in with your institutional Google account or institutional email address.
+                <span className="text-[10px] font-extrabold text-[#0C4DA2] tracking-widest uppercase bg-[#0C4DA2]/10 px-2.5 py-1 rounded-full border border-[#0C4DA2]/20">
+                  SRMIST RESEARCH PORTAL
+                </span>
+                <h2 className="text-2xl font-display font-extrabold text-slate-900 tracking-tight mt-2.5">
+                  {isSubmitted ? 'Check your email' : 'Welcome to CuriousBees'}
+                </h2>
+                <p className="text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed font-sans">
+                  {isSubmitted 
+                    ? 'We sent a secure sign-in link to your institutional email address.'
+                    : 'Sign in with your institutional email address.'}
                 </p>
               </div>
 
+              {/* Error Callout */}
               {errorMessage && (
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3.5 text-left text-xs font-medium text-red-800"
+                  className="flex items-start gap-2.5 bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-left text-xs font-semibold text-rose-800"
                 >
-                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <p>{errorMessage}</p>
                 </motion.div>
               )}
 
-              {mode === 'oauth' && (
-                <div className="space-y-4">
+              {/* Resend Success Banner */}
+              {resendSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-left text-xs font-bold text-emerald-800"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <p>A new magic link has been dispatched to your email.</p>
+                </motion.div>
+              )}
+
+              {/* VIEW A: Initial State (Enter Email & Send Magic Link) */}
+              {!isSubmitted ? (
+                <form onSubmit={handleMagicLinkSubmit} className="space-y-4 text-left">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+                      Institutional Email Address
+                    </label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#0C4DA2] transition-colors">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your institutional email"
+                        disabled={isLoading}
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]/40 focus:border-[#0C4DA2] transition-all shadow-2xs"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium pt-0.5">
+                      We'll send you a secure sign-in link to your institutional email.
+                    </p>
+                  </div>
+
                   <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                    className="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-sm cursor-pointer"
+                    type="submit"
+                    disabled={isLoading || !email}
+                    className="w-full h-12 rounded-xl bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-[#0C4DA2]" />
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sending Magic Link...</span>
+                      </>
                     ) : (
                       <>
-                        <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <span>Send Magic Link</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </motion.button>
+
+                  <div className="relative my-4 flex items-center justify-center">
+                    <div className="border-t border-slate-200 w-full" />
+                    <span className="bg-white/80 px-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 absolute">
+                      Or
+                    </span>
+                  </div>
+
+                  {/* Google OAuth Alternative */}
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={isGoogleLoading}
+                    className="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 text-xs font-bold flex items-center justify-center gap-3 transition-all duration-200 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isGoogleLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-[#0C4DA2]" />
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                           <path
                             fill="#4285F4"
                             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -324,126 +338,81 @@ function LoginContent() {
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                           />
                         </svg>
-                        <span>Continue with SRM Google Account</span>
+                        <span>Continue with Google</span>
                       </>
                     )}
                   </motion.button>
-
-                  <div className="relative flex items-center justify-center my-4">
-                    <div className="border-t border-slate-200 w-full" />
-                    <span className="bg-white/80 px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider absolute">or</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => { setErrorMessage(''); setMode('otp'); }}
-                    className="w-full h-11 px-4 rounded-xl bg-white/70 border border-slate-200 text-slate-700 hover:bg-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-                  >
-                    <Mail className="w-4 h-4 text-[#0C4DA2]" />
-                    <span>Sign In via Institutional Email OTP</span>
-                  </button>
-                </div>
-              )}
-
-              {mode === 'otp' && (
-                <form onSubmit={handleSendOtp} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Institutional Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
-                      <input
-                        type="email"
-                        value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
-                        placeholder="you@srmist.edu.in or you@gmail.com"
-                        required
-                        className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]/40"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full h-11 rounded-xl bg-[#0C4DA2] hover:bg-[#003370] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-60"
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Send One-Time Passcode</span><ArrowRight className="w-4 h-4" /></>}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setErrorMessage(''); setMode('oauth'); }}
-                    className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors pt-1 cursor-pointer"
-                  >
-                    Back to Google Sign In
-                  </button>
                 </form>
-              )}
-
-              {mode === 'otp_verify' && (
-                <form onSubmit={handleVerifyOtp} className="space-y-3">
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <p>Enter the 6-digit verification code sent to <strong>{emailInput}</strong></p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">6-Digit Code</label>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="123456"
-                        required
-                        className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 tracking-widest font-mono text-center font-bold focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]/40"
-                      />
+              ) : (
+                /* VIEW B: Magic Link Dispatched (Check Email Screen) */
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="space-y-5 text-left"
+                >
+                  <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-2xl space-y-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">
+                      Target Email Address
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-[#0C4DA2] shrink-0" />
+                      <span className="font-extrabold text-xs text-slate-900 truncate">
+                        {email}
+                      </span>
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading || otpCode.length !== 6}
-                    className="w-full h-11 rounded-xl bg-[#0C4DA2] hover:bg-[#003370] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Verify & Access Portal</span>}
-                  </button>
+                  <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1 text-xs text-slate-600">
+                    <p className="font-bold text-slate-800">
+                      Open your email client and click <span className="text-[#0C4DA2]">"Sign in to CuriousBees"</span>.
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      The link will securely authenticate your session and automatically direct you to your portal.
+                    </p>
+                  </div>
 
-                  <div className="flex flex-col gap-2 pt-1">
-                    <button
+                  <div className="flex flex-col gap-2.5 pt-2">
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
                       type="button"
-                      disabled={resendCooldown > 0 || isLoading}
-                      onClick={handleResendOtp}
-                      className="w-full text-center text-xs font-bold text-[#0C4DA2] hover:text-[#042654] disabled:opacity-40 disabled:hover:text-[#0C4DA2] transition-colors cursor-pointer"
+                      onClick={handleResendMagicLink}
+                      disabled={isLoading}
+                      className="w-full h-11 rounded-xl bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-extrabold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
                     >
-                      {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code'}
-                    </button>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Resending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Resend Magic Link</span>
+                        </>
+                      )}
+                    </motion.button>
+
                     <button
                       type="button"
-                      onClick={() => { setErrorMessage(''); setOtpCode(''); setOtpSent(false); setMode('otp'); }}
-                      className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setIsSubmitted(false);
+                        setErrorMessage('');
+                      }}
+                      className="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors text-center cursor-pointer"
                     >
                       Change Email Address
                     </button>
                   </div>
-                </form>
+                </motion.div>
               )}
 
-              <div className="flex items-start gap-2.5 bg-[#FFC828]/10 border border-[#FFC828]/25 rounded-xl p-4 text-left text-[11px] text-slate-700 leading-relaxed font-medium">
-                <Info className="w-4.5 h-4.5 text-[#B88608] shrink-0 mt-0.5" />
-                <p>
-                  CuriousBees is restricted to SRMIST researchers and authorized members (<span className="text-[#0C4DA2] font-bold">@srmist.edu.in</span> accounts).
-                </p>
-              </div>
             </div>
 
             {/* Footer */}
-            <div className="text-center pt-8 text-[10px] text-slate-400 font-medium tracking-wider uppercase">
-              SRMIST • Secured by Supabase Auth
+            <div className="text-center pt-6 text-[10px] text-slate-400 font-bold tracking-wider uppercase flex items-center justify-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Passwordless Security • Supabase Magic Link</span>
             </div>
           </div>
         </motion.div>

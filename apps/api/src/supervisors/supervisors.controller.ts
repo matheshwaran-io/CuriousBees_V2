@@ -7,7 +7,6 @@ import { SupervisorGuard } from '../auth/guards/supervisor.guard';
 export class SupervisorsController {
   constructor(private readonly supervisorsService: SupervisorsService) {}
 
-  @UseGuards(SupabaseAuthGuard)
   @Get('supervisors')
   async getSupervisors(
     @Query('departmentId') departmentId?: string,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Save, Loader2, BookOpen, Layers, Globe, Shield, AlertCircle } from 'lucide-react';
+import { X, Save, Loader2, Globe, AlertCircle } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { STAGES } from './ResearchLifecycle';
 
@@ -22,9 +22,12 @@ export function EditResearcherProfileDrawer({
 }: EditResearcherProfileDrawerProps) {
   const { updateProfile, updateResearchProfile } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'RESEARCH' | 'LINKS' | 'ACADEMIC'>('RESEARCH');
+  const isAdmin = user?.role === 'INSTITUTE_ADMIN';
+  const [activeTab, setActiveTab] = useState<'PROFILE' | 'LINKS'>('PROFILE');
 
   // Form State
+  const [name, setName] = useState('');
+  const [department, setDepartment] = useState('');
   const [bio, setBio] = useState('');
   const [interestsText, setInterestsText] = useState('');
   const [researchTitle, setResearchTitle] = useState('');
@@ -38,6 +41,8 @@ export function EditResearcherProfileDrawer({
 
   useEffect(() => {
     if (user) {
+      setName(user.name || '');
+      setDepartment(user.department || '');
       setBio(user.bio || '');
       const existingInterests = Array.isArray(user.interests)
         ? user.interests.map((i: any) => i.interest?.name || i.name || i).join(', ')
@@ -62,19 +67,21 @@ export function EditResearcherProfileDrawer({
     setErrorMsg(null);
 
     try {
-      // 1. Update Base User Profile (Bio & Interests)
+      // 1. Update Base User Profile
       const interestsArray = interestsText
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
 
       await updateProfile({
+        name: name.trim() || undefined,
+        department: department.trim() || undefined,
         bio: bio.trim(),
         interests: interestsArray,
       });
 
-      // 2. Update Research Profile
-      if (researchTitle.trim()) {
+      // 2. Update Research Profile (for scholars & supervisors)
+      if (!isAdmin && researchTitle.trim()) {
         await updateResearchProfile({
           title: researchTitle.trim(),
           researchArea: researchArea.trim() || 'Computer Science',
@@ -93,18 +100,15 @@ export function EditResearcherProfileDrawer({
     }
   };
 
-  const isSupervisor = user?.role === 'RESEARCH_SUPERVISOR';
-  const registrationId = user?.employeeId || user?.scholarProfile?.registrationNo || user?.id?.substring(0, 8);
-
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-2xl border border-[#E4E9F2] shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
-            <h3 className="text-lg font-extrabold text-[#17233D]">Edit Institutional Profile</h3>
+            <h3 className="text-lg font-extrabold text-[#17233D]">Edit Profile</h3>
             <p className="text-xs text-slate-500 font-medium">
-              Update researcher-owned details. Institutional credentials are read-only.
+              Update your public profile details and research focus.
             </p>
           </div>
           <button
@@ -118,24 +122,14 @@ export function EditResearcherProfileDrawer({
         {/* Section Tabs */}
         <div className="flex border-b border-slate-200 bg-slate-50/30 px-6 gap-2 pt-2">
           <button
-            onClick={() => setActiveTab('RESEARCH')}
+            onClick={() => setActiveTab('PROFILE')}
             className={`px-4 py-2.5 text-xs font-extrabold border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'RESEARCH'
+              activeTab === 'PROFILE'
                 ? 'border-[#0C4DA2] text-[#0C4DA2]'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            Research Profile
-          </button>
-          <button
-            onClick={() => setActiveTab('IDENTITY')}
-            className={`px-4 py-2.5 text-xs font-extrabold border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'IDENTITY'
-                ? 'border-[#0C4DA2] text-[#0C4DA2]'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Identity (Locked)
+            Profile Information
           </button>
           <button
             onClick={() => setActiveTab('LINKS')}
@@ -146,16 +140,6 @@ export function EditResearcherProfileDrawer({
             }`}
           >
             External Links
-          </button>
-          <button
-            onClick={() => setActiveTab('ACADEMIC')}
-            className={`px-4 py-2.5 text-xs font-extrabold border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'ACADEMIC'
-                ? 'border-[#0C4DA2] text-[#0C4DA2]'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Academic Record
           </button>
         </div>
 
@@ -168,13 +152,37 @@ export function EditResearcherProfileDrawer({
             </div>
           )}
 
-          {activeTab === 'RESEARCH' && (
+          {activeTab === 'PROFILE' && (
             <form id="edit-profile-form" onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Department / Faculty</label>
+                  <input
+                    type="text"
+                    value={department}
+                    placeholder="e.g. Computer Applications"
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Research Bio / Summary</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  {isAdmin ? 'Administrative Bio / Overview' : 'Research Bio / Summary'}
+                </label>
                 <textarea
                   rows={3}
-                  placeholder="Describe your research focus, methodology, or academic statement..."
+                  placeholder={isAdmin ? 'Describe your institutional role and oversight areas...' : 'Describe your research focus, methodology, or academic statement...'}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   className="w-full text-xs font-semibold p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
@@ -183,109 +191,75 @@ export function EditResearcherProfileDrawer({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Research Interests (Comma-Separated)
+                  {isAdmin ? 'Key Focus Areas (Comma-Separated)' : 'Research Interests (Comma-Separated)'}
                 </label>
                 <input
                   type="text"
-                  placeholder="Artificial Intelligence, Knowledge Graphs, NLP"
+                  placeholder="Artificial Intelligence, Research Policy, Analytics"
                   value={interestsText}
                   onChange={(e) => setInterestsText(e.target.value)}
                   className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
                 />
               </div>
 
-              <div className="pt-2 border-t border-slate-100 space-y-3">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#0C4DA2]">Current Research Project</h4>
+              {!isAdmin && (
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#0C4DA2]">
+                    Current Research Project
+                  </h4>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Research Project Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. AI-Based Research Collaboration Framework"
-                    value={researchTitle}
-                    onChange={(e) => setResearchTitle(e.target.value)}
-                    className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Research Area</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Research Project Title</label>
                     <input
                       type="text"
-                      placeholder="e.g. Artificial Intelligence"
-                      value={researchArea}
-                      onChange={(e) => setResearchArea(e.target.value)}
+                      placeholder="e.g. AI-Based Research Collaboration Framework"
+                      value={researchTitle}
+                      onChange={(e) => setResearchTitle(e.target.value)}
                       className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Research Area</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Artificial Intelligence"
+                        value={researchArea}
+                        onChange={(e) => setResearchArea(e.target.value)}
+                        className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Current Research Stage</label>
+                      <select
+                        value={currentStage}
+                        onChange={(e) => setCurrentStage(e.target.value)}
+                        className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
+                      >
+                        {STAGES.map((stg) => (
+                          <option key={stg.id} value={stg.id}>
+                            {stg.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Current Research Stage</label>
-                    <select
-                      value={currentStage}
-                      onChange={(e) => setCurrentStage(e.target.value)}
-                      className="w-full text-xs font-semibold p-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
-                    >
-                      {STAGES.map((stg) => (
-                        <option key={stg.id} value={stg.id}>
-                          {stg.label}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Research Abstract</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Short summary of current project methodology and goals..."
+                      value={abstract}
+                      onChange={(e) => setAbstract(e.target.value)}
+                      className="w-full text-xs font-semibold p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
+                    />
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Research Abstract</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Short summary of current project methodology and goals..."
-                    value={abstract}
-                    onChange={(e) => setAbstract(e.target.value)}
-                    className="w-full text-xs font-semibold p-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0C4DA2]"
-                  />
-                </div>
-              </div>
+              )}
             </form>
-          )}
-
-          {activeTab === 'IDENTITY' && (
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-700">
-                <Lock className="w-4 h-4 text-amber-600" />
-                <span>Institution-Controlled Credentials</span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                These credentials are generated directly from official SRMIST institutional records and cannot be altered directly by the user.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Institutional Name</span>
-                  <span className="text-xs font-extrabold text-slate-800">{user?.name}</span>
-                </div>
-
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Role</span>
-                  <span className="text-xs font-extrabold text-[#0C4DA2]">
-                    {isSupervisor ? 'Research Supervisor' : 'Research Scholar'}
-                  </span>
-                </div>
-
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Department</span>
-                  <span className="text-xs font-extrabold text-slate-800">{user?.department || 'Computer Science'}</span>
-                </div>
-
-                <div className="p-3 bg-white rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                    {isSupervisor ? 'Employee ID' : 'Registration ID'}
-                  </span>
-                  <span className="text-xs font-mono font-extrabold text-slate-800">{registrationId}</span>
-                </div>
-              </div>
-            </div>
           )}
 
           {activeTab === 'LINKS' && (
@@ -306,20 +280,6 @@ export function EditResearcherProfileDrawer({
               </button>
             </div>
           )}
-
-          {activeTab === 'ACADEMIC' && (
-            <div className="space-y-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-700">
-                <Shield className="w-4 h-4 text-[#0C4DA2]" />
-                <span>Institutional Affiliation & Registration</span>
-              </div>
-              <div className="space-y-2 text-xs text-slate-600 font-medium">
-                <p>● Institution: SRM Institute of Science and Technology</p>
-                <p>● Campus: Kattankulathur Main Campus</p>
-                <p>● Record Status: Active Verified Researcher</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
@@ -331,7 +291,7 @@ export function EditResearcherProfileDrawer({
             Cancel
           </button>
 
-          {activeTab === 'RESEARCH' && (
+          {activeTab === 'PROFILE' && (
             <button
               type="submit"
               form="edit-profile-form"

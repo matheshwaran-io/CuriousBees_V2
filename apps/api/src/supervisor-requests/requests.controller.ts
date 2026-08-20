@@ -22,11 +22,15 @@ export class RequestsController {
 
   @Post()
   @Roles(Role.RESEARCH_SCHOLAR)
-  async createRequest(@Req() req: any, @Body('supervisorId') supervisorId: string) {
+  async createRequest(
+    @Req() req: any,
+    @Body('supervisorId') supervisorId: string,
+    @Body('message') message?: string,
+  ) {
     if (!supervisorId) {
       throw new BadRequestException('supervisorId is required.');
     }
-    return this.requestsService.createRequest(req.user.id, supervisorId);
+    return this.requestsService.createRequest(req.user.id, supervisorId, message);
   }
 
   @Delete(':id')
@@ -43,7 +47,11 @@ export class RequestsController {
 
   @Put(':id/reject')
   @Roles(Role.RESEARCH_SUPERVISOR)
-  async rejectRequest(@Req() req: any, @Param('id') requestId: string) {
-    return this.requestsService.rejectRequest(req.user.id, requestId);
+  async rejectRequest(
+    @Req() req: any,
+    @Param('id') requestId: string,
+    @Body('rejectionReason') rejectionReason?: string,
+  ) {
+    return this.requestsService.rejectRequest(req.user.id, requestId, rejectionReason);
   }
 }

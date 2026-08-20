@@ -381,7 +381,7 @@ function UserManagementContent() {
                 }}
                 className="px-4 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <UserPlus className="w-3.5 h-3.5" /> Assign Scholar
+                <UserPlus className="w-3.5 h-3.5" /> Add Scholar
               </button>
             </>
           )}
@@ -851,7 +851,7 @@ function UserManagementContent() {
                     {editingUser ? (
                       editingUser.role === 'RESEARCH_SCHOLAR' ? 'Edit Scholar' : editingUser.role === 'RESEARCH_SUPERVISOR' ? 'Edit Supervisor' : 'Edit Administrator'
                     ) : (
-                      singleRole === 'SCHOLAR' ? 'Assign Scholar' : singleRole === 'SUPERVISOR' ? 'Assign Supervisor' : 'Add Administrator'
+                      singleRole === 'SCHOLAR' ? 'Add Scholar' : singleRole === 'SUPERVISOR' ? 'Add Supervisor' : 'Add Administrator'
                     )}
                   </h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
@@ -934,30 +934,6 @@ function UserManagementContent() {
                       className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0C4DA2] bg-slate-50 focus:bg-white text-xs font-semibold"
                     />
                   </div>
-
-                  {singleRole === 'SCHOLAR' && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Research Supervisor Guide</label>
-                      <select
-                        value={singleSupervisorId}
-                        onChange={(e) => setSingleSupervisorId(e.target.value)}
-                        required
-                        className="cb-input w-full cursor-pointer focus:bg-white bg-slate-50"
-                      >
-                        <option value="">Select Supervisor Guide...</option>
-                        {(() => {
-                          const matchedDeptName = departments.find(d => d.id === singleDeptId)?.name;
-                          const filteredSupervisors = matchedDeptName
-                            ? allSupervisorsList.filter(s => s.department === matchedDeptName)
-                            : allSupervisorsList;
-                          return filteredSupervisors.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name} ({s.department})</option>
-                          ));
-                        })()}
-                      </select>
-                    </div>
-                  )}
-
                 </div>
 
                 <div className="p-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100 shrink-0 font-sans">
@@ -1769,7 +1745,7 @@ function AdminsManagement({
                       ))
                     ) : (
                       admins.map((item) => {
-                        const isSuperAdmin = item.email.toLowerCase() === 'r.matheshwaran.io@gmail.com' || item.email.toLowerCase() === 'admin@srmist.edu.in';
+                        const isSuperAdmin = item.email.toLowerCase() === 'curiousbees@srmist.edu.in' || item.email.toLowerCase() === 'r.matheshwaran.io@gmail.com';
                         return (
                           <tr key={item.id} className="hover:bg-slate-50/40 transition-colors">
                             <td className="px-5 py-3">

@@ -133,7 +133,7 @@ export class OnboardingService {
       facultyId: string;
       departmentId: string;
       researchArea: string;
-      supervisorId: string;
+      supervisorId?: string;
     }
   ) {
     const user = await this.prisma.user.findUnique({
@@ -158,32 +158,35 @@ export class OnboardingService {
       throw new BadRequestException('Invalid department/faculty selection.');
     }
 
-    // Verify supervisor exists and is active/not at capacity
-    const supervisor = await this.prisma.user.findUnique({
-      where: { id: data.supervisorId },
-      include: {
-        supervisorProfile: true,
-        _count: {
-          select: {
-            scholars: {
-              where: {
-                role: Role.RESEARCH_SCHOLAR,
-                status: UserStatus.ACTIVE,
+    let supervisor: any = null;
+    if (data.supervisorId) {
+      // Verify supervisor exists and is active/not at capacity
+      supervisor = await this.prisma.user.findUnique({
+        where: { id: data.supervisorId },
+        include: {
+          supervisorProfile: true,
+          _count: {
+            select: {
+              scholars: {
+                where: {
+                  role: Role.RESEARCH_SCHOLAR,
+                  status: UserStatus.ACTIVE,
+                }
               }
             }
           }
         }
+      });
+
+      if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR || supervisor.status !== UserStatus.ACTIVE) {
+        throw new BadRequestException('Selected supervisor is not active.');
       }
-    });
 
-    if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR || supervisor.status !== UserStatus.ACTIVE) {
-      throw new BadRequestException('Selected supervisor is not active.');
-    }
-
-    const currentScholars = supervisor._count.scholars;
-    const maxScholars = supervisor.supervisorProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
-    if (currentScholars >= maxScholars) {
-      throw new BadRequestException(`Selected supervisor has reached maximum scholar capacity of ${maxScholars}.`);
+      const currentScholars = supervisor._count.scholars;
+      const maxScholars = supervisor.supervisorProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
+      if (currentScholars >= maxScholars) {
+        throw new BadRequestException(`Selected supervisor has reached maximum scholar capacity of ${maxScholars}.`);
+      }
     }
 
     // Start transaction to create profile, update user, and create request
@@ -203,21 +206,23 @@ export class OnboardingService {
         }
       });
 
-      await tx.scholarSupervisorRequest.create({
-        data: {
-          scholarId: userId,
-          supervisorId: data.supervisorId,
-          status: RequestStatus.PENDING,
-        },
-      });
+      if (data.supervisorId) {
+        await tx.scholarSupervisorRequest.create({
+          data: {
+            scholarId: userId,
+            supervisorId: data.supervisorId,
+            status: RequestStatus.PENDING,
+          },
+        });
+      }
 
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
           role: Role.RESEARCH_SCHOLAR,
           onboardingCompleted: true,
-          status: UserStatus.PENDING_SUPERVISOR_APPROVAL,
-          approved: false,
+          status: data.supervisorId ? UserStatus.PENDING_SUPERVISOR_APPROVAL : UserStatus.ACTIVE,
+          approved: !data.supervisorId,
           departmentId: data.departmentId,
           department: dept.name,
           faculty: dept.faculty.name,
@@ -227,37 +232,37 @@ export class OnboardingService {
         },
       });
 
-      // Trigger supervisor notification asynchronously (after tx resolves, but we can launch it here)
-      try {
-        await this.notifications.notifyScholarRegistrationSubmitted(userId, data.supervisorId);
-      } catch (err) {
-        // Log notification error but do not fail onboarding transaction
-        console.error('Failed to notify supervisor on onboarding:', err);
-      }
+      // Trigger supervisor notification asynchronously if supervisor chosen
+      if (data.supervisorId && supervisor) {
+        try {
+          await this.notifications.notifyScholarRegistrationSubmitted(userId, data.supervisorId);
+        } catch (err) {
+          console.error('Failed to notify supervisor on onboarding:', err);
+        }
 
-      // Send Resend email notification to supervisor (async, non-blocking)
-      const request = await tx.scholarSupervisorRequest.findFirst({
-        where: { scholarId: userId, supervisorId: data.supervisorId, status: RequestStatus.PENDING },
-      });
-      if (request) {
-        this.mailService.sendScholarSupervisionRequestAlert({
-          supervisorEmail: supervisor.email,
-          supervisorName: supervisor.name || 'Supervisor',
-          scholarName: user.name || user.email,
-          scholarEmail: user.email,
-          department: dept.name,
-          researchArea: data.researchArea,
-          requestId: request.id,
-          createdAt: request.createdAt,
-        }).catch(() => {});
+        const request = await tx.scholarSupervisorRequest.findFirst({
+          where: { scholarId: userId, supervisorId: data.supervisorId, status: RequestStatus.PENDING },
+        });
+        if (request) {
+          this.mailService.sendScholarSupervisionRequestAlert({
+            supervisorEmail: supervisor.email,
+            supervisorName: supervisor.name || 'Supervisor',
+            scholarName: user.name || user.email,
+            scholarEmail: user.email,
+            department: dept.name,
+            researchArea: data.researchArea,
+            requestId: request.id,
+            createdAt: request.createdAt,
+          }).catch(() => {});
+        }
       }
 
       // Audit Log
       await tx.auditLog.create({
         data: {
           userId,
-          action: 'SCHOLAR_SUPERVISION_REQUEST_CREATED',
-          details: JSON.stringify({ supervisorId: data.supervisorId, requestId: request?.id }),
+          action: data.supervisorId ? 'SCHOLAR_SUPERVISION_REQUEST_CREATED' : 'SCHOLAR_ONBOARDING_COMPLETED',
+          details: JSON.stringify({ supervisorId: data.supervisorId || null, facultyId: data.facultyId, departmentId: data.departmentId }),
         }
       });
 

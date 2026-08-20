@@ -92,7 +92,8 @@ export class SupabaseAuthGuard implements CanActivate {
           decodedUser.user_metadata?.picture ||
           null;
 
-        const role = email === 'r.matheshwaran.io@gmail.com' ? 'INSTITUTE_ADMIN' : 'RESEARCH_SCHOLAR';
+        const ADMIN_EMAILS = ['curiousbees@srmist.edu.in', 'r.matheshwaran.io@gmail.com'];
+        const role = ADMIN_EMAILS.includes(email) ? 'INSTITUTE_ADMIN' : 'RESEARCH_SCHOLAR';
 
         this.logger.log(`Auto-provisioning user profile for ${email} with role ${role}`);
         user = await this.prisma.user.create({

@@ -20,7 +20,9 @@ These variables must be set for the application to boot successfully:
 These variables enable additional integrations but will not prevent startup if omitted:
 
 * `GEMINI_API_KEY`: API key for Gemini LLM AI features.
-* `RESEND_API_KEY`: API key for Resend email notifications.
+* `BREVO_API_KEY`: API key for Brevo transactional email notifications.
+* `MAIL_FROM_EMAIL`: Verified sender email address in Brevo.
+* `MAIL_FROM_NAME`: Sender display name (e.g. CuriousBees).
 
 ---
 

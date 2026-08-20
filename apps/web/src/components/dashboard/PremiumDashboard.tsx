@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import AvatarRing from '@/components/AvatarRing';
+import { SupervisorRequestsWidget } from './SupervisorRequestsWidget';
+import { ScholarSupervisorStatusWidget } from './ScholarSupervisorStatusWidget';
 
 export function PremiumDashboard() {
   const {
@@ -140,6 +142,13 @@ export function PremiumDashboard() {
           </div>
         </div>
 
+        {/* 🎓 SUPERVISION WORKFLOW WIDGETS */}
+        {isSupervisor ? (
+          <SupervisorRequestsWidget />
+        ) : (
+          <ScholarSupervisorStatusWidget />
+        )}
+
         {/* 🚀 MAIN GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
@@ -158,8 +167,8 @@ export function PremiumDashboard() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Link href="/approval-requests" className="px-3.5 py-1.5 bg-white border border-amber-200 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition-colors">
-                  3 Supervision Requests
+                <Link href="/supervisor" className="px-3.5 py-1.5 bg-white border border-amber-200 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition-colors">
+                  Supervision Requests
                 </Link>
                 <Link href="/reports" className="px-3.5 py-1.5 bg-white border border-amber-200 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold transition-colors">
                   2 Reports Awaiting Review

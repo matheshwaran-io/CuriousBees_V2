@@ -115,7 +115,7 @@ export default function OnboardingPage() {
   } = useStore();
 
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
-  const [role, setRole] = useState<'SCHOLAR' | 'SUPERVISOR' | null>(null);
+  const [role, setRole] = useState<'SCHOLAR' | 'SUPERVISOR'>('SCHOLAR');
   
   // Academic selections
   const [faculties, setFaculties] = useState<any[]>([]);
@@ -156,19 +156,14 @@ export default function OnboardingPage() {
     if (currentUser) {
       const r = String(currentUser.role || '');
       // Pre-select role if already assigned in DB
-      if (r.includes('SCHOLAR')) {
-        setRole('SCHOLAR');
-      } else if (r.includes('SUPERVISOR')) {
+      if (r.includes('SUPERVISOR')) {
         setRole('SUPERVISOR');
+      } else {
+        setRole('SCHOLAR');
       }
 
       if (currentUser.onboardingCompleted) {
-        // If supervisor has no department assigned, keep them on this page to select one
         if (r.includes('SUPERVISOR') && !currentUser.departmentId) {
-          return;
-        }
-        // If scholar has no supervisor assigned, keep them on this page to select one
-        if (r.includes('SCHOLAR') && !currentUser.supervisorId) {
           return;
         }
         
@@ -298,8 +293,8 @@ export default function OnboardingPage() {
         setErrorMsg('Please select your Faculty and Department.');
         return;
       }
-      if (!finalResearchArea || !selectedSupervisorId) {
-        setErrorMsg('Please select at least one Research Area and select a supervisor.');
+      if (!finalResearchArea) {
+        setErrorMsg('Please select at least one Research Area.');
         return;
       }
     }
@@ -324,7 +319,7 @@ export default function OnboardingPage() {
             facultyId: selectedFacultyId,
             departmentId: selectedDepartmentId,
             researchArea: finalResearchArea,
-            supervisorId: selectedSupervisorId,
+            ...(selectedSupervisorId ? { supervisorId: selectedSupervisorId } : {}),
           };
 
       const res = await apiFetch(endpoint, {
@@ -850,9 +845,8 @@ export default function OnboardingPage() {
                   type="submit"
                   disabled={
                     isSubmitting || 
-                    !role || 
                     (role === 'SUPERVISOR' && selectedDomains.length === 0) ||
-                    (role === 'SCHOLAR' && (!selectedFacultyId || !selectedDepartmentId || selectedDomains.length === 0 || !selectedSupervisorId))
+                    (role === 'SCHOLAR' && (!selectedFacultyId || !selectedDepartmentId || selectedDomains.length === 0))
                   }
                   className="flex-1 py-3.5 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-extrabold text-[13px] uppercase tracking-wide rounded-xl transition-all duration-300 disabled:opacity-40 disabled:hover:bg-yellow-400 cursor-pointer shadow-[0_4px_14px_0_rgba(250,204,21,0.39)] hover:shadow-[0_6px_20px_rgba(250,204,21,0.23)] hover:-translate-y-0.5 active:scale-[0.98]"
                 >

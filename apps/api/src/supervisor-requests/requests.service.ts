@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RequestStatus, UserStatus, Role } from '@prisma/client';
 import { MailService } from '../users/mail.service';
@@ -11,18 +11,27 @@ export class RequestsService {
     private mailService: MailService,
   ) {}
 
-  async createRequest(scholarId: string, supervisorId: string) {
+  async createRequest(scholarId: string, supervisorId: string, message?: string) {
+    if (!supervisorId) {
+      throw new BadRequestException('Supervisor ID is required.');
+    }
+
+    if (scholarId === supervisorId) {
+      throw new BadRequestException('You cannot request yourself as a supervisor.');
+    }
+
     const scholar = await this.prisma.user.findUnique({
       where: { id: scholarId },
       include: { scholarProfile: true }
     });
 
     if (!scholar || scholar.role !== Role.RESEARCH_SCHOLAR) {
-      throw new BadRequestException('Only Research Scholars can create requests.');
+      throw new ForbiddenException('Only Research Scholars can create supervisor requests.');
     }
 
-    if (!scholar.scholarProfile) {
-      throw new BadRequestException('Please complete onboarding first.');
+    // Check if scholar already has an assigned active supervisor
+    if (scholar.supervisorId && scholar.approved) {
+      throw new ConflictException('You already have an assigned and approved research supervisor.');
     }
 
     // Verify supervisor
@@ -44,37 +53,45 @@ export class RequestsService {
     });
 
     if (!supervisor || supervisor.role !== Role.RESEARCH_SUPERVISOR) {
-      throw new BadRequestException('Selected user is not a valid Research Supervisor.');
+      throw new NotFoundException('Selected user is not a valid Research Supervisor.');
+    }
+
+    if (supervisor.suspended) {
+      throw new BadRequestException('Selected supervisor is currently not available.');
     }
 
     const currentScholars = supervisor._count.scholars;
     const maxScholars = supervisor.supervisorProfile?.maxScholars ?? MAX_SCHOLARS_PER_SUPERVISOR;
     if (currentScholars >= maxScholars) {
-      throw new BadRequestException(`Selected supervisor has reached maximum scholar capacity of ${maxScholars}.`);
+      throw new BadRequestException(`Selected supervisor has reached the maximum capacity of ${maxScholars} scholars.`);
     }
 
-    // Check for existing pending request
-    const existing = await this.prisma.scholarSupervisorRequest.findFirst({
+    // Check for existing pending request for this scholar
+    const existingPending = await this.prisma.scholarSupervisorRequest.findFirst({
       where: {
         scholarId,
         status: RequestStatus.PENDING,
-      }
+      },
+      include: { supervisor: { select: { name: true } } }
     });
-    if (existing) {
-      throw new BadRequestException('You already have a pending supervisor request.');
+
+    if (existingPending) {
+      throw new ConflictException(
+        `You already have a pending supervisor request for Dr. ${existingPending.supervisor?.name || 'a supervisor'}. Please wait for their review or cancel your current request.`
+      );
     }
 
     const req = await this.prisma.$transaction(async (tx) => {
-      // Create request
       const createdReq = await tx.scholarSupervisorRequest.create({
         data: {
           scholarId,
           supervisorId,
+          message: message?.trim() || null,
           status: RequestStatus.PENDING,
         }
       });
 
-      // Set scholar status
+      // Update scholar status to pending approval
       await tx.user.update({
         where: { id: scholarId },
         data: {
@@ -86,24 +103,35 @@ export class RequestsService {
       return createdReq;
     });
 
-    // Asynchronously trigger Resend Email Notification
+    // Trigger Supervisor Email Alert via Brevo REST API
     this.mailService.sendScholarSupervisionRequestAlert({
       supervisorEmail: supervisor.email,
-      supervisorName: supervisor.name || 'Supervisor',
+      supervisorName: supervisor.name || 'Faculty Member',
       scholarName: scholar.name || scholar.email,
       scholarEmail: scholar.email,
       department: scholar.department || 'SRMIST',
-      researchArea: scholar.scholarProfile?.researchArea || '',
+      campus: scholar.faculty || 'SRMIST Kattankulathur',
+      researchArea: scholar.scholarProfile?.researchArea || scholar.bio || 'General Research',
+      message: message?.trim() || null,
       requestId: req.id,
       createdAt: req.createdAt,
+    }).then(async (emailRes) => {
+      const emailAction = emailRes.status === 'SENT' ? 'SUPERVISION_REQUEST_EMAIL_SENT' : 'SUPERVISION_REQUEST_EMAIL_FAILED';
+      await this.prisma.auditLog.create({
+        data: {
+          userId: scholarId,
+          action: emailAction,
+          details: JSON.stringify({ requestId: req.id, supervisorEmail: supervisor.email, status: emailRes.status, error: emailRes.error }),
+        }
+      }).catch(() => {});
     }).catch(() => {});
 
-    // Audit Logging
+    // Audit Log for request creation
     await this.prisma.auditLog.create({
       data: {
         userId: scholarId,
-        action: 'SCHOLAR_SUPERVISION_REQUEST_CREATED',
-        details: JSON.stringify({ requestId: req.id, supervisorId }),
+        action: 'SUPERVISION_REQUEST_CREATED',
+        details: JSON.stringify({ requestId: req.id, supervisorId, scholarId }),
       }
     }).catch(() => {});
 
@@ -115,10 +143,10 @@ export class RequestsService {
       return this.prisma.scholarSupervisorRequest.findMany({
         include: {
           scholar: {
-            select: { id: true, name: true, email: true, department: true }
+            select: { id: true, name: true, email: true, department: true, image: true, scholarProfile: true }
           },
           supervisor: {
-            select: { id: true, name: true, email: true, department: true }
+            select: { id: true, name: true, email: true, department: true, image: true, supervisorProfile: true }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -135,7 +163,9 @@ export class RequestsService {
               name: true,
               email: true,
               department: true,
+              faculty: true,
               image: true,
+              bio: true,
               scholarProfile: true
             }
           }
@@ -154,7 +184,9 @@ export class RequestsService {
               name: true,
               email: true,
               department: true,
+              faculty: true,
               image: true,
+              bio: true,
               supervisorProfile: true
             }
           }
@@ -176,8 +208,12 @@ export class RequestsService {
             name: true,
             email: true,
             department: true,
+            faculty: true,
             image: true,
             bio: true,
+            employeeId: true,
+            status: true,
+            approved: true,
             scholarProfile: true,
           }
         },
@@ -187,6 +223,7 @@ export class RequestsService {
             name: true,
             email: true,
             department: true,
+            faculty: true,
             image: true,
             supervisorProfile: true,
           }
@@ -195,12 +232,12 @@ export class RequestsService {
     });
 
     if (!request) {
-      throw new NotFoundException('Request not found.');
+      throw new NotFoundException('Supervision request not found.');
     }
 
     // Security Check: User must be the scholar, supervisor, or Institute Admin
     if (role !== Role.INSTITUTE_ADMIN && request.scholarId !== userId && request.supervisorId !== userId) {
-      throw new ForbiddenException('You are not authorized to view this request.');
+      throw new ForbiddenException('You are not authorized to view this supervision request.');
     }
 
     return request;
@@ -213,7 +250,7 @@ export class RequestsService {
     });
 
     if (!request) {
-      throw new NotFoundException('Request not found.');
+      throw new NotFoundException('Supervision request not found.');
     }
 
     if (request.supervisorId !== supervisorId) {
@@ -221,7 +258,7 @@ export class RequestsService {
     }
 
     if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Request is already processed.');
+      throw new BadRequestException(`Request cannot be approved because it is already ${request.status.toLowerCase()}.`);
     }
 
     const supervisor = await this.prisma.user.findUnique({
@@ -229,7 +266,7 @@ export class RequestsService {
     });
 
     const updatedReq = await this.prisma.$transaction(async (tx) => {
-      // 0. Server-side transaction check: Ensure supervisor capacity is not exceeded
+      // 1. Ensure supervisor capacity is not exceeded
       const activeScholarCount = await tx.user.count({
         where: {
           supervisorId,
@@ -245,13 +282,25 @@ export class RequestsService {
         throw new BadRequestException(`Supervisor has reached maximum scholar capacity of ${maxScholars}.`);
       }
 
-      // 1. Update request status
+      // 2. Double check scholar does not already have an approved supervisor
+      const currentScholarState = await tx.user.findUnique({
+        where: { id: request.scholarId },
+        select: { supervisorId: true, approved: true }
+      });
+      if (currentScholarState?.supervisorId && currentScholarState.approved) {
+        throw new ConflictException('This scholar is already assigned to another supervisor.');
+      }
+
+      // 3. Update request status to APPROVED
       const req = await tx.scholarSupervisorRequest.update({
         where: { id: requestId },
-        data: { status: RequestStatus.APPROVED },
+        data: {
+          status: RequestStatus.APPROVED,
+          respondedAt: new Date(),
+        },
       });
 
-      // 2. Update user status to ACTIVE, approved = true, link supervisorId
+      // 4. Update scholar user status to ACTIVE, approved = true, link supervisorId
       await tx.user.update({
         where: { id: request.scholarId },
         data: {
@@ -265,13 +314,22 @@ export class RequestsService {
       return req;
     });
 
-    // Trigger Email Notification
+    // Send Scholar Approval Email via Brevo REST API
     if (request.scholar?.email) {
       this.mailService.sendScholarSupervisionApprovedAlert({
         scholarEmail: request.scholar.email,
         scholarName: request.scholar.name || request.scholar.email,
         supervisorName: supervisor?.name || 'Your Research Supervisor',
         department: supervisor?.department || 'SRMIST',
+      }).then(async (emailRes) => {
+        const emailAction = emailRes.status === 'SENT' ? 'SUPERVISION_ACCEPTED_EMAIL_SENT' : 'SUPERVISION_ACCEPTED_EMAIL_FAILED';
+        await this.prisma.auditLog.create({
+          data: {
+            userId: supervisorId,
+            action: emailAction,
+            details: JSON.stringify({ requestId, scholarEmail: request.scholar?.email, status: emailRes.status, error: emailRes.error }),
+          }
+        }).catch(() => {});
       }).catch(() => {});
     }
 
@@ -279,22 +337,22 @@ export class RequestsService {
     await this.prisma.auditLog.create({
       data: {
         userId: supervisorId,
-        action: 'SUPERVISION_REQUEST_APPROVED',
-        details: JSON.stringify({ requestId, scholarId: request.scholarId }),
+        action: 'SUPERVISION_REQUEST_ACCEPTED',
+        details: JSON.stringify({ requestId, scholarId: request.scholarId, supervisorId }),
       }
     }).catch(() => {});
 
     return updatedReq;
   }
 
-  async rejectRequest(supervisorId: string, requestId: string) {
+  async rejectRequest(supervisorId: string, requestId: string, rejectionReason?: string) {
     const request = await this.prisma.scholarSupervisorRequest.findUnique({
       where: { id: requestId },
       include: { scholar: true }
     });
 
     if (!request) {
-      throw new NotFoundException('Request not found.');
+      throw new NotFoundException('Supervision request not found.');
     }
 
     if (request.supervisorId !== supervisorId) {
@@ -302,7 +360,7 @@ export class RequestsService {
     }
 
     if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Request is already processed.');
+      throw new BadRequestException(`Request cannot be rejected because it is already ${request.status.toLowerCase()}.`);
     }
 
     const supervisor = await this.prisma.user.findUnique({
@@ -313,27 +371,43 @@ export class RequestsService {
       // 1. Update request status
       const req = await tx.scholarSupervisorRequest.update({
         where: { id: requestId },
-        data: { status: RequestStatus.REJECTED },
+        data: {
+          status: RequestStatus.REJECTED,
+          rejectionReason: rejectionReason?.trim() || null,
+          respondedAt: new Date(),
+        },
       });
 
-      // 2. Update user status to REJECTED and approved = false
+      // 2. Allow scholar to choose another supervisor (keep status neutral ACTIVE or unapproved)
       await tx.user.update({
         where: { id: request.scholarId },
         data: {
-          status: UserStatus.REJECTED,
+          status: UserStatus.ACTIVE,
           approved: false,
+          supervisorId: null,
+          supervisorEmail: null,
         },
       });
 
       return req;
     });
 
-    // Trigger Email Notification
+    // Send Scholar Rejection Email via Brevo REST API
     if (request.scholar?.email) {
       this.mailService.sendScholarSupervisionRejectedAlert({
         scholarEmail: request.scholar.email,
         scholarName: request.scholar.name || request.scholar.email,
         supervisorName: supervisor?.name || 'Research Supervisor',
+        rejectionReason: rejectionReason?.trim() || null,
+      }).then(async (emailRes) => {
+        const emailAction = emailRes.status === 'SENT' ? 'SUPERVISION_REJECTED_EMAIL_SENT' : 'SUPERVISION_REJECTED_EMAIL_FAILED';
+        await this.prisma.auditLog.create({
+          data: {
+            userId: supervisorId,
+            action: emailAction,
+            details: JSON.stringify({ requestId, scholarEmail: request.scholar?.email, status: emailRes.status, error: emailRes.error }),
+          }
+        }).catch(() => {});
       }).catch(() => {});
     }
 
@@ -342,7 +416,7 @@ export class RequestsService {
       data: {
         userId: supervisorId,
         action: 'SUPERVISION_REQUEST_REJECTED',
-        details: JSON.stringify({ requestId, scholarId: request.scholarId }),
+        details: JSON.stringify({ requestId, scholarId: request.scholarId, supervisorId, rejectionReason }),
       }
     }).catch(() => {});
 
@@ -355,7 +429,7 @@ export class RequestsService {
     });
 
     if (!request) {
-      throw new NotFoundException('Request not found.');
+      throw new NotFoundException('Supervision request not found.');
     }
 
     if (request.scholarId !== scholarId) {
@@ -369,14 +443,20 @@ export class RequestsService {
     const updatedReq = await this.prisma.$transaction(async (tx) => {
       const req = await tx.scholarSupervisorRequest.update({
         where: { id: requestId },
-        data: { status: RequestStatus.REJECTED },
+        data: {
+          status: RequestStatus.REJECTED,
+          rejectionReason: 'Cancelled by scholar',
+          respondedAt: new Date(),
+        },
       });
 
       await tx.user.update({
         where: { id: scholarId },
         data: {
-          status: UserStatus.REJECTED,
+          status: UserStatus.ACTIVE,
           approved: false,
+          supervisorId: null,
+          supervisorEmail: null,
         },
       });
 
@@ -388,7 +468,7 @@ export class RequestsService {
       data: {
         userId: scholarId,
         action: 'SUPERVISION_REQUEST_CANCELLED',
-        details: JSON.stringify({ requestId }),
+        details: JSON.stringify({ requestId, scholarId }),
       }
     }).catch(() => {});
 

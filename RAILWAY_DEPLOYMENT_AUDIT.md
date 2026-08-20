@@ -78,7 +78,9 @@ Ensure these environment variables are fully configured in the Railway dashboard
 | `FRONTEND_URL`              | Yes      | Root URL of Vercel frontend app.                            |
 | `ALLOWED_ORIGINS`           | Yes      | Comma-separated list of CORS-permitted origins.             |
 | `GEMINI_API_KEY`            | No       | Gemini API key for AI features.                             |
-| `RESEND_API_KEY`            | No       | Resend API key for emails.                                  |
+| `BREVO_API_KEY`             | No       | Brevo API key for transactional emails.                     |
+| `MAIL_FROM_EMAIL`           | No       | Verified sender email address in Brevo.                     |
+| `MAIL_FROM_NAME`            | No       | Sender display name (default "CuriousBees").                |
 
 ---
 

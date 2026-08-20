@@ -18,7 +18,9 @@ import { AcademicBackgroundCard } from './AcademicBackgroundCard';
 import { AwardsCard } from './AwardsCard';
 import { ResearchActivityTimeline } from './ResearchActivityTimeline';
 import { EditResearcherProfileDrawer } from './EditResearcherProfileDrawer';
+import { RequestSupervisorModal } from '@/components/supervisors/RequestSupervisorModal';
 import { ResearcherExternalLink } from '@curiousbees/types';
+import { apiFetch } from '@/lib/api-client';
 
 interface AcademicProfileViewProps {
   user: any;
@@ -50,13 +52,44 @@ export function AcademicProfileView({
   const [externalLinks, setExternalLinks] = useState<ResearcherExternalLink[]>([]);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [isLinksEditorOpen, setIsLinksEditorOpen] = useState(false);
+  const [isSupervisorModalOpen, setIsSupervisorModalOpen] = useState(false);
+  const [supervisionRequestStatus, setSupervisionRequestStatus] = useState<'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED'>('NONE');
+
+  const isViewerScholar = currentUser?.role === 'RESEARCH_SCHOLAR';
+  const isTargetSupervisor = user?.role === 'RESEARCH_SUPERVISOR';
+
+  // Fetch scholar supervisor request status
+  const loadSupervisionStatus = React.useCallback(async () => {
+    if (!isViewerScholar || !isTargetSupervisor || !user?.id || isOwnProfile) return;
+
+    if (currentUser?.supervisorId === user.id && currentUser?.approved) {
+      setSupervisionRequestStatus('APPROVED');
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/supervisor-requests');
+      if (res.ok) {
+        const requests = await res.json();
+        const thisReq = requests.find((r: any) => r.supervisorId === user.id || r.supervisor?.id === user.id);
+        if (thisReq) {
+          setSupervisionRequestStatus(thisReq.status as any);
+        } else {
+          setSupervisionRequestStatus('NONE');
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, [isViewerScholar, isTargetSupervisor, user?.id, isOwnProfile, currentUser?.supervisorId, currentUser?.approved]);
 
   // Fetch collaboration status for relationship-aware hero action buttons
   useEffect(() => {
     if (user?.id && !isOwnProfile) {
       fetchCollabStatus(user.id);
+      loadSupervisionStatus();
     }
-  }, [user?.id, isOwnProfile, fetchCollabStatus]);
+  }, [user?.id, isOwnProfile, fetchCollabStatus, loadSupervisionStatus]);
 
   // Fetch external links
   const loadExternalLinks = React.useCallback(async () => {
@@ -94,6 +127,7 @@ export function AcademicProfileView({
     }
   };
 
+  const isAdmin = user?.role === 'INSTITUTE_ADMIN';
   const isSupervisor = user?.role === 'RESEARCH_SUPERVISOR';
   const activeCollaborations = user?.collaborationsRequested?.concat(user?.collaborationsReceived || []) || [];
 
@@ -118,6 +152,8 @@ export function AcademicProfileView({
           activeCollabId={activeCollabId}
           onInitiateCollab={handleInitiateCollab}
           onOpenNexus={handleOpenNexus}
+          supervisionStatus={supervisionRequestStatus as any}
+          onRequestSupervision={() => setIsSupervisorModalOpen(true)}
         />
 
         {/* 2-Column Responsive Layout */}
@@ -130,11 +166,13 @@ export function AcademicProfileView({
               onEditClick={() => setIsEditDrawerOpen(true)}
             />
 
-            <CurrentResearchCard
-              researchProfile={user?.researchProfile}
-              isOwnProfile={isOwnProfile}
-              onEditClick={() => setIsEditDrawerOpen(true)}
-            />
+            {!isAdmin && (
+              <CurrentResearchCard
+                researchProfile={user?.researchProfile}
+                isOwnProfile={isOwnProfile}
+                onEditClick={() => setIsEditDrawerOpen(true)}
+              />
+            )}
 
             <ResearchProjectsCard projects={mappedProjects} isOwnProfile={isOwnProfile} />
 
@@ -145,7 +183,9 @@ export function AcademicProfileView({
               currentUserId={currentUser?.id}
             />
 
-            <ResearchActivityTimeline activities={user?.researchProfile?.activities} />
+            {!isAdmin && (
+              <ResearchActivityTimeline activities={user?.researchProfile?.activities} />
+            )}
           </div>
 
           {/* Right / Sidebar Column (4 Cols on Desktop) */}
@@ -198,6 +238,18 @@ export function AcademicProfileView({
         links={externalLinks}
         onRefresh={loadExternalLinks}
       />
+
+      {/* Request Supervisor Modal */}
+      {isSupervisorModalOpen && user && (
+        <RequestSupervisorModal
+          isOpen={isSupervisorModalOpen}
+          onClose={() => setIsSupervisorModalOpen(false)}
+          supervisor={user}
+          onSuccess={() => {
+            loadSupervisionStatus();
+          }}
+        />
+      )}
     </div>
   );
 }

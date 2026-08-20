@@ -12,7 +12,49 @@ interface SupervisionCardProps {
 
 export function SupervisionCard({ user, isOwnProfile }: SupervisionCardProps) {
   const router = useRouter();
+  const isAdmin = user?.role === 'INSTITUTE_ADMIN';
   const isSupervisor = user?.role === 'RESEARCH_SUPERVISOR';
+
+  if (isAdmin) {
+    return (
+      <div className="bg-white border border-[#E4E9F2] rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-[#0C4DA2]">
+            <GraduationCap className="w-4 h-4 text-[#0C4DA2]" />
+            <span>Institutional Governance</span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#0C4DA2]/10 text-[#0C4DA2]">
+            Admin
+          </span>
+        </div>
+
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <p className="text-xs font-bold text-slate-800">
+            Institutional Research Administration
+          </p>
+          <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+            Overseeing university research programs, doctoral supervisory capacities, and faculty departments.
+          </p>
+          {isOwnProfile && (
+            <div className="pt-2 flex items-center gap-2">
+              <button
+                onClick={() => router.push('/admin/dashboard')}
+                className="px-3.5 py-1.5 bg-[#0C4DA2] hover:bg-[#003370] text-white text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+              >
+                Admin Dashboard
+              </button>
+              <button
+                onClick={() => router.push('/institute-admin/user-management')}
+                className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                User Management
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (isSupervisor) {
     const scholars: any[] = user?.scholars || [];

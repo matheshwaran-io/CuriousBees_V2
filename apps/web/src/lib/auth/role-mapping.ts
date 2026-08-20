@@ -22,17 +22,20 @@ export const ROLE_LABELS: Record<string, string> = {
  *
  * @returns The UserRole resolved from email pattern.
  */
+export const AUTHORIZED_ADMIN_EMAILS = [
+  'curiousbees@srmist.edu.in',
+  'r.matheshwaran.io@gmail.com',
+];
+
 export function getRoleForEmail(email: string): UserRole {
   const normalized = email.trim().toLowerCase();
-  const username = normalized.split('@')[0];
 
-  if (normalized === 'r.matheshwaran.io@gmail.com') {
+  if (AUTHORIZED_ADMIN_EMAILS.includes(normalized)) {
     return 'INSTITUTE_ADMIN';
   }
 
-  if (username.includes('.')) {
-    return 'INSTITUTE_ADMIN';
-  } else if (/[a-zA-Z]/.test(username) && /[0-9]/.test(username)) {
+  const username = normalized.split('@')[0];
+  if (/[a-zA-Z]/.test(username) && /[0-9]/.test(username)) {
     return 'RESEARCH_SCHOLAR';
   } else if (/^[a-zA-Z]+$/.test(username)) {
     return 'RESEARCH_SUPERVISOR';

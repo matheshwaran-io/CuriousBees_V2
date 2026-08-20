@@ -209,15 +209,15 @@ interface AppState {
   updateEvent: (id: string, title: string, date: string, time: string, venue: string, description?: string, eventType?: string, registrationLink?: string) => Promise<Event>;
   deleteEvent: (id: string) => Promise<Event>;
   signInWithGoogle: (redirectTo?: string) => Promise<void>;
+  signInWithMagicLink: (email: string, redirectTo?: string) => Promise<void>;
   signInWithOtp: (email: string, redirectTo?: string) => Promise<void>;
-  verifyOtp: (email: string, token: string) => Promise<void>;
   logout: () => void;
 
   // Supervisor Approvals & Requests
   fetchPendingApprovals: () => Promise<User[]>;
   approveScholar: (scholarId: string) => Promise<User>;
   declineScholar: (scholarId: string) => Promise<User>;
-  requestSupervisor: (supervisorId: string) => Promise<User>;
+  requestSupervisor: (supervisorId: string, message?: string) => Promise<User>;
 
   // Admin Supervisor Approvals
   fetchPendingSupervisors: () => Promise<User[]>;
@@ -1280,29 +1280,40 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  signInWithOtp: async (email: string) => {
+  signInWithMagicLink: async (email: string, redirectTo?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
+    const targetRedirect = redirectTo || '/feed';
+    const callbackUrl = `${origin}/auth/callback?redirectTo=${encodeURIComponent(targetRedirect)}`;
+
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
+        emailRedirectTo: callbackUrl,
         shouldCreateUser: true,
       },
     });
 
     if (error) {
-      console.error('[AuthStore] Supabase OTP error:', error);
+      console.error('[AuthStore] Supabase Magic Link error:', error);
       throw error;
     }
   },
 
-  verifyOtp: async (email: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
+  signInWithOtp: async (email: string, redirectTo?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
+    const targetRedirect = redirectTo || '/feed';
+    const callbackUrl = `${origin}/auth/callback?redirectTo=${encodeURIComponent(targetRedirect)}`;
+
+    const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      token: token.trim(),
-      type: 'email',
+      options: {
+        emailRedirectTo: callbackUrl,
+        shouldCreateUser: true,
+      },
     });
 
     if (error) {
-      console.error('[AuthStore] Supabase Verify OTP error:', error);
+      console.error('[AuthStore] Supabase Magic Link error:', error);
       throw error;
     }
   },
@@ -1389,17 +1400,17 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  requestSupervisor: async (supervisorId: string) => {
+  requestSupervisor: async (supervisorId: string, message?: string) => {
     set({ isLoading: true });
     try {
       const res = await apiFetch('/api/supervisor-requests', {
         method: 'POST',
-        body: JSON.stringify({ supervisorId }),
+        body: JSON.stringify({ supervisorId, message }),
       });
       if (!res.ok) throw new Error(await readApiError(res));
       // Refresh the current user to reflect PENDING_SUPERVISOR_APPROVAL status
       await get().syncUserSession({ force: true });
-      get().addToast('Supervisor request submitted successfully', 'success');
+      get().addToast('Supervisor request sent successfully.', 'success');
       return get().currentUser as any;
     } catch (err: any) {
       get().addToast(err.message, 'error');

@@ -572,11 +572,15 @@ model ScholarSupervisorRequest {
   supervisorId  String
   supervisor    User          @relation("SupervisorScholarRequests", fields: [supervisorId], references: [id], onDelete: Cascade)
   status        RequestStatus @default(PENDING)
+  message       String?
+  rejectionReason String?
+  respondedAt   DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   @@index([scholarId])
   @@index([supervisorId])
+  @@index([scholarId, supervisorId, status])
 }
 
 

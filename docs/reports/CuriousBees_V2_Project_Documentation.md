@@ -216,7 +216,7 @@ graph TD
 | **Caching/Queues**     | Redis                               | 7                             | Background job queues                          |
 | **Authentication**     | Clerk                               | 7.4 (Next.js) / 3.5 (Backend) | Google OAuth SSO with JWT verification         |
 | **Object Storage**     | Supabase Storage                    | —                             | File uploads and public URL lookups            |
-| **Email**              | Resend API                          | —                             | Transactional email notifications              |
+| **Email**              | Brevo REST API                      | —                             | Transactional email notifications              |
 | **Package Manager**    | npm Workspaces                      | 10.8+                         | Monorepo dependency management                 |
 | **Containerization**   | Docker + Docker Compose             | —                             | Local and production container orchestration   |
 
@@ -247,7 +247,7 @@ flowchart TD
     subgraph Data ["Data & Queue Layer"]
         F -->|"Prisma Client"| G[("PostgreSQL DB")]
         F -->|"BullMQ Producer"| H[("Redis Server")]
-        I["BullMQ Worker"] -->|"Resend API"| J["Email Notifications"]
+        I["BullMQ Worker"] -->|"Brevo API"| J["Email Notifications"]
         H -->|"Queue Tasks"| I
     end
 
@@ -867,7 +867,7 @@ flowchart LR
 
     subgraph External
         I["Clerk Auth"]
-        J["Resend Email"]
+        J["Brevo Email"]
     end
 
     B -.-> I
@@ -965,7 +965,9 @@ The `npm run doctor` command performs a 5-phase diagnostic check:
 | `AUTH_MODE`                         | String | Authentication mode (`GOOGLE_ADMIN_MANAGED`)              |
 | `NEXT_PUBLIC_AUTH_MODE`             | String | Frontend auth mode (mirrors `AUTH_MODE`)                  |
 | `MAIN_ADMIN_EMAIL`                  | Email  | Primary admin email for notifications                     |
-| `RESEND_API_KEY`                    | String | Resend API key for email delivery                         |
+| `BREVO_API_KEY`                     | String | Brevo API key for transactional email delivery            |
+| `MAIL_FROM_EMAIL`                   | Email  | Verified sender email address in Brevo                    |
+| `MAIL_FROM_NAME`                    | String | Sender display name (default: `CuriousBees`)              |
 | `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS` | CSV    | Allowed email domains (default: `srmist.edu.in`)          |
 
 ---

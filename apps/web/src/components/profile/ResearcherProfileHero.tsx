@@ -31,16 +31,17 @@ export function ResearcherProfileHero({
 }: ResearcherProfileHeroProps) {
   const router = useRouter();
 
+  const isAdmin = user?.role === 'INSTITUTE_ADMIN';
   const isSupervisor = user?.role === 'RESEARCH_SUPERVISOR';
-  const name = user?.name || 'Academic Scholar';
-  const roleLabel = isSupervisor ? 'Research Supervisor' : 'Research Scholar';
-  const department = user?.department || 'Computer Science & Engineering';
+  const name = user?.name || (isAdmin ? 'Institute Administrator' : 'Academic Scholar');
+  const roleLabel = isAdmin ? 'Institute Administrator' : isSupervisor ? 'Research Supervisor' : 'Research Scholar';
+  const department = user?.department || (isAdmin ? 'Research & Academic Governance' : 'Computer Science & Engineering');
   const institution = 'SRM Institute of Science and Technology';
 
   // Email and ID details
   const email = user?.email || '';
-  const registrationId = user?.employeeId || user?.scholarProfile?.registrationNo || user?.id?.substring(0, 8);
-  const designation = isSupervisor ? (user?.supervisorProfile?.designation || 'Professor') : 'Ph.D. Scholar';
+  const registrationId = user?.employeeId || (isAdmin ? 'ADMIN-SRM' : user?.scholarProfile?.registrationNo || user?.id?.substring(0, 8));
+  const designation = isAdmin ? 'Institute Administrator' : isSupervisor ? (user?.supervisorProfile?.designation || 'Professor') : 'Ph.D. Scholar';
 
   // Interests tags
   const interests: string[] = Array.isArray(user?.interests)
@@ -173,14 +174,29 @@ export function ResearcherProfileHero({
                   </button>
                 )}
 
-                {/* Optional Supervision Request Action */}
-                {isSupervisor && !isOwnProfile && onRequestSupervision && (
-                  <button
-                    onClick={onRequestSupervision}
-                    className="px-4 py-2.5 bg-white border border-[#E4E9F2] hover:bg-slate-50 text-[#0C4DA2] font-bold text-xs md:text-sm rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                  >
-                    <span>Request Supervision</span>
-                  </button>
+                {/* Supervision Request Action & Statuses */}
+                {isSupervisor && !isOwnProfile && (
+                  <>
+                    {supervisionStatus === 'APPROVED' ? (
+                      <div className="px-4 py-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs md:text-sm rounded-xl flex items-center gap-1.5 shadow-2xs">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Supervisor Assigned</span>
+                      </div>
+                    ) : supervisionStatus === 'PENDING' ? (
+                      <div className="px-4 py-2.5 bg-[#FFC828]/20 text-[#855D00] border border-[#FFC828]/40 font-bold text-xs md:text-sm rounded-xl flex items-center gap-1.5 shadow-2xs">
+                        <span className="w-2 h-2 rounded-full bg-[#B88608] animate-pulse" />
+                        <span>Request Pending</span>
+                      </div>
+                    ) : onRequestSupervision ? (
+                      <button
+                        onClick={onRequestSupervision}
+                        className="px-4 py-2.5 bg-[#0C4DA2] hover:bg-[#003370] text-white font-bold text-xs md:text-sm rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-[#FFC828]" />
+                        <span>Request Supervisor</span>
+                      </button>
+                    ) : null}
+                  </>
                 )}
               </>
             )}
