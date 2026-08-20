@@ -29,8 +29,12 @@ export class CollaborationsController {
   }
 
   @Post('requests/:id/accept')
-  async acceptRequest(@Req() req: any, @Param('id') id: string) {
-    return this.collaborationsService.acceptRequest(id, req.user.id);
+  async acceptRequest(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('provider') provider?: any
+  ) {
+    return this.collaborationsService.acceptRequest(id, req.user.id, provider);
   }
 
   @Post('requests/:id/decline')

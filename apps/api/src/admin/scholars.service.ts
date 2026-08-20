@@ -46,19 +46,12 @@ export class AdminScholarsService {
 
     if (query.access) {
       if (query.access === 'MATCHED') {
-        where.OR = [
-          { supabaseAuthId: { not: null } },
-          { clerkId: { not: null } }
-        ];
+        where.supabaseAuthId = { not: null };
         where.employeeId = { not: null };
       } else if (query.access === 'UNMATCHED') {
         where.supabaseAuthId = null;
-        where.clerkId = null;
       } else if (query.access === 'REQUIRES REVIEW') {
-        where.OR = [
-          { supabaseAuthId: { not: null } },
-          { clerkId: { not: null } }
-        ];
+        where.supabaseAuthId = { not: null };
         where.employeeId = null;
       }
     }

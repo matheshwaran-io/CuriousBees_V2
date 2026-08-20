@@ -138,6 +138,14 @@ export default function ScholarSettingsPage() {
               </button>
             );
           })}
+
+          <Link
+            href="/settings/integrations"
+            className="flex items-center justify-between py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-primary hover:bg-slate-100 transition-all border border-slate-200/60 mt-2 bg-slate-50"
+          >
+            <span>Integrations</span>
+            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.2 rounded font-mono font-bold">NEW</span>
+          </Link>
         </div>
 
         {/* Right Hand Settings Form Pane */}

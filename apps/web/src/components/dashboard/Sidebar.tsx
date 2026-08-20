@@ -29,9 +29,9 @@ import {
   Clock,
   GraduationCap,
   Crown,
-  Megaphone,
   Network,
   BookMarked,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProfileImageUrl } from '@/lib/avatar';
@@ -56,8 +56,9 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
       { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
       { name: 'Notification Logs', href: '/notifications', icon: MessageSquare },
       { name: 'System Settings', href: '/admin/settings', icon: Shield },
-      { name: 'Researcher Network', href: '/researchers', icon: Users },
+      { name: 'Researchers', href: '/researchers', icon: Users },
       { name: 'Curious Nexus', href: '/nexus', icon: Network },
+      { name: 'Integrations', href: '/settings/integrations', icon: Layers },
     ];
   }
 
@@ -66,9 +67,10 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
       { name: 'Research Feed', href: '/feed', icon: MessageSquare },
       { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
       { name: 'Events', href: '/events', icon: CalendarIcon },
-      { name: 'Researcher Network', href: '/researchers', icon: Users },
+      { name: 'Researchers', href: '/researchers', icon: Users },
       { name: 'Curious Nexus', href: '/nexus', icon: Network },
       { name: 'Publications', href: '/publications', icon: BookOpen },
+      { name: 'Integrations', href: '/settings/integrations', icon: Layers },
     ];
   }
 
@@ -77,10 +79,11 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
     { name: 'Research Feed', href: '/feed', icon: MessageSquare },
     { name: 'Opportunities', href: '/opportunities', icon: Briefcase },
     { name: 'Events', href: '/events', icon: CalendarIcon },
-    { name: 'Researcher Network', href: '/researchers', icon: Users },
+    { name: 'Researchers', href: '/researchers', icon: Users },
     { name: 'Curious Nexus', href: '/nexus', icon: Network },
     { name: 'My Research', href: '/my-research', icon: BookMarked },
     { name: 'Publications', href: '/publications', icon: BookOpen },
+    { name: 'Integrations', href: '/settings/integrations', icon: Layers },
   ];
 };
 

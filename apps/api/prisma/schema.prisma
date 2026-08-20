@@ -103,6 +103,10 @@ model User {
   researchActivities      ResearchActivity[]
   externalLinks           ResearcherExternalLink[]
 
+  // Integrations & Meetings relations
+  integrationConnections  IntegrationConnection[]
+  meetingsCreated         ResearchMeeting[]         @relation("MeetingCreator")
+
   @@index([departmentId])
   @@index([supervisorId])
 }
@@ -396,17 +400,24 @@ model CollaborationRequest {
 }
 
 model Workspace {
-  id            String                  @id @default(cuid())
-  title         String
-  description   String?                 @db.Text
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  id                    String                  @id @default(cuid())
+  title                 String
+  description           String?                 @db.Text
+  collaborationProvider IntegrationProvider     @default(GOOGLE_WORKSPACE)
+  googleChatSpaceId     String?
+  googleChatSpaceUrl    String?
+  zoomMeetingId         String?
+  zoomJoinUrl           String?
+  externalMeetingUrl    String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
 
-  members       WorkspaceMember[]
-  files         WorkspaceFile[]
-  milestones    WorkspaceMilestone[]
-  announcements WorkspaceAnnouncement[]
+  members               WorkspaceMember[]
+  files                 WorkspaceFile[]
+  milestones            WorkspaceMilestone[]
+  announcements         WorkspaceAnnouncement[]
   researchCollaboration ResearchCollaboration?
+  meetings              ResearchMeeting[]
 }
 
 model WorkspaceMember {
@@ -875,3 +886,90 @@ model ResearcherExternalLink {
   @@unique([userId, platform])
   @@index([userId])
 }
+
+// ============================================
+// Google Workspace & Zoom Integration Models
+// ============================================
+
+enum IntegrationProvider {
+  GOOGLE_WORKSPACE
+  ZOOM_WORKPLACE
+  EXTERNAL
+}
+
+enum IntegrationStatus {
+  NOT_CONNECTED
+  CONNECTING
+  CONNECTED
+  EXPIRED
+  REAUTH_REQUIRED
+  DISCONNECTED
+  ERROR
+}
+
+enum MeetingProvider {
+  GOOGLE_MEET
+  ZOOM
+  EXTERNAL
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model IntegrationConnection {
+  id                   String              @id @default(cuid())
+  userId               String
+  provider             IntegrationProvider
+  status               IntegrationStatus   @default(NOT_CONNECTED)
+  externalAccountId    String?
+  externalAccountEmail String?
+  accessToken          String?             @db.Text
+  refreshToken         String?             @db.Text
+  tokenExpiresAt       DateTime?
+  scopes               String?             @db.Text
+  lastError            String?             @db.Text
+  connectedAt          DateTime?
+  updatedAt            DateTime            @updatedAt
+
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+model ResearchMeeting {
+  id                String          @id @default(cuid())
+  workspaceId       String
+  createdById       String
+  provider          MeetingProvider @default(GOOGLE_MEET)
+  externalMeetingId String?
+  meetingUrl        String
+  title             String
+  description       String?         @db.Text
+  scheduledAt       DateTime
+  duration          Int             @default(30)
+  status            MeetingStatus   @default(SCHEDULED)
+  recordingUrl      String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy         User            @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([createdById])
+  @@index([scheduledAt])
+}
+
+model InstitutionIntegrationSetting {
+  id                     String   @id @default(cuid())
+  googleWorkspaceEnabled Boolean  @default(true)
+  zoomWorkplaceEnabled   Boolean  @default(true)
+  externalLinksEnabled   Boolean  @default(true)
+  updatedAt              DateTime @updatedAt
+}
+

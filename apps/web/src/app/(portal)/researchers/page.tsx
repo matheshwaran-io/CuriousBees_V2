@@ -79,14 +79,14 @@ export default function ResearchersDiscoveryPage() {
               <Network className="w-5 h-5" />
             </span>
             <span className="text-xs font-black uppercase tracking-widest text-[#0C4DA2]">
-              ACADEMIC NETWORK
+              SRM RESEARCH COMMUNITY
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight font-display">
-            Researcher Network
+            Researchers
           </h1>
           <p className="text-slate-600 max-w-2xl text-sm md:text-base leading-relaxed font-medium">
-            Discover Research Supervisors and Scholars across CuriousBees. Explore research profiles, follow researchers you care about, and stay updated on their latest publications and research activity.
+            Discover Research Supervisors and Scholars across CuriousBees. Explore academic profiles, publications, ongoing investigations, and connect directly.
           </p>
         </div>
 

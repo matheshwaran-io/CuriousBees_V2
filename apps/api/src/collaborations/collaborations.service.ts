@@ -149,7 +149,7 @@ export class CollaborationsService {
 
   // ─── ACCEPT REQUEST ────────────────────────────────────────────────────────
 
-  async acceptRequest(requestId: string, userId: string) {
+  async acceptRequest(requestId: string, userId: string, provider?: any) {
     const request = await this.prisma.researchCollabRequest.findUnique({
       where: { id: requestId },
       include: {
@@ -162,12 +162,13 @@ export class CollaborationsService {
     if (request.recipientId !== userId) throw new ForbiddenException('Only the recipient can accept this request.');
     if (request.status !== 'PENDING') throw new BadRequestException('Only pending requests can be accepted.');
 
-    // Create workspace for the collaboration
+    // Create workspace for the collaboration with selected provider
     const threadTitle = request.thread?.title || 'Research Collaboration';
     const workspace = await this.prisma.workspace.create({
       data: {
         title: `Collaboration: ${threadTitle}`,
         description: `Research collaboration workspace between ${request.requester.name || request.requester.email} and ${request.recipient.name || request.recipient.email}.`,
+        collaborationProvider: provider === 'ZOOM_WORKPLACE' ? 'ZOOM_WORKPLACE' : provider === 'EXTERNAL' ? 'EXTERNAL' : 'GOOGLE_WORKSPACE',
       },
     });
 

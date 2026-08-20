@@ -54,7 +54,7 @@ export default function ResearcherProfilePage() {
       <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
         <h2 className="text-2xl font-bold text-slate-900">Researcher Not Found</h2>
         <button onClick={() => router.push('/researchers')} className="text-[#0C4DA2] font-bold hover:underline cursor-pointer">
-          Return to Researcher Network
+          Return to Researchers
         </button>
       </div>
     );
@@ -81,7 +81,7 @@ export default function ResearcherProfilePage() {
           onClick={() => router.push('/researchers')}
           className="flex items-center gap-2 text-[#6B7890] hover:text-[#0C4DA2] transition-colors text-xs font-bold uppercase tracking-wider cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Researcher Network
+          <ArrowLeft className="w-4 h-4" /> Back to Researchers
         </button>
       </div>
 

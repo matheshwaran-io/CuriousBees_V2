@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification, ResearchCollaboration, CollaborationMessage, ResearchCollabRequest, CollaborationStatusResponse } from '@curiousbees/types';
+import { User, Thread, Comment, Opportunity, UserRole, Event, CollaborationRequest, Workspace, WorkspaceFile, WorkspaceMilestone, WorkspaceAnnouncement, AuditLog, Publication, Report, Department, Notification, ResearchCollaboration, CollaborationMessage, ResearchCollabRequest, CollaborationStatusResponse, IntegrationConnection, ResearchMeeting, IntegrationProvider, MeetingProvider } from '@curiousbees/types';
 import { supabase } from '@/lib/supabase/client';
 import { getDashboardRoute } from '@/lib/auth/route-protection';
 import { ROLE_COOKIE_NAME } from '@curiousbees/constants';
@@ -241,12 +241,27 @@ interface AppState {
   fetchCollabStatus: (targetUserId: string, threadId?: string) => Promise<CollaborationStatusResponse>;
   sendCollabRequest: (recipientId: string, threadId?: string, message?: string) => Promise<ResearchCollabRequest>;
   cancelCollabRequest: (requestId: string) => Promise<ResearchCollabRequest>;
-  acceptCollabRequest: (requestId: string) => Promise<ResearchCollaboration>;
+  acceptCollabRequest: (requestId: string, provider?: IntegrationProvider) => Promise<ResearchCollaboration>;
   declineCollabRequest: (requestId: string) => Promise<ResearchCollabRequest>;
   fetchMyCollaborations: () => Promise<ResearchCollaboration[]>;
   fetchMyCollabRequests: () => Promise<{ sent: ResearchCollabRequest[]; received: ResearchCollabRequest[] }>;
   fetchCollabMessages: (collabId: string, page?: number) => Promise<CollaborationMessage[]>;
   sendCollabMessage: (collabId: string, content: string) => Promise<CollaborationMessage>;
+
+  // External Integrations & Meetings
+  integrationConnections: { google: IntegrationConnection; zoom: IntegrationConnection } | null;
+  workspaceMeetings: Record<string, ResearchMeeting[]>;
+  fetchIntegrationStatus: () => Promise<{ google: IntegrationConnection; zoom: IntegrationConnection }>;
+  getGoogleAuthUrl: (redirectUri: string) => Promise<{ authUrl: string }>;
+  handleGoogleCallback: (code: string, redirectUri: string) => Promise<any>;
+  getZoomAuthUrl: (redirectUri: string) => Promise<{ authUrl: string }>;
+  handleZoomCallback: (code: string, redirectUri: string) => Promise<any>;
+  disconnectIntegration: (provider: IntegrationProvider) => Promise<any>;
+  fetchWorkspaceMeetings: (workspaceId: string) => Promise<ResearchMeeting[]>;
+  createWorkspaceMeeting: (workspaceId: string, dto: { title: string; description?: string; provider: MeetingProvider; scheduledAt: string | Date; duration?: number; externalMeetingUrl?: string }) => Promise<ResearchMeeting>;
+  cancelWorkspaceMeeting: (workspaceId: string, meetingId: string) => Promise<ResearchMeeting>;
+  setWorkspaceCollaborationProvider: (workspaceId: string, provider: IntegrationProvider, externalMeetingUrl?: string) => Promise<Workspace>;
+  connectWorkspaceChatSpace: (workspaceId: string) => Promise<{ success: boolean; googleChatSpaceId?: string; googleChatSpaceUrl?: string }>;
 
 
   // Admin / Governance
@@ -1666,6 +1681,190 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  // ─── INTEGRATIONS & MEETINGS ────────────────────────────────────────────────
+  integrationConnections: null,
+  workspaceMeetings: {},
+
+  fetchIntegrationStatus: async () => {
+    try {
+      const res = await apiFetch('/api/integrations/status');
+      if (res.ok) {
+        const data = await res.json();
+        set({ integrationConnections: data });
+        return data;
+      }
+      return {
+        google: { provider: 'GOOGLE_WORKSPACE', status: 'NOT_CONNECTED' },
+        zoom: { provider: 'ZOOM_WORKPLACE', status: 'NOT_CONNECTED' },
+      } as any;
+    } catch (err) {
+      console.error('Error fetching integration status:', err);
+      return {
+        google: { provider: 'GOOGLE_WORKSPACE', status: 'NOT_CONNECTED' },
+        zoom: { provider: 'ZOOM_WORKPLACE', status: 'NOT_CONNECTED' },
+      } as any;
+    }
+  },
+
+  getGoogleAuthUrl: async (redirectUri: string) => {
+    const res = await apiFetch(`/api/integrations/google/auth-url?redirectUri=${encodeURIComponent(redirectUri)}`);
+    if (res.ok) {
+      return res.json();
+    }
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Google Workspace Client ID is not configured. Please add GOOGLE_CLIENT_ID to your root .env file.');
+  },
+
+  handleGoogleCallback: async (code: string, redirectUri: string) => {
+    const res = await apiFetch('/api/integrations/google/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirectUri }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      await (get() as any).fetchIntegrationStatus();
+      return data;
+    }
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to complete Google Workspace connection.');
+  },
+
+  getZoomAuthUrl: async (redirectUri: string) => {
+    const res = await apiFetch(`/api/integrations/zoom/auth-url?redirectUri=${encodeURIComponent(redirectUri)}`);
+    if (res.ok) {
+      return res.json();
+    }
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Zoom Workplace Client ID is not configured. Please add ZOOM_CLIENT_ID to your root .env file.');
+  },
+
+  handleZoomCallback: async (code: string, redirectUri: string) => {
+    const res = await apiFetch('/api/integrations/zoom/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirectUri }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      await (get() as any).fetchIntegrationStatus();
+      return data;
+    }
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || 'Failed to complete Zoom Workplace connection.');
+  },
+
+  disconnectIntegration: async (provider: IntegrationProvider) => {
+    const res = await apiFetch(`/api/integrations/${provider}/disconnect`, {
+      method: 'POST',
+    });
+    if (res.ok) {
+      await (get() as any).fetchIntegrationStatus();
+      return res.json();
+    }
+    throw new Error(`Failed to disconnect ${provider}.`);
+  },
+
+  fetchWorkspaceMeetings: async (workspaceId: string) => {
+    try {
+      const res = await apiFetch(`/api/workspaces/${workspaceId}/meetings`);
+      if (res.ok) {
+        const meetings = await res.json();
+        set((state) => ({
+          workspaceMeetings: {
+            ...state.workspaceMeetings,
+            [workspaceId]: meetings,
+          },
+        }));
+        return meetings;
+      }
+      return [];
+    } catch (err) {
+      console.error('Error fetching workspace meetings:', err);
+      return [];
+    }
+  },
+
+  createWorkspaceMeeting: async (workspaceId: string, dto: any) => {
+    const res = await apiFetch(`/api/workspaces/${workspaceId}/meetings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+    if (res.ok) {
+      const meeting = await res.json();
+      set((state) => {
+        const existing = state.workspaceMeetings[workspaceId] || [];
+        return {
+          workspaceMeetings: {
+            ...state.workspaceMeetings,
+            [workspaceId]: [...existing, meeting],
+          },
+        };
+      });
+      return meeting;
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to schedule meeting.');
+  },
+
+  cancelWorkspaceMeeting: async (workspaceId: string, meetingId: string) => {
+    const res = await apiFetch(`/api/workspaces/${workspaceId}/meetings/${meetingId}`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
+      const cancelled = await res.json();
+      set((state) => {
+        const existing = state.workspaceMeetings[workspaceId] || [];
+        return {
+          workspaceMeetings: {
+            ...state.workspaceMeetings,
+            [workspaceId]: existing.map((m) => (m.id === meetingId ? { ...m, status: 'CANCELLED' } : m)),
+          },
+        };
+      });
+      return cancelled;
+    }
+    throw new Error('Failed to cancel meeting.');
+  },
+
+  setWorkspaceCollaborationProvider: async (workspaceId: string, provider: IntegrationProvider, externalMeetingUrl?: string) => {
+    const res = await apiFetch(`/api/workspaces/${workspaceId}/collaboration/provider`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, externalMeetingUrl }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      set((state) => ({
+        activeWorkspace: state.activeWorkspace && state.activeWorkspace.id === workspaceId ? { ...state.activeWorkspace, ...updated } : state.activeWorkspace,
+      }));
+      return updated;
+    }
+    throw new Error('Failed to update collaboration provider.');
+  },
+
+  connectWorkspaceChatSpace: async (workspaceId: string) => {
+    const res = await apiFetch(`/api/workspaces/${workspaceId}/collaboration/chat-space`, {
+      method: 'POST',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      set((state) => ({
+        activeWorkspace: state.activeWorkspace && state.activeWorkspace.id === workspaceId
+          ? {
+              ...state.activeWorkspace,
+              googleChatSpaceId: data.googleChatSpaceId,
+              googleChatSpaceUrl: data.googleChatSpaceUrl,
+            }
+          : state.activeWorkspace,
+      }));
+      return data;
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to connect Google Chat Space.');
+  },
+
   // ─── CONTROLLED RESEARCH COLLABORATIONS ──────────────────────────────────────
 
   fetchCollabStatus: async (targetUserId: string, threadId?: string) => {
@@ -1736,11 +1935,13 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  acceptCollabRequest: async (requestId: string) => {
+  acceptCollabRequest: async (requestId: string, provider?: IntegrationProvider) => {
     set({ isLoading: true });
     try {
       const res = await apiFetch(`/api/collaborations/requests/${requestId}/accept`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: provider || 'GOOGLE_WORKSPACE' }),
       });
       if (!res.ok) throw new Error('Failed to accept request');
       const data = await res.json();

@@ -287,16 +287,68 @@ export interface CollaborationStatusResponse {
   collaborationId?: string;
 }
 
+export type IntegrationProvider = 'GOOGLE_WORKSPACE' | 'ZOOM_WORKPLACE' | 'EXTERNAL';
+export type IntegrationStatus = 'NOT_CONNECTED' | 'CONNECTING' | 'CONNECTED' | 'EXPIRED' | 'REAUTH_REQUIRED' | 'DISCONNECTED' | 'ERROR';
+export type MeetingProvider = 'GOOGLE_MEET' | 'ZOOM' | 'EXTERNAL';
+export type MeetingStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface IntegrationConnection {
+  id: string;
+  userId: string;
+  provider: IntegrationProvider;
+  status: IntegrationStatus;
+  externalAccountId?: string | null;
+  externalAccountEmail?: string | null;
+  tokenExpiresAt?: Date | string | null;
+  scopes?: string | null;
+  lastError?: string | null;
+  connectedAt?: Date | string | null;
+  updatedAt: Date | string;
+}
+
+export interface ResearchMeeting {
+  id: string;
+  workspaceId: string;
+  createdById: string;
+  provider: MeetingProvider;
+  externalMeetingId?: string | null;
+  meetingUrl: string;
+  title: string;
+  description?: string | null;
+  scheduledAt: Date | string;
+  duration: number;
+  status: MeetingStatus;
+  recordingUrl?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  createdBy?: User;
+}
+
+export interface InstitutionIntegrationSetting {
+  id: string;
+  googleWorkspaceEnabled: boolean;
+  zoomWorkplaceEnabled: boolean;
+  externalLinksEnabled: boolean;
+  updatedAt: Date | string;
+}
+
 export interface Workspace {
   id: string;
   title: string;
   description: string | null;
+  collaborationProvider?: IntegrationProvider;
+  googleChatSpaceId?: string | null;
+  googleChatSpaceUrl?: string | null;
+  zoomMeetingId?: string | null;
+  zoomJoinUrl?: string | null;
+  externalMeetingUrl?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   members?: WorkspaceMember[];
   files?: WorkspaceFile[];
   milestones?: WorkspaceMilestone[];
   announcements?: WorkspaceAnnouncement[];
+  meetings?: ResearchMeeting[];
 }
 
 export interface WorkspaceMember {

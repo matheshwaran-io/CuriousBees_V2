@@ -28,6 +28,7 @@ import { FeedModule } from './feed/feed.module';
 import { CollaborationsModule } from './collaborations/collaborations.module';
 import { MyResearchModule } from './my-research/my-research.module';
 import { ChatModule } from './chat/chat.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { ChatModule } from './chat/chat.module';
     CollaborationsModule,
     MyResearchModule,
     ChatModule,
+    IntegrationsModule,
   ],
   controllers: [AppController],
   providers: [],

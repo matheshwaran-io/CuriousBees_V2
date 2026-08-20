@@ -24,7 +24,17 @@ import {
   Info,
   Activity,
   Award,
-  BookMarked
+  BookMarked,
+  Video,
+  Loader2,
+  Sparkles,
+  FolderGit2,
+  Target,
+  ChevronRight,
+  CalendarDays,
+  ExternalLink,
+  CheckCircle2,
+  Radio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -89,6 +99,11 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
   const [newFileName, setNewFileName] = useState('');
   const [newFileUrl, setNewFileUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // Collaboration Provider Selection State
+  const [pendingAcceptReq, setPendingAcceptReq] = useState<{ id: string; name: string; title: string } | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<'GOOGLE_WORKSPACE' | 'ZOOM_WORKPLACE'>('GOOGLE_WORKSPACE');
+  const [acceptingLoading, setAcceptingLoading] = useState(false);
 
   // Resolved scholar's supervisor details
   const [supervisorProfile, setSupervisorProfile] = useState<any>(null);
@@ -349,14 +364,27 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
     }
   };
 
-  const handleAcceptCollab = async (reqId: string) => {
+  const handleAcceptCollab = async (reqId: string, reqName?: string, reqTitle?: string) => {
+    setPendingAcceptReq({
+      id: reqId,
+      name: reqName || 'Collaborator',
+      title: reqTitle || 'Research Collaboration',
+    });
+  };
+
+  const confirmAcceptCollab = async () => {
+    if (!pendingAcceptReq) return;
     try {
-      await acceptCollabRequest(reqId);
-      addToast('Collaboration request accepted.', 'success');
+      setAcceptingLoading(true);
+      await acceptCollabRequest(pendingAcceptReq.id, selectedPlatform);
+      addToast('Collaboration workspace initialized with ' + (selectedPlatform === 'GOOGLE_WORKSPACE' ? 'Google Workspace' : 'Zoom Workplace'), 'success');
+      setPendingAcceptReq(null);
       fetchMyCollabRequests();
       fetchMyCollaborations();
     } catch (e: any) {
       addToast(`Failed to accept request: ${e.message}`, 'error');
+    } finally {
+      setAcceptingLoading(false);
     }
   };
 
@@ -463,109 +491,325 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
 
   // Render Detail View
   if (selectedCollab) {
+    const workspaceId = selectedCollab.workspaceId || 'advisory';
+    const hasWorkspace = Boolean(selectedCollab.workspaceId);
+    const provider = activeWorkspace?.collaborationProvider || 'GOOGLE_WORKSPACE';
+    const isGoogle = provider === 'GOOGLE_WORKSPACE';
+    const filesCount = selectedCollab.type === 'project' ? (activeWorkspace?.files?.length || 0) : advisoryFilesList.length;
+    const milestonesList = activeWorkspace?.milestones || [];
+    const completedMilestones = milestonesList.filter((m: any) => m.completed).length;
+
+    const quickPrompts = [
+      `Hi ${selectedCollab.partner?.name || 'there'}! Let's align on our research objectives and methodology.`,
+      `Can we schedule an introductory synchronization meeting on ${isGoogle ? 'Google Meet' : 'Zoom'}?`,
+      `I have prepared the preliminary research datasets and notes for review.`,
+      `Let's outline our milestone timeline and target publication venues.`
+    ];
+
     return (
-      <div className="h-[calc(100vh-4rem)] p-4 md:p-6 max-w-7xl mx-auto flex flex-col gap-4 select-none text-left overflow-hidden">
+      <div className="h-[calc(100vh-4rem)] p-3 md:p-5 max-w-7xl mx-auto flex flex-col gap-3 select-none text-left overflow-hidden">
         
-        {/* Back Button */}
-        <div>
+        {/* Navigation & Breadcrumb */}
+        <div className="flex items-center justify-between gap-2 shrink-0">
           <button
             onClick={() => setOpenedCollabId(null)}
-            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-3xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Collaborations
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Collaborations
           </button>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={hasWorkspace ? `/workspace/${workspaceId}` : `/workspace`}
+              className="px-3.5 py-1.5 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Open 9-Tab Nexus Workspace</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              href={selectedCollab.partner?.id && selectedCollab.partner?.id !== 'system' ? `/researchers/${selectedCollab.partner.id}` : '#'}
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-3xs transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              Profile <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
-        {/* A. Collaboration Header */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 shrink-0">
+        {/* Collaboration Header Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#0C4DA2]/20 shrink-0 shadow-3xs">
               <img src={getProfileImageUrl(selectedCollab.partner)} alt="" className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2.5 py-0.5 bg-[#0C4DA2]/10 text-[#0C4DA2] border border-[#0C4DA2]/20 rounded-full font-black text-[9px] uppercase tracking-wider">
-                  {selectedCollab.type === 'advisory' ? 'PhD advisory' : 'Research project'}
+                  {selectedCollab.type === 'advisory' ? 'PhD Advisory' : 'Research Project'}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-bold text-[9px] uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
                   {selectedCollab.status}
                 </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full font-bold text-[9px] uppercase tracking-wider">
+                  <Radio className="w-2.5 h-2.5 text-blue-600" />
+                  {isGoogle ? 'Google Workspace' : 'Zoom Workplace'}
+                </span>
               </div>
-              <h2 className="text-lg font-black text-slate-900 mt-1 truncate leading-snug">
+              <h2 className="text-base md:text-lg font-black text-slate-900 mt-1 truncate leading-snug">
                 {selectedCollab.title}
               </h2>
-              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+              <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate">
                 Collaborator: <span className="text-slate-800 font-bold">{selectedCollab.partner?.name}</span> ({selectedCollab.partner?.roleLabel}) • {selectedCollab.partner?.department}
               </p>
             </div>
           </div>
-
-          <div className="shrink-0">
-            <Link
-              href={selectedCollab.partner?.id && selectedCollab.partner?.id !== 'system' ? `/researchers/${selectedCollab.partner.id}` : '#'}
-              className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-250 transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              View Research Profile <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
         </div>
 
-        {/* Content Layout Grid */}
-        <div className="flex-1 min-h-0 flex flex-col">
+        {/* 2-Column Responsive Workspace Body */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
           
-          {/* B. Research Discussion */}
-          <div className="flex-1 bg-white border border-slate-200 rounded-2xl shadow-3xs flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex items-center gap-2 bg-white shrink-0">
-              <MessageSquare className="w-4 h-4 text-[#0C4DA2]" />
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                Research Discussion
-              </h3>
+          {/* Left Column: Nexus Synergy & Quick Modules (5 cols) */}
+          <div className="lg:col-span-5 flex flex-col gap-3 overflow-y-auto pr-1">
+            
+            {/* External Collaboration Hub */}
+            <div className="bg-gradient-to-br from-slate-900 to-[#0C4DA2] text-white rounded-2xl p-4 shadow-sm space-y-3 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+                    <Video className="w-4 h-4 text-emerald-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider">Communication Channel</h3>
+                    <p className="text-[10px] text-blue-100 font-medium">Integrated {isGoogle ? 'Google Workspace' : 'Zoom Workplace'}</p>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                  Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <Link
+                  href={hasWorkspace ? `/workspace/${workspaceId}?tab=meetings` : '/workspace'}
+                  className="p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Video className="w-4 h-4 text-emerald-300" />
+                  <span className="text-[11px] font-bold">{isGoogle ? 'Google Meet' : 'Zoom Meeting'}</span>
+                  <span className="text-[9px] text-blue-200">Start / Join ↗</span>
+                </Link>
+
+                <Link
+                  href={hasWorkspace ? `/workspace/${workspaceId}?tab=discussions` : '/workspace'}
+                  className="p-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-1 cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4 text-blue-300" />
+                  <span className="text-[11px] font-bold">{isGoogle ? 'Chat Space' : 'Workplace Chat'}</span>
+                  <span className="text-[9px] text-blue-200">Open Space ↗</span>
+                </Link>
+              </div>
             </div>
-            {/* Transparency Caution */}
-            <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2 shrink-0">
-              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <p className="text-[10px] font-semibold text-amber-700">
-                <span className="font-black">Caution:</span> All chats are transparent and may be reviewed by supervisors &amp; administrators.
+
+            {/* Quick Nexus Modules Grid */}
+            <div className="grid grid-cols-2 gap-2.5 shrink-0">
+              
+              {/* Files Module */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-3xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0C4DA2] flex items-center justify-center">
+                    <FolderGit2 className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-black text-slate-800">{filesCount}</span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Files &amp; Data</h4>
+                  <p className="text-[10px] text-slate-400 font-medium">Shared research assets</p>
+                </div>
+                <div className="pt-1 flex items-center justify-between border-t border-slate-100">
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="text-[10px] font-bold text-[#0C4DA2] hover:underline flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" /> Upload
+                  </button>
+                  <Link
+                    href={hasWorkspace ? `/workspace/${workspaceId}?tab=files` : '/workspace'}
+                    className="text-[10px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-0.5"
+                  >
+                    View <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Milestones Module */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-3xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-black text-slate-800">
+                    {milestonesList.length > 0 ? `${completedMilestones}/${milestonesList.length}` : '0/0'}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Milestones</h4>
+                  <p className="text-[10px] text-slate-400 font-medium">Research deliverables</p>
+                </div>
+                <div className="pt-1 flex items-center justify-between border-t border-slate-100">
+                  <span className="text-[10px] font-semibold text-emerald-700">
+                    {milestonesList.length > 0 ? `${Math.round((completedMilestones / milestonesList.length) * 100)}% done` : 'No tasks'}
+                  </span>
+                  <Link
+                    href={hasWorkspace ? `/workspace/${workspaceId}?tab=milestones` : '/workspace'}
+                    className="text-[10px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-0.5"
+                  >
+                    View <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Team Members Card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-3xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-[#0C4DA2]" /> Collaboration Team
+                </h4>
+                <span className="text-[10px] font-bold text-slate-400">2 Members</span>
+              </div>
+
+              <div className="space-y-2">
+                {selectedCollab.participants?.map((p: any, idx: number) => (
+                  <div key={p.id || idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-150/60">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-200 shrink-0">
+                        <img src={getProfileImageUrl(p)} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">{p.name || 'User'}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold truncate">
+                          {p.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[8px] font-bold uppercase tracking-wider">
+                      Active
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Research Objectives Summary */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-3xs space-y-1.5 text-xs">
+              <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-[#0C4DA2]" /> Synergy Objective
+              </h4>
+              <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                {selectedCollab.objective || 'Co-author high-impact research, establish experimental methodology, and publish peer-reviewed papers.'}
               </p>
             </div>
 
-            {/* Messages stream */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-              {messages.map((msg: any) => {
-                const isMine = msg.senderId === currentUser?.id;
-                return (
-                  <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs font-semibold leading-relaxed shadow-sm ${
-                        isMine
-                          ? 'bg-[#0C4DA2] text-white rounded-tr-sm'
-                          : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
-                      }`}
-                    >
-                      <div className="flex justify-between items-end gap-3 mb-1">
-                        <span className={`text-[9px] font-black tracking-wide ${isMine ? 'text-blue-100' : 'text-slate-400'}`}>
-                          {msg.senderName}
-                        </span>
-                        <span className={`text-[8px] font-bold ${isMine ? 'text-blue-200' : 'text-slate-400'}`}>
-                          {msg.timestamp}
-                        </span>
-                      </div>
-                      {msg.replyTo && (
-                        <div className="mb-2 p-2 bg-slate-50/70 border-l-2 border-blue-500 rounded text-[10px] text-slate-500 font-medium">
-                          <span className="font-extrabold text-[#0C4DA2] block">Replying to {msg.replyTo.senderName}</span>
-                          <span className="truncate block mt-0.5">"{msg.replyTo.content}"</span>
-                        </div>
-                      )}
-                      <p>{msg.content}</p>
+          </div>
+
+          {/* Right Column: Research Discussion Stream (7 cols) */}
+          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl shadow-3xs flex flex-col overflow-hidden">
+            
+            {/* Discussion Header */}
+            <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[#0C4DA2]" />
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Research Discussion
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full font-bold text-[9px] uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  Realtime Synced
+                </span>
+              </div>
+            </div>
+
+            {/* Transparency Caution */}
+            <div className="px-4 py-2 bg-amber-50/80 border-b border-amber-200/80 flex items-center gap-2 shrink-0">
+              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <p className="text-[10px] font-semibold text-amber-800 leading-tight">
+                <span className="font-black">Notice:</span> Official institutional collaboration channel. Messages are archived for research auditability.
+              </p>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-blue-200 text-[#0C4DA2] flex items-center justify-center shadow-inner">
+                    <MessageSquare className="w-7 h-7 stroke-[2]" />
+                  </div>
+                  <div className="max-w-md space-y-1">
+                    <h3 className="text-sm font-black text-slate-900">Start the Research Discussion</h3>
+                    <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                      Connect with <span className="text-slate-800 font-bold">{selectedCollab.partner?.name}</span>. Exchange methodology updates, share draft links, or initiate a discussion prompt below.
+                    </p>
+                  </div>
+
+                  {/* Quick Starter Chips */}
+                  <div className="w-full max-w-md space-y-2 pt-2 text-left">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider text-center">Suggested Starters</p>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {quickPrompts.map((prompt, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setMessageInput(prompt)}
+                          className="w-full text-left p-2.5 bg-white hover:bg-blue-50/80 border border-slate-200 hover:border-blue-200 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#0C4DA2] transition-all shadow-3xs flex items-center justify-between group cursor-pointer"
+                        >
+                          <span className="truncate pr-2">{prompt}</span>
+                          <Send className="w-3 h-3 text-slate-300 group-hover:text-[#0C4DA2] shrink-0 transition-colors" />
+                        </button>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ) : (
+                messages.map((msg: any) => {
+                  const isMine = msg.senderId === currentUser?.id;
+                  return (
+                    <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-xs font-semibold leading-relaxed shadow-3xs ${
+                          isMine
+                            ? 'bg-[#0C4DA2] text-white rounded-tr-xs'
+                            : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
+                        }`}
+                      >
+                        <div className="flex justify-between items-end gap-3 mb-1">
+                          <span className={`text-[9px] font-black tracking-wide ${isMine ? 'text-blue-100' : 'text-slate-400'}`}>
+                            {msg.senderName}
+                          </span>
+                          <span className={`text-[8px] font-bold ${isMine ? 'text-blue-200' : 'text-slate-400'}`}>
+                            {msg.timestamp}
+                          </span>
+                        </div>
+                        {msg.replyTo && (
+                          <div className="mb-2 p-2 bg-slate-50/70 border-l-2 border-blue-500 rounded text-[10px] text-slate-500 font-medium">
+                            <span className="font-extrabold text-[#0C4DA2] block">Replying to {msg.replyTo.senderName}</span>
+                            <span className="truncate block mt-0.5">"{msg.replyTo.content}"</span>
+                          </div>
+                        )}
+                        <p>{msg.content}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Messages Composer */}
+            {/* Message Composer */}
             <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-white shrink-0 space-y-2">
               {replyingTo && (
                 <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border border-slate-150 text-[11px]">
@@ -589,15 +833,15 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
                 />
                 <button
                   type="submit"
-                  className="p-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center"
+                  disabled={!messageInput.trim()}
+                  className="px-4 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] disabled:opacity-40 disabled:hover:bg-[#0C4DA2] text-white rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1 text-xs font-bold shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  <span>Send</span>
+                  <Send className="w-3.5 h-3.5" />
                 </button>
               </div>
             </form>
           </div>
-
-
 
         </div>
 
@@ -724,7 +968,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
             </div>
             <div className="flex items-center gap-2 mt-2">
               <button
-                onClick={() => handleAcceptCollab(req.id)}
+                onClick={() => handleAcceptCollab(req.id, req.requester?.name || '', req.thread?.title || '')}
                 className="flex-1 py-2 bg-[#0C4DA2] hover:bg-[#042654] text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" /> Accept
@@ -952,6 +1196,129 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* ─── START COLLABORATION PLATFORM SELECTION MODAL ─── */}
+      {pendingAcceptReq && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="cb-card bg-white max-w-lg w-full p-6 rounded-2xl shadow-xl space-y-6 relative text-left">
+            <button
+              onClick={() => setPendingAcceptReq(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider font-mono">
+                Nexus Initialization
+              </span>
+              <h3 className="text-xl font-bold font-display text-slate-900">Start Collaboration</h3>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                Choose the external collaboration platform for <strong className="text-slate-800">{pendingAcceptReq.name}</strong> on "{pendingAcceptReq.title}". CuriousBees remains your research system of record.
+              </p>
+            </div>
+
+            {/* Platform Options */}
+            <div className="space-y-3">
+              {/* Google Workspace */}
+              <div
+                onClick={() => setSelectedPlatform('GOOGLE_WORKSPACE')}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-4 ${
+                  selectedPlatform === 'GOOGLE_WORKSPACE'
+                    ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary/20'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-2 shadow-2xs shrink-0">
+                    <svg className="w-full h-full" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-xs text-slate-900">Google Workspace</h4>
+                      <span className="text-[9px] font-bold uppercase bg-primary/10 text-primary px-1.5 py-0.2 rounded">Recommended</span>
+                    </div>
+                    <ul className="text-[11px] text-slate-500 space-y-0.5 list-disc list-inside">
+                      <li>Google Chat Spaces for team discussion</li>
+                      <li>Google Meet for video conferencing</li>
+                      <li>Google Calendar for meeting scheduling</li>
+                    </ul>
+                  </div>
+                </div>
+                <input
+                  type="radio"
+                  name="platformSelect"
+                  checked={selectedPlatform === 'GOOGLE_WORKSPACE'}
+                  onChange={() => setSelectedPlatform('GOOGLE_WORKSPACE')}
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Zoom Workplace */}
+              <div
+                onClick={() => setSelectedPlatform('ZOOM_WORKPLACE')}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-4 ${
+                  selectedPlatform === 'ZOOM_WORKPLACE'
+                    ? 'border-[#2D8CFF] bg-[#2D8CFF]/5 shadow-xs ring-1 ring-[#2D8CFF]/20'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#2D8CFF]/10 border border-[#2D8CFF]/20 flex items-center justify-center p-2 text-[#2D8CFF] shrink-0">
+                    <Video className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-xs text-slate-900">Zoom Workplace</h4>
+                    </div>
+                    <ul className="text-[11px] text-slate-500 space-y-0.5 list-disc list-inside">
+                      <li>Zoom Meetings for direct video syncs</li>
+                      <li>Instant passcodes and participant links</li>
+                    </ul>
+                  </div>
+                </div>
+                <input
+                  type="radio"
+                  name="platformSelect"
+                  checked={selectedPlatform === 'ZOOM_WORKPLACE'}
+                  onChange={() => setSelectedPlatform('ZOOM_WORKPLACE')}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingAcceptReq(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAcceptCollab}
+                disabled={acceptingLoading}
+                className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+              >
+                {acceptingLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Initializing Workspace...</span>
+                  </>
+                ) : (
+                  <span>Continue with {selectedPlatform === 'GOOGLE_WORKSPACE' ? 'Google Workspace' : 'Zoom Workplace'}</span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
