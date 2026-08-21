@@ -44,7 +44,7 @@ export function SupervisionCard({ user, isOwnProfile }: SupervisionCardProps) {
                 Admin Dashboard
               </button>
               <button
-                onClick={() => router.push('/institute-admin/user-management')}
+                onClick={() => router.push('/admin/users')}
                 className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 User Management

@@ -1,147 +1,144 @@
-# CuriousBees V2
+# CuriousBees — Institutional Academic Collaboration & Governance Platform
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Status-Active-success.svg?style=for-the-badge" alt="Status" />
+  <img src="https://img.shields.io/badge/Production-Ready-0C4DA2.svg?style=for-the-badge" alt="Production Ready" />
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
-  <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS" />
+  <img src="https://img.shields.io/badge/Next.js%2015-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/NestJS%2011-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS" />
   <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Prisma%20ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
 </div>
 
 <br />
 
-**CuriousBees V2** is a centralized, digital Research Collaboration Platform designed specifically for modern university ecosystems. It integrates scholars, faculty supervisors, and institutional administrators into a unified, secure academic environment.
+**CuriousBees** is an enterprise-grade digital research collaboration and governance platform designed for university institutions. It connects research scholars, faculty supervisors, and university leadership into a structured, secure, and audited academic ecosystem.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## 🏛️ Core Product & Role Model
 
-CuriousBees employs a decoupled client-server monorepo architecture:
+CuriousBees enforces strict separation of concerns across three primary institutional roles:
 
-- **Frontend**: Next.js 15+ (App Router), Tailwind CSS, Zustand, React Query.
-- **Backend API**: NestJS 11+, Prisma ORM, BullMQ.
-- **Database**: PostgreSQL and Redis.
-- **Authentication**: Supabase Auth (Google OAuth & Magic Link).
+```
+                  ┌─────────────────────────────────┐
+                  │         INSTITUTE ADMIN         │
+                  │  (Governance, Moderation, Audit)│
+                  └──────────────┬──────────────────┘
+                                 │
+           ┌─────────────────────┴─────────────────────┐
+           ▼                                           ▼
+┌───────────────────────┐                   ┌───────────────────────┐
+│  RESEARCH SUPERVISOR  │ ◄──[Supervises]── │    RESEARCH SCHOLAR   │
+│ (Direct Registration, │                   │ (Requests Supervisor, │
+│  Scholar Mentorship)  │                   │  Authors Research)    │
+└───────────────────────┘                   └───────────────────────┘
+```
 
-For a detailed breakdown of the internal systems, data flows, and relational schemas, refer to [ARCHITECTURE.md](./ARCHITECTURE.md).
+1. **RESEARCH SCHOLAR**
+   - Direct authentication and profile management.
+   - Discovers faculty supervisors and submits direct supervision applications.
+   - Authors publications, manages research project workspaces, and tracks milestones.
+
+2. **RESEARCH SUPERVISOR**
+   - **Direct Registration & Login**: Active immediately upon authentication with **no administrative approval required**.
+   - Directly reviews and accepts or rejects scholar supervision applications.
+   - Oversees supervised scholars, doctoral milestones, co-authored papers, and research workspaces.
+
+3. **INSTITUTE ADMIN**
+   - Operates the institutional governance command center (`/admin/*`).
+   - Manages faculty and department structures, campus nodes, and user identity accounts.
+   - Enforces content and publication moderation, supervisor reassignments, account suspensions, and reviews the immutable audit log (`AuditLog`).
+   - **Zero research authoring clutter**: purely governance, compliance, and institutional administration.
 
 ---
 
-## 📂 Folder Structure
+## 🏗️ Monorepo Architecture
+
+The repository is structured as a corporate npm workspace monorepo:
 
 ```text
-curiousbees-monorepo/
+CuriousBees_V2/
 ├── apps/
-│   ├── web/                # Next.js Frontend Web Application (React)
-│   └── api/                # NestJS Backend REST API (Express wrapper)
+│   ├── web/                    # Next.js 15+ App Router frontend (React, Tailwind, Zustand)
+│   └── api/                    # NestJS backend API (Prisma, Express, Brevo, PostgreSQL)
 ├── packages/
-│   ├── types/              # Shared TypeScript definitions
-│   ├── shared-utils/       # Shared utility functions (e.g. apiFetch)
-│   ├── ui/                 # Reusable React components & Design tokens
-│   ├── constants/          # Shared system constants (e.g. cookie names)
-│   └── config/             # Shared ESLint/Prettier/TypeScript configs
-├── docs/
-│   ├── setup/              # OS-Specific setup guides (Windows, macOS, Linux)
-├── scripts/                # Cross-platform utility and automation scripts
-├── .nvmrc                  # Pinned node version specification
-├── package.json            # Root workspace definitions & scripts
-└── docker-compose.yml      # Local Postgres & Redis container orchestration
+│   ├── types/                  # Shared TypeScript models and interfaces
+│   ├── constants/              # Shared system tokens, cookie keys, and roles
+│   ├── shared-utils/           # Common utilities (HTTP fetchers, formatting, error readers)
+│   └── ui/                     # Design system primitives and UI component tokens
+├── docs/                       # Technical architecture, security, and schema documentation
+│   ├── architecture/           # System design diagrams and module relationships
+│   ├── database/               # Relational entity schemas and ERD documentation
+│   ├── deployment/             # Railway, Vercel, and Docker deployment runbooks
+│   └── guides/                 # Developer onboarding and contribution guidelines
+├── scripts/                    # Engineering toolchain and maintenance scripts
+│   ├── database/               # Database bootstrap and seeding utilities
+│   ├── development/            # Environment health check and diagnostics doctor
+│   └── maintenance/            # Administrative maintenance tasks
+├── .github/                    # CI/CD workflows and automated checks
+├── Dockerfile.api              # Production container build for NestJS backend
+├── Dockerfile.web              # Production container build for Next.js web application
+└── package.json                # Root workspace configuration and developer commands
 ```
 
 ---
 
-## 🚀 5-Minute Quick Start
-
-Set up the entire project locally on any operating system (macOS/Windows/Linux) in under 5 minutes:
+## 🚀 Quick Start (Local Development)
 
 ### 1. Prerequisites
+- **Node.js**: `>= 22.0.0`
+- **npm**: `>= 10.0.0`
+- **PostgreSQL**: Local instance or Supabase cloud connection
 
-- **Node.js**: `v22.x` or higher (managed via `.nvmrc`)
-- **npm**: `v10.x` or higher
-- **Docker & Docker Compose**
-
-### 2. Install Monorepo Dependencies
-
-From the root of the repository:
-
+### 2. Dependency Installation
 ```bash
 npm install --legacy-peer-deps
 ```
 
-### 3. Setup Environment variables
-
-Copy the consolidated global environment configuration template at the root:
-
+### 3. Environment Configuration
 ```bash
 cp .env.example .env
 ```
+_Configure database connection string (`DATABASE_URL`), Supabase credentials, and Brevo API keys in `.env`._
 
-_(By default, this file has bypass settings active, enabling instant offline logins.)_
-
-### 4. Run Environment & Database Setup
-
-Compile shared packages, generate Prisma schema types, and validate typecheck compliance:
-
+### 4. Build Shared Packages & Prisma Generation
 ```bash
 npm run setup
 ```
 
-### 5. Spin Up Infrastructure
-
-Launch the local PostgreSQL database and Redis queue server inside Docker:
-
-```bash
-npm run docker:up
-```
-
-### 6. Verify System Health (Diagnostics Doctor)
-
-To verify your setup, ports, environment configuration, database, and Redis connectivity, run:
-
+### 5. Diagnostics & Environment Health Check
 ```bash
 npm run doctor
 ```
 
-### 7. Launch Development Servers
-
-Start both the NestJS API and Next.js frontend concurrently:
-
+### 6. Start Development Servers
 ```bash
 npm run dev
 ```
-
-- **Frontend Web Application**: [http://localhost:3000](http://localhost:3000)
-- **Backend REST API**: [http://localhost:4000](http://localhost:4000)
-- **Interactive API Documentation (Swagger)**: [http://localhost:4000/api/docs](http://localhost:4000/api/docs)
-- **API Health check Dashboard**: [http://localhost:4000/api/health](http://localhost:4000/api/health)
+- **Web Application**: [http://localhost:3000](http://localhost:3000)
+- **REST API Backend**: [http://localhost:4000](http://localhost:4000)
+- **API Documentation (Swagger)**: [http://localhost:4000/api/docs](http://localhost:4000/api/docs)
 
 ---
 
-## ⚙️ Standard Scripts (Cross-Platform)
+## 🛠️ Monorepo Scripts Reference
 
-All monorepo scripts are standardized to run across Windows, macOS, and Linux:
-
-- `npm run setup`: Compiles shared packages, generates Prisma database client, and runs TypeScript checks.
-- `npm run doctor`: Validates required environment variables and tests DB/Redis connectivity.
-- `npm run dev`: Starts Next.js and NestJS concurrently.
-- `npm run build`: Compiles all packages and builds applications in dependency order.
-- `npm run lint`: Runs ESLint check across all modules.
-- `npm run typecheck`: Runs tsc type validation globally.
-- `npm run clean`: Cleans Node modules, distribution outputs, and Next.js caches.
-- `npm run reset`: Completely cleans and reinstalls all dependencies, database, and seeds.
-- `npm run health`: Runs a quick query script validating if NestJS is healthy.
+| Command | Purpose |
+| :--- | :--- |
+| `npm run dev` | Runs Next.js frontend and NestJS API concurrently in development mode. |
+| `npm run build` | Compiles shared packages, Next.js web app, and NestJS API in dependency order. |
+| `npm run build:packages` | Compiles `@curiousbees/types`, `@curiousbees/constants`, and `@curiousbees/shared-utils`. |
+| `npm run typecheck` | Validates TypeScript compilation across `apps/web` and `apps/api` with zero emissions. |
+| `npm run doctor` | Performs diagnostic health check on environment variables, ports, and database connectivity. |
+| `npm run db:generate` | Generates typed Prisma Client from `schema.prisma`. |
+| `npm run db:migrate` | Runs database migrations. |
+| `npm run db:seed` | Seeds initial faculties, departments, and administrative accounts. |
+| `npm run clean` | Cleans build artifacts (`.next`, `dist`, `node_modules`). |
 
 ---
 
-## 🔧 Troubleshooting
+## 🔐 Security & Governance Principles
 
-### Port Conflict (`EADDRINUSE`)
-
-If port `3000` or `4000` is already in use:
-
-- On **macOS/Linux**: `lsof -i :4000` then `kill -9 <PID>`
-- On **Windows**: `netstat -ano | findstr 4000` then `taskkill /F /PID <PID>`
-
-### CORS Blocks
-
-If NestJS blocks client requests, ensure `DEVELOPMENT_MODE=true` is active in `apps/api/.env`. This enables wildcard local port origin matching so that shifted client instances (e.g. port `3001`) are allowed.
+1. **Immutable Audit Trail**: Every administrative mutation (account suspension, user deletion, role modification, report resolution) requires an audited justification and writes directly to the immutable append-only `AuditLog` table.
+2. **Strict Route Guards**: Route protection operates at both the Next.js edge middleware level and NestJS JWT/Roles guard level, strictly enforcing role-level access.
+3. **Brevo Email Gateway**: System emails (supervision requests, account status notices, invitations) are routed through transactional Brevo email services with status telemetry.
