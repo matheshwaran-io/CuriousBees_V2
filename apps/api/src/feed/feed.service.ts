@@ -41,6 +41,7 @@ export class FeedService {
 
     const users = await this.prisma.user.findMany({
       where: {
+        NOT: { name: { contains: 'admin', mode: 'insensitive' } },
         OR: [
           { name: { contains: term, mode: 'insensitive' } },
           { department: { contains: term, mode: 'insensitive' } },

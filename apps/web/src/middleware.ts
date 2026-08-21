@@ -37,6 +37,20 @@ function isPublicPath(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // 0. Explicit early-return for static assets, public images, and internal routes
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/icon.png' ||
+    pathname === '/apple-touch-icon.png' ||
+    pathname === '/logo.png' ||
+    pathname === '/logo_icon.png' ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$/i.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   try {
     // 1. Refresh Supabase session and get authenticated user
     const { supabaseResponse, user } = await updateSession(request);
@@ -88,6 +102,6 @@ export async function middleware(request: NextRequest) {
 // Match all application paths except Next.js internals, API routes, and static assets
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|icon.png|apple-touch-icon.png|logo.png|logo_icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)',
   ],
 };

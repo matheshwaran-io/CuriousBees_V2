@@ -89,14 +89,14 @@ export default function Navbar() {
   return (
     <>
       {/* ─── MAIN NAVBAR ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 h-16 w-full bg-white/80 backdrop-blur-md border-b border-borderStroke flex items-center justify-between px-4 md:px-8 gap-3 font-sans">
+      <header className="sticky top-0 z-30 h-16 w-full bg-white/80 dark:bg-[#07111F]/85 backdrop-blur-md border-b border-borderStroke dark:border-white/[0.07] flex items-center justify-between px-4 md:px-8 gap-3 font-sans transition-colors">
         
         {/* Leading section: Mobile Menu & Breadcrumbs */}
         <div className="flex items-center gap-3 min-w-0">
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileSidebar(!showMobileSidebar)}
-            className="md:hidden p-2 rounded-lg text-textSecondary hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+            className="md:hidden p-2 rounded-lg text-textSecondary dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#132238] transition-colors shrink-0 cursor-pointer"
             aria-label="Open navigation"
           >
             <Menu className="w-5 h-5" />
@@ -104,16 +104,16 @@ export default function Navbar() {
         </div>
 
         {/* Trailing actions */}
-        <div className="flex items-center gap-2 md:gap-4 shrink-0 text-textSecondary">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0 text-textSecondary dark:text-slate-300">
           
           {/* Global Search Clickable Zone */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-borderStroke/70 hover:border-borderStroke hover:bg-slate-50 transition-all text-[12.5px] cursor-pointer text-left w-36 md:w-56"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-borderStroke/70 dark:border-white/[0.08] hover:border-borderStroke dark:hover:border-white/[0.16] bg-transparent dark:bg-[#0B1728] hover:bg-slate-50 dark:hover:bg-[#101D30] transition-all text-[12.5px] cursor-pointer text-left w-36 md:w-56"
           >
-            <Search className="w-3.5 h-3.5 text-textSecondary shrink-0" />
-            <span className="truncate text-textSecondary/60 flex-1">Search...</span>
-            <kbd className="hidden md:inline-flex h-4 select-none items-center gap-0.5 rounded border border-borderStroke/55 bg-white px-1.5 font-mono text-[9px] font-bold text-textSecondary/60 shadow-sm leading-none">
+            <Search className="w-3.5 h-3.5 text-textSecondary dark:text-slate-400 shrink-0" />
+            <span className="truncate text-textSecondary/60 dark:text-[#A7B3C5] flex-1 font-medium">Search...</span>
+            <kbd className="hidden md:inline-flex h-4 select-none items-center gap-0.5 rounded border border-borderStroke/55 dark:border-white/[0.12] bg-white dark:bg-[#101D30] px-1.5 font-mono text-[9px] font-bold text-textSecondary/60 dark:text-[#A7B3C5] shadow-sm leading-none">
               ⌘K
             </kbd>
           </button>
@@ -121,7 +121,7 @@ export default function Navbar() {
           {/* Discussions feed shortcut */}
           <Link
             href="/feed"
-            className="p-2 rounded-full hover:bg-slate-50 hover:text-primary transition-colors flex items-center justify-center"
+            className="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-[#132238] hover:text-primary dark:hover:text-[#3B82F6] text-slate-600 dark:text-[#A7B3C5] transition-colors flex items-center justify-center"
             title="Research Feed"
           >
             <MessageSquare className="w-4.5 h-4.5" />

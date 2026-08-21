@@ -160,6 +160,7 @@ export class UsersService {
       where: {
         id: { not: userId },
         role: { in: ['RESEARCH_SCHOLAR', 'RESEARCH_SUPERVISOR'] },
+        NOT: { name: { contains: 'admin', mode: 'insensitive' } },
         ...(requesterInterestIds.length > 0 && {
           interests: {
             some: {
@@ -403,6 +404,7 @@ export class UsersService {
     return this.prisma.user.findMany({
       where: {
         role: Role.RESEARCH_SUPERVISOR,
+        NOT: { name: { contains: 'admin', mode: 'insensitive' } },
         approved: true,
         status: UserStatus.ACTIVE,
       },
@@ -684,7 +686,9 @@ export class UsersService {
     const { q, role, department, interest, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = {
+      NOT: { name: { contains: 'admin', mode: 'insensitive' } }
+    };
     if (q) {
       where.OR = [
         { name: { contains: q, mode: 'insensitive' } },

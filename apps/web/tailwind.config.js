@@ -10,6 +10,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Institutional Dark Mode Palette (#07111F, #0B1728, #101D30, #132238, #172942)
+        dark: {
+          bg: "#07111F",
+          secondary: "#0B1728",
+          surface: "#101D30",
+          card: "#132238",
+          cardHover: "#172942",
+          sidebar: "#091525",
+          border: "rgba(255, 255, 255, 0.08)",
+          borderStrong: "rgba(255, 255, 255, 0.13)",
+          textPrimary: "#F5F7FA",
+          textSecondary: "#A7B3C5",
+          textMuted: "#718096",
+          blue: "#2563EB",
+          blueBright: "#3B82F6",
+          gold: "#F4B740",
+          goldSoft: "#D9A52E",
+          success: "#22C55E",
+          warning: "#F59E0B",
+          error: "#EF4444",
+          info: "#38BDF8",
+        },
         curiousbees: {
           blue: "#0C4DA2",
           gold: "#FFC828",

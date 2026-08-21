@@ -351,6 +351,7 @@ model Notification {
   actionUrl     String?
 
   createdAt     DateTime @default(now())
+  readAt        DateTime?
 
   @@index([userId])
   @@index([eventId])

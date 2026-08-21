@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useResearchers } from '@/hooks/useResearchers';
-import { useFollowUser, useUnfollowUser, useToggleFollowNotifications } from '@/hooks/useFollow';
 import { SRM_DEPARTMENTS } from '@curiousbees/shared-utils';
 import { useStore } from '@/store/useStore';
 import { 
@@ -11,11 +10,8 @@ import {
   MapPin, 
   Network, 
   Loader2, 
-  UserCheck, 
   Sparkles, 
   ArrowUpRight,
-  Bell,
-  BellOff,
   BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,29 +33,12 @@ export default function ResearchersDiscoveryPage() {
     limit: 50
   });
 
-  const followMutation = useFollowUser();
-  const unfollowMutation = useUnfollowUser();
-  const toggleNotifyMutation = useToggleFollowNotifications();
-
-  const handleFollowToggle = (researcher: any) => {
-    if (researcher.isFollowing) {
-      unfollowMutation.mutate(researcher.id);
-    } else {
-      followMutation.mutate(researcher.id);
-    }
-  };
-
-  const handleNotificationToggle = (researcher: any) => {
-    const nextState = !researcher.notificationsEnabled;
-    toggleNotifyMutation.mutate({ userId: researcher.id, enabled: nextState });
-  };
-
   const researchers = (data as any)?.items?.filter((r: any) => r.id !== currentUser?.id) || [];
   const totalCount = (data as any)?.pagination?.total ?? researchers.length;
   
   // Suggest peers based on shared interests > 0
   const suggestedPeers = researchers
-    .filter((r: any) => r.sharedInterestCount > 0 && !r.isFollowing)
+    .filter((r: any) => r.sharedInterestCount > 0)
     .sort((a: any, b: any) => b.sharedInterestCount - a.sharedInterestCount)
     .slice(0, 3);
 
@@ -144,13 +123,6 @@ export default function ResearchersDiscoveryPage() {
                 </div>
 
                 <div className="flex items-center gap-2 mt-5 relative z-10">
-                  <button
-                    onClick={() => handleFollowToggle(peer)}
-                    disabled={followMutation.isPending || unfollowMutation.isPending}
-                    className="flex-1 py-2 bg-[#0C4DA2] hover:bg-[#042654] text-white text-xs font-bold rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    Follow
-                  </button>
                   <Link 
                     href={`/researchers/${peer.id}`}
                     className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition-colors border border-slate-200 flex items-center gap-1 cursor-pointer"
@@ -298,57 +270,10 @@ export default function ResearchersDiscoveryPage() {
                     )}
                   </Link>
 
-                  {/* Card Actions: Follow + Notification Bell Toggle */}
-                  <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleFollowToggle(researcher);
-                      }}
-                      disabled={followMutation.isPending || unfollowMutation.isPending}
-                      className={cn(
-                        "flex-1 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer",
-                        researcher.isFollowing 
-                          ? "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200" 
-                          : "bg-[#0C4DA2] text-white hover:bg-[#042654]"
-                      )}
-                    >
-                      {researcher.isFollowing ? (
-                        <>
-                          <UserCheck className="w-3.5 h-3.5 text-emerald-600" /> Following
-                        </>
-                      ) : (
-                        'Follow'
-                      )}
-                    </button>
-
-                    {/* Notification Bell Control for Followed Researcher */}
-                    {researcher.isFollowing && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleNotificationToggle(researcher);
-                        }}
-                        disabled={toggleNotifyMutation.isPending}
-                        title={researcher.notificationsEnabled ? "Notifications ON (Click to mute)" : "Notifications OFF (Click to enable)"}
-                        className={cn(
-                          "p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center",
-                          researcher.notificationsEnabled
-                            ? "bg-blue-50 text-[#0C4DA2] border-blue-200 hover:bg-blue-100"
-                            : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600"
-                        )}
-                      >
-                        {researcher.notificationsEnabled ? (
-                          <Bell className="w-4 h-4 text-[#0C4DA2]" />
-                        ) : (
-                          <BellOff className="w-4 h-4 text-slate-400" />
-                        )}
-                      </button>
-                    )}
-
+                  <div className="px-5 pb-5 pt-3 border-t border-slate-100">
                     <Link
                       href={`/researchers/${researcher.id}`}
-                      className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                      className="block w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-center text-xs font-bold rounded-xl border border-slate-200 transition-colors cursor-pointer"
                     >
                       View Profile
                     </Link>

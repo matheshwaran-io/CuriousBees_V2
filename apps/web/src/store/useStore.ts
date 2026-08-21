@@ -16,57 +16,6 @@ const MOCK_INTERESTS = [
   'Bioinformatics'
 ];
 
-const DEFAULT_INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'notif-1',
-    type: 'RESEARCH_PAPER',
-    title: 'New Research Paper Shared',
-    body: 'Dr. Suresh Kumar published a paper in IEEE TPAMI',
-    time: '10m ago',
-    href: '/feed?type=PUBLICATION',
-    isRead: false,
-    sentStatus: false,
-    openedStatus: false,
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'notif-2',
-    type: 'OPPORTUNITY',
-    title: 'New Research Opportunity',
-    body: 'SERB-DST Selective Excellence Grant 2025 is now accepting proposals',
-    time: '25m ago',
-    href: '/opportunities',
-    isRead: false,
-    sentStatus: false,
-    openedStatus: false,
-    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'notif-3',
-    type: 'COLLABORATION',
-    title: 'Collaboration Invitation',
-    body: 'A researcher with matching interests requested a collaboration',
-    time: '1h ago',
-    href: '/feed?type=COLLABORATION_REQUEST',
-    isRead: false,
-    sentStatus: false,
-    openedStatus: false,
-    createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: 'notif-4',
-    type: 'ADVISORY',
-    title: 'PhD Advisory Update',
-    body: 'Annual research milestone review schedule released',
-    time: '2h ago',
-    href: '/scholar/my-research',
-    isRead: false,
-    sentStatus: false,
-    openedStatus: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-  }
-];
-
 function deriveNotificationType(title: string = ''): any {
   const t = title.toLowerCase();
   if (t.includes('paper') || t.includes('publication') || t.includes('journal')) return 'RESEARCH_PAPER';
@@ -151,6 +100,7 @@ interface AppState {
   supervisors: User[];
   myScholars: User[];
   notifications: Notification[];
+  unreadCount: number;
   toasts: { id: string; message: string; type: 'success' | 'error' | 'info' }[];
 
   // Follow System State
@@ -374,6 +324,7 @@ export const useStore = create<AppState>((set, get) => ({
   supervisors: [],
   myScholars: [],
   notifications: [],
+  unreadCount: 0,
   toasts: [],
 
   followedUserIds: {},
@@ -2552,10 +2503,15 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const res = await apiFetch('/api/notifications');
       let loaded: Notification[] = [];
+      let serverUnreadCount = 0;
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          loaded = data.map((n: any) => ({
+        // The API now returns { notifications: [], unreadCount: number }
+        const notifs = data.notifications || [];
+        serverUnreadCount = typeof data.unreadCount === 'number' ? data.unreadCount : 0;
+        
+        if (Array.isArray(notifs) && notifs.length > 0) {
+          loaded = notifs.map((n: any) => ({
             id: n.id,
             userId: n.userId,
             eventId: n.eventId,
@@ -2563,7 +2519,8 @@ export const useStore = create<AppState>((set, get) => ({
             body: n.body || n.message || '',
             sentStatus: n.sentStatus,
             openedStatus: n.openedStatus,
-            isRead: !!(n.openedStatus || n.isRead || (n.sentStatus && n.openedStatus)),
+            readAt: n.readAt,
+            isRead: !!n.readAt,
             type: n.type || deriveNotificationType(n.title),
             href: n.href || n.actionUrl || deriveNotificationHref(n.type, n.title),
             createdAt: n.createdAt || new Date().toISOString()
@@ -2571,55 +2528,53 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
 
-      const current = get().notifications;
-
-      // If state is empty and backend returned empty array, use initial contextual notifications
-      if (loaded.length === 0 && current.length === 0) {
-        set({ notifications: DEFAULT_INITIAL_NOTIFICATIONS });
-        return DEFAULT_INITIAL_NOTIFICATIONS;
-      }
-
-      if (loaded.length > 0) {
-        // Merge loaded with local state if local has user-read status updates
-        const localReadMap = new Map(current.map(n => [n.id, n.isRead]));
-        const merged = loaded.map(n => ({
-          ...n,
-          isRead: localReadMap.has(n.id) ? !!localReadMap.get(n.id) : !!n.isRead
-        }));
-        set({ notifications: merged });
-        return merged;
-      }
-
-      return get().notifications;
+      set({ notifications: loaded, unreadCount: serverUnreadCount });
+      return loaded;
     } catch (e) {
       console.error('Failed to fetch notifications:', e);
-      if (get().notifications.length === 0) {
-        set({ notifications: DEFAULT_INITIAL_NOTIFICATIONS });
-        return DEFAULT_INITIAL_NOTIFICATIONS;
-      }
-      return get().notifications;
+      set({ notifications: [], unreadCount: 0 });
+      return [];
     }
   },
 
   markNotificationAsRead: async (id: string) => {
+    const prevState = get().notifications;
+    const prevCount = get().unreadCount;
+    const target = prevState.find(n => n.id === id);
+    if (target && target.isRead) return; // Idempotency check
+
     set(state => ({
-      notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true, openedStatus: true } : n)
+      notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString(), openedStatus: true } : n),
+      unreadCount: Math.max(0, state.unreadCount - 1)
     }));
+    
     try {
-      await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+      const res = await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+      if (!res.ok) throw new Error('API failed');
     } catch (e) {
-      // silent catch
+      // Rollback optimistic update
+      set({ notifications: prevState, unreadCount: prevCount });
+      get().addToast('Failed to update notification status', 'error');
     }
   },
 
   markAllNotificationsAsRead: async () => {
+    const prevState = get().notifications;
+    const prevCount = get().unreadCount;
+    if (prevCount === 0) return; // Idempotency check
+
     set(state => ({
-      notifications: state.notifications.map(n => ({ ...n, isRead: true, openedStatus: true }))
+      notifications: state.notifications.map(n => ({ ...n, isRead: true, readAt: n.readAt || new Date().toISOString(), openedStatus: true })),
+      unreadCount: 0
     }));
+    
     try {
-      await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+      const res = await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+      if (!res.ok) throw new Error('API failed');
     } catch (e) {
-      // silent catch
+      // Rollback optimistic update
+      set({ notifications: prevState, unreadCount: prevCount });
+      get().addToast('Failed to mark all as read', 'error');
     }
   },
 
@@ -2634,7 +2589,8 @@ export const useStore = create<AppState>((set, get) => ({
       createdAt: data.createdAt || new Date().toISOString()
     };
     set(state => ({
-      notifications: [newNotif, ...state.notifications]
+      notifications: [newNotif, ...state.notifications],
+      unreadCount: state.unreadCount + 1
     }));
   },
 

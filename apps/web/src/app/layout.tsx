@@ -3,12 +3,13 @@ import QueryProvider from '@/components/QueryProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'CuriousBees — Elevating Academic Research & Collaboration',
   description: 'CuriousBees is a premium university-grade research platform connecting scholars, supervisors, and institutions for seamless collaboration, academic tracking, and innovation.',
   icons: {
     icon: '/icon.png',
+    shortcut: '/favicon.ico',
     apple: '/apple-touch-icon.png',
-    shortcut: '/logo.png',
   },
   openGraph: {
     title: 'CuriousBees — Elevating Academic Research',

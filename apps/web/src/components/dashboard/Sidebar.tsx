@@ -32,6 +32,7 @@ import {
   Network,
   BookMarked,
   Layers,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProfileImageUrl } from '@/lib/avatar';
@@ -56,6 +57,7 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
       { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
       { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
       { name: 'Announcements', href: '/admin/announcements', icon: MessageSquare },
+      { name: 'Portal Settings', href: '/settings', icon: SettingsIcon },
       { name: 'System Settings', href: '/admin/settings', icon: Shield },
     ];
   }
@@ -68,7 +70,7 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
       { name: 'Curious Nexus', href: '/nexus', icon: Network },
       { name: 'Events', href: '/events', icon: CalendarIcon },
       { name: 'Researchers', href: '/researchers', icon: Users },
-      { name: 'Integrations', href: '/settings/integrations', icon: Layers },
+      { name: 'Settings', href: '/settings', icon: SettingsIcon },
     ];
   }
 
@@ -81,7 +83,7 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
     { name: 'Curious Nexus', href: '/nexus', icon: Network },
     { name: 'Events', href: '/events', icon: CalendarIcon },
     { name: 'Researchers', href: '/researchers', icon: Users },
-    { name: 'Integrations', href: '/settings/integrations', icon: Layers },
+    { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 };
 
@@ -113,15 +115,15 @@ function NavItem({
       className={cn(
         "relative flex items-center gap-3.5 px-4 py-3 rounded-full text-sm font-bold transition-all duration-150 select-none group",
         active 
-          ? "bg-[#0C4DA2]/10 text-[#0C4DA2] font-black" 
-          : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900"
+          ? "bg-[#0C4DA2]/10 dark:bg-blue-600/15 text-[#0C4DA2] dark:text-[#F5F7FA] font-black" 
+          : "text-slate-700 dark:text-[#A7B3C5] hover:bg-slate-100/80 dark:hover:bg-[#132238] hover:text-slate-900 dark:hover:text-[#F5F7FA]"
       )}
     >
       {/* Active Blue Left Pillar */}
       {active && (
         <motion.span
           layoutId="sidebar-active-indicator"
-          className="absolute left-1 top-2.5 bottom-2.5 w-[4px] bg-[#0C4DA2] rounded-full z-10"
+          className="absolute left-1 top-2.5 bottom-2.5 w-[4px] bg-[#0C4DA2] dark:bg-[#3B82F6] rounded-full z-10"
           transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         />
       )}
@@ -129,13 +131,13 @@ function NavItem({
       <Icon
         className={cn(
           'w-5 h-5 shrink-0 transition-transform duration-150 relative z-10 group-hover:scale-105',
-          active ? 'text-[#0C4DA2]' : 'text-slate-500 group-hover:text-slate-900'
+          active ? 'text-[#0C4DA2] dark:text-[#3B82F6]' : 'text-slate-500 dark:text-[#718096] group-hover:text-slate-900 dark:group-hover:text-[#F5F7FA]'
         )}
       />
       <span
         className={cn(
           'truncate leading-none relative z-10 text-[14px]',
-          active ? 'text-[#0C4DA2] font-extrabold tracking-tight' : 'text-slate-700 group-hover:text-slate-900'
+          active ? 'text-[#0C4DA2] dark:text-[#F5F7FA] font-extrabold tracking-tight' : 'text-slate-700 dark:text-[#A7B3C5] group-hover:text-slate-900 dark:group-hover:text-[#F5F7FA]'
         )}
       >
         {name}
@@ -143,8 +145,6 @@ function NavItem({
     </Link>
   );
 }
-
-// ─── Collapsible Nav Section ─────────────────────────────────────────────────
 
 // ─── Sidebar Content ──────────────────────────────────────────────────────────
 
@@ -164,14 +164,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full py-4 bg-white border-r border-slate-200/80">
+    <div className="flex flex-col h-full py-4 bg-white dark:bg-[#091525] border-r border-slate-200/80 dark:border-white/[0.08]">
       {/* Brand + Close (mobile) */}
       <div className="flex items-center justify-between px-5 mb-4">
         <Logo showText={true} size={32} />
         {onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer md:hidden"
+            className="p-1.5 rounded-full text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-[#132238] transition-colors cursor-pointer md:hidden"
           >
             <X className="w-5 h-5" />
           </button>
@@ -195,14 +195,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* User mini-profile pill */}
-      <div className="px-3 pt-3 mt-auto border-t border-slate-100">
+      <div className="px-3 pt-3 mt-auto border-t border-slate-100 dark:border-white/[0.08]">
         {currentUser && (
           <Link
             href={role === 'RESEARCH_SCHOLAR' ? '/scholar/profile' : '/profile'}
             onClick={onClose}
-            className="p-2.5 rounded-full hover:bg-slate-100/90 transition-all flex items-center gap-3 border border-slate-200/60 mb-2 group cursor-pointer"
+            className="p-2.5 rounded-full hover:bg-slate-100/90 dark:hover:bg-[#132238] transition-all flex items-center gap-3 border border-slate-200/60 dark:border-white/[0.08] dark:bg-[#0B1728] mb-2 group cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800">
               <img
                 src={getProfileImageUrl(currentUser)}
                 alt={currentUser.name || 'User'}
@@ -210,8 +210,8 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2]">{currentUser.name || 'Researcher'}</p>
-              <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
+              <p className="text-xs font-black text-slate-900 dark:text-[#F5F7FA] truncate leading-tight group-hover:text-[#0C4DA2] dark:group-hover:text-[#3B82F6]">{currentUser.name || 'Researcher'}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-[#718096] truncate mt-0.5">
                 {currentUser.department || (role === 'INSTITUTE_ADMIN' ? 'Institute Admin' : role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar')}
               </p>
             </div>
@@ -225,33 +225,33 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             className={cn(
               "p-2.5 rounded-full transition-all flex items-center gap-3 border mb-2 cursor-pointer",
               isActive('/my-scholars')
-                ? "bg-[#0C4DA2] text-white border-[#0C4DA2] shadow-sm shadow-[#0C4DA2]/25"
-                : "bg-[#0C4DA2]/10 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] border-[#0C4DA2]/25"
+                ? "bg-[#0C4DA2] dark:bg-[#2563EB] text-white border-[#0C4DA2] dark:border-transparent shadow-sm shadow-[#0C4DA2]/25"
+                : "bg-[#0C4DA2]/10 dark:bg-blue-600/15 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] dark:text-[#3B82F6] border-[#0C4DA2]/25 dark:border-blue-500/30"
             )}
           >
             <div className={cn(
               "w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm transition-colors",
-              isActive('/my-scholars') ? "bg-white text-[#0C4DA2]" : "bg-[#0C4DA2] text-white"
+              isActive('/my-scholars') ? "bg-white text-[#0C4DA2]" : "bg-[#0C4DA2] dark:bg-[#2563EB] text-white"
             )}>
               <GraduationCap className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className={cn("text-xs font-black leading-tight", isActive('/my-scholars') ? "text-white" : "text-[#0C4DA2]")}>Supervision Panel</p>
-              <p className={cn("text-[10px] font-bold mt-0.5", isActive('/my-scholars') ? "text-blue-100" : "text-blue-650/80")}>Manage Scholars & Advisory</p>
+              <p className={cn("text-xs font-black leading-tight", isActive('/my-scholars') ? "text-white" : "text-[#0C4DA2] dark:text-[#F5F7FA]")}>Supervision Panel</p>
+              <p className={cn("text-[10px] font-bold mt-0.5", isActive('/my-scholars') ? "text-blue-100" : "text-slate-400 dark:text-[#718096]")}>Manage Scholars & Advisory</p>
             </div>
           </Link>
         )}
 
         <button
           onClick={() => { logout(); onClose?.(); }}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-extrabold text-slate-500 hover:text-rose-600 hover:bg-rose-50/60 transition-all cursor-pointer text-left"
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-extrabold text-slate-500 dark:text-[#718096] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all cursor-pointer text-left"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           <span>Exit Portal</span>
         </button>
 
         {/* SRM Institutional Branding */}
-        <div className="mt-3 pt-3 border-t border-slate-100/80 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity">
+        <div className="mt-3 pt-3 border-t border-slate-100/80 dark:border-white/[0.08] flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity">
           <SRMLogo variant="full" theme="dark" size={32} />
         </div>
       </div>
@@ -267,7 +267,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-[260px] bg-white border-r border-borderStroke h-screen sticky top-0 z-40 shrink-0 font-sans">
+      <aside className="hidden md:flex flex-col w-[260px] bg-white dark:bg-[#091525] border-r border-borderStroke dark:border-white/[0.08] h-screen sticky top-0 z-40 shrink-0 font-sans">
         <SidebarContent />
       </aside>
 
@@ -281,7 +281,7 @@ export default function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden fixed inset-0 z-50 bg-black/35 backdrop-blur-[1px]"
+              className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]"
               onClick={() => setMobileSidebar(false)}
             />
 
@@ -291,7 +291,7 @@ export default function Sidebar() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              className="md:hidden fixed left-0 top-0 bottom-0 z-[51] w-[280px] bg-white border-r border-borderStroke shadow-2xl font-sans"
+              className="md:hidden fixed left-0 top-0 bottom-0 z-[51] w-[280px] bg-white dark:bg-[#091525] border-r border-borderStroke dark:border-white/[0.08] shadow-2xl font-sans"
             >
               <SidebarContent onClose={() => setMobileSidebar(false)} />
             </motion.aside>

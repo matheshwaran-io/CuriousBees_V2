@@ -18,10 +18,10 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_STYLES: Record<string, string> = {
-  ADMIN:                 'bg-slate-100 text-slate-800 border-slate-300',
-  INSTITUTE_ADMIN:       'bg-slate-100 text-slate-800 border-slate-300',
-  RESEARCH_SUPERVISOR:   'bg-[#FFF9E6] text-[#92400E] border-[#F5B800]/40',
-  RESEARCH_SCHOLAR:      'bg-[#EEF4FF] text-[#0B4EA2] border-[#0B4EA2]/20',
+  ADMIN:                 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700',
+  INSTITUTE_ADMIN:       'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700',
+  RESEARCH_SUPERVISOR:   'bg-[#FFF9E6] dark:bg-amber-950/35 text-[#92400E] dark:text-[#F4B740] border-[#F5B800]/40 dark:border-amber-500/30',
+  RESEARCH_SCHOLAR:      'bg-[#EEF4FF] dark:bg-blue-950/35 text-[#0B4EA2] dark:text-[#38BDF8] border-[#0B4EA2]/20 dark:border-blue-500/30',
 };
 
 interface RoleBadgeProps {

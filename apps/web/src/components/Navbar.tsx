@@ -98,12 +98,9 @@ export default function Navbar() {
 
           {/* Settings */}
           <Link
-            href={
-              role === 'INSTITUTE_ADMIN' ? '/admin/settings' :
-              role === 'RESEARCH_SUPERVISOR' ? '/supervisor/settings' :
-              '/scholar/settings'
-            }
+            href="/settings"
             className="p-2.5 rounded-xl hover:bg-[#EEF4FF] hover:text-[#0B4EA2] transition-colors flex items-center justify-center text-[#4A5568]"
+            title="Account & Portal Settings"
           >
             <Settings className="w-5 h-5" />
           </Link>

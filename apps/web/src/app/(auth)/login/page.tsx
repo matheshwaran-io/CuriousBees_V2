@@ -186,26 +186,26 @@ function LoginContent() {
           {/* =========================================================================
               RIGHT PANEL — AUTHENTICATION CARD
              ========================================================================= */}
-          <div className="w-full lg:w-[42%] p-8 sm:p-10 lg:p-12 flex flex-col justify-between bg-white text-slate-900">
+          <div className="w-full lg:w-[42%] p-8 sm:p-10 lg:p-12 flex flex-col justify-between bg-white dark:bg-[#0B1728] text-slate-900 dark:text-[#F5F7FA]">
             
             <div className="my-auto flex flex-col justify-center w-full max-w-sm mx-auto space-y-6">
               
               {/* Center Top Shield Icon */}
               <div className="flex justify-center">
-                <div className="w-13 h-13 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-500 flex items-center justify-center shadow-xs">
+                <div className="w-13 h-13 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-500/30 text-amber-500 dark:text-amber-400 flex items-center justify-center shadow-xs">
                   <ShieldCheck className="w-7 h-7" />
                 </div>
               </div>
 
               {/* Title & Subtitle */}
               <div className="text-center space-y-1.5">
-                <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#0C4DA2] block">
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#0C4DA2] dark:text-[#3B82F6] block">
                   WELCOME BACK
                 </span>
-                <h3 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 tracking-tight">
+                <h3 className="text-2xl sm:text-3xl font-display font-extrabold text-slate-900 dark:text-[#F5F7FA] tracking-tight">
                   Sign in to CuriousBees
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed max-w-xs mx-auto">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-[#A7B3C5] font-medium leading-relaxed max-w-xs mx-auto">
                   Use your official institutional Google account to access your research workspace securely.
                 </p>
               </div>
@@ -215,9 +215,9 @@ function LoginContent() {
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-2.5 bg-rose-50 border border-rose-200 rounded-2xl p-3.5 text-left text-xs font-semibold text-rose-800"
+                  className="flex items-start gap-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/40 rounded-2xl p-3.5 text-left text-xs font-semibold text-rose-800 dark:text-rose-300"
                 >
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                   <p>{errorMessage}</p>
                 </motion.div>
               )}
@@ -229,10 +229,10 @@ function LoginContent() {
                   whileTap={{ scale: 0.99 }}
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
-                  className="w-full h-13 sm:h-14 px-5 rounded-2xl bg-white border border-slate-200 text-slate-800 hover:bg-slate-50/80 hover:border-slate-300 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-bold flex items-center justify-center gap-3 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
+                  className="w-full h-13 sm:h-14 px-5 rounded-2xl bg-white dark:bg-[#101D30] border border-slate-200 dark:border-white/[0.12] text-slate-800 dark:text-[#F5F7FA] hover:bg-slate-50/80 dark:hover:bg-[#172942] hover:border-slate-300 dark:hover:border-white/[0.20] disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-bold flex items-center justify-center gap-3 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer"
                 >
                   {isLoading ? (
-                    <div className="flex items-center gap-2.5 text-[#0C4DA2]">
+                    <div className="flex items-center gap-2.5 text-[#0C4DA2] dark:text-[#3B82F6]">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span className="text-xs font-extrabold uppercase tracking-wider">Connecting...</span>
                     </div>
@@ -265,8 +265,8 @@ function LoginContent() {
             </div>
 
             {/* BOTTOM FOOTER */}
-            <div className="text-center pt-6 text-[10px] text-slate-400 font-extrabold tracking-widest uppercase flex items-center justify-center gap-1.5 border-t border-slate-100">
-              <Shield className="w-3.5 h-3.5 text-slate-400" />
+            <div className="text-center pt-6 text-[10px] text-slate-400 dark:text-[#718096] font-extrabold tracking-widest uppercase flex items-center justify-center gap-1.5 border-t border-slate-100 dark:border-white/[0.08]">
+              <Shield className="w-3.5 h-3.5 text-slate-400 dark:text-[#718096]" />
               <span>SRMIST INSTITUTIONAL SSO</span>
             </div>
 

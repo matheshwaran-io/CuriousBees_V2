@@ -79,7 +79,9 @@ export default function ResearchPostCard({
   const isFollowingAuthor = authorId ? !!followedUserIds[authorId] : false;
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const isCompact = typeof window !== 'undefined' && localStorage.getItem('cb_pref_compact_cards') === 'true';
+  const autoExpandPref = typeof window !== 'undefined' && localStorage.getItem('cb_pref_auto_abstracts') === 'true';
+  const [isExpanded, setIsExpanded] = useState(autoExpandPref);
 
   const authorName = post.author?.name || 'Academic Researcher';
   const authorDept = post.author?.department || 'Research Division';
@@ -113,21 +115,23 @@ export default function ResearchPostCard({
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const newSavedState = !isSaved;
-    setIsSaved(newSavedState);
-
+    const nextSaved = !isSaved;
+    setIsSaved(nextSaved);
     try {
+      if (currentUser?.id) {
+        useStore.getState().toggleSaveThreadLocally(post.id, nextSaved, currentUser.id);
+      }
       await toggleSaveThread(post.id);
-      addToast(newSavedState ? 'Post saved to your bookmarks' : 'Post removed from bookmarks', 'info');
+      addToast(nextSaved ? 'Post saved to your bookmarks' : 'Post removed from bookmarks', 'info');
     } catch (err: any) {
-      setIsSaved(!newSavedState);
-      addToast('Failed to update saved status', 'error');
+      setIsSaved(!nextSaved);
+      addToast('Failed to update bookmark status', 'error');
     }
   };
 
   const handleCollabRequest = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isOwner) return;
+    if (!authorId || isOwner) return;
 
     if (collabState === 'ACTIVE' && collabId) {
       window.location.href = `/nexus?collab=${collabId}`;
@@ -165,19 +169,17 @@ export default function ResearchPostCard({
   const getPostTypeBadge = (rawType?: string) => {
     switch (rawType) {
       case 'PUBLICATION':
-        return { label: 'PUBLICATION', style: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+        return { label: 'PUBLICATION', style: 'bg-indigo-50 dark:bg-indigo-950/35 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/40' };
       case 'QUESTION':
-        return { label: 'QUESTION', style: 'bg-amber-50 text-amber-700 border-amber-200' };
+        return { label: 'QUESTION', style: 'bg-amber-50 dark:bg-amber-950/35 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' };
       case 'COLLABORATION_REQUEST':
-        return { label: 'COLLAB REQUEST', style: 'bg-blue-50 text-[#0C4DA2] border-blue-200' };
+        return { label: 'COLLAB REQUEST', style: 'bg-blue-50 dark:bg-blue-950/35 text-[#0C4DA2] dark:text-blue-300 border-blue-200 dark:border-blue-800/40' };
       case 'ACHIEVEMENT':
-        return { label: 'ACHIEVEMENT', style: 'bg-yellow-50 text-yellow-800 border-yellow-200' };
+        return { label: 'ACHIEVEMENT', style: 'bg-yellow-50 dark:bg-yellow-950/35 text-yellow-800 dark:text-amber-300 border-yellow-200 dark:border-yellow-800/40' };
       case 'ANNOUNCEMENT':
-        return { label: 'ANNOUNCEMENT', style: 'bg-rose-50 text-rose-700 border-rose-200' };
-      case 'OPPORTUNITY':
-        return { label: 'OPPORTUNITY', style: 'bg-teal-50 text-teal-700 border-teal-200' };
+        return { label: 'ANNOUNCEMENT', style: 'bg-rose-50 dark:bg-rose-950/35 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/40' };
       default:
-        return { label: 'RESEARCH UPDATE', style: 'bg-slate-100 text-slate-700 border-slate-200' };
+        return { label: 'RESEARCH UPDATE', style: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
     }
   };
 
@@ -186,12 +188,12 @@ export default function ResearchPostCard({
   const isLongContent = textContent.length > 280;
 
   return (
-    <article className="bg-white border-b border-slate-200/80 p-4 sm:p-5 transition-colors hover:bg-slate-50/40 text-left">
+    <article className={`bg-white dark:bg-[#132238] border-b border-slate-200/80 dark:border-white/[0.08] ${isCompact ? 'p-3 sm:p-3.5' : 'p-4 sm:p-5'} transition-colors hover:bg-slate-50/40 dark:hover:bg-[#172942] text-left`}>
       <div className="flex items-start gap-3">
         {/* Author Avatar */}
         <button
           onClick={() => onAuthorClick?.(post.author || { name: authorName, department: authorDept })}
-          className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity mt-0.5"
+          className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800 cursor-pointer hover:opacity-90 transition-opacity mt-0.5"
         >
           <img src={avatarUrl} alt={authorName} className="w-full h-full object-cover" />
         </button>
@@ -202,15 +204,15 @@ export default function ResearchPostCard({
             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
               <button
                 onClick={() => onAuthorClick?.(post.author || { name: authorName, department: authorDept })}
-                className="text-[13px] font-bold text-slate-900 hover:underline transition-colors truncate cursor-pointer"
+                className="text-[13px] font-bold text-slate-900 dark:text-[#F5F7FA] hover:underline transition-colors truncate cursor-pointer"
               >
                 {authorName}
               </button>
               
               {post.author?.role && (
                 <>
-                  <span className="text-[11px] font-medium text-slate-400">·</span>
-                  <span className="text-[11px] font-medium text-slate-500">
+                  <span className="text-[11px] font-medium text-slate-400 dark:text-[#718096]">·</span>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-[#A7B3C5]">
                     {post.author.role.replace('_', ' ')}
                   </span>
                 </>
@@ -218,16 +220,16 @@ export default function ResearchPostCard({
 
               {authorDept && (
                 <>
-                  <span className="text-[11px] font-medium text-slate-400">·</span>
-                  <span className="text-[11px] font-medium text-slate-500 truncate max-w-[140px] sm:max-w-none">
+                  <span className="text-[11px] font-medium text-slate-400 dark:text-[#718096]">·</span>
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-[#A7B3C5] truncate max-w-[140px] sm:max-w-none">
                     {authorDept}
                   </span>
                 </>
               )}
 
-              <span className="text-[11px] font-medium text-slate-400">·</span>
+              <span className="text-[11px] font-medium text-slate-400 dark:text-[#718096]">·</span>
 
-              <span className="text-[11px] font-medium text-slate-400 hover:underline cursor-pointer">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-[#718096] hover:underline cursor-pointer">
                 {formatDate(post.createdAt)}
               </span>
 
@@ -242,7 +244,7 @@ export default function ResearchPostCard({
             <div className="relative shrink-0">
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full text-slate-400 dark:text-[#718096] hover:text-slate-700 dark:hover:text-[#F5F7FA] hover:bg-slate-100 dark:hover:bg-[#101D30] transition-colors cursor-pointer"
               >
                 <MoreHorizontal className="w-4 h-4" />
               </button>
@@ -255,7 +257,7 @@ export default function ResearchPostCard({
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="absolute right-0 top-7 w-44 bg-white rounded-2xl border border-slate-200 shadow-xl z-30 py-1 text-left text-xs font-bold text-slate-700"
+                      className="absolute right-0 top-7 w-44 bg-white dark:bg-[#101D30] rounded-2xl border border-slate-200 dark:border-white/[0.10] shadow-xl z-30 py-1 text-left text-xs font-bold text-slate-700 dark:text-[#F5F7FA]"
                     >
                       {!isOwner && (
                         <button
@@ -264,9 +266,9 @@ export default function ResearchPostCard({
                             if (post.authorId) toggleFollowUser(post.authorId);
                             setShowMenu(false);
                           }}
-                          className="w-full px-4 py-2 hover:bg-slate-50 text-left flex items-center gap-2 cursor-pointer"
+                          className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-[#132238] text-left flex items-center gap-2 cursor-pointer"
                         >
-                          <UserPlus className="w-3.5 h-3.5 text-[#0C4DA2]" />
+                          <UserPlus className="w-3.5 h-3.5 text-[#0C4DA2] dark:text-[#3B82F6]" />
                           <span>{isFollowingAuthor ? 'Unfollow Author' : 'Follow Author'}</span>
                         </button>
                       )}
@@ -274,9 +276,9 @@ export default function ResearchPostCard({
                       {isOwner && onEditClick && (
                         <button
                           onClick={() => { onEditClick(post); setShowMenu(false); }}
-                          className="w-full px-4 py-2 hover:bg-slate-50 text-left flex items-center gap-2"
+                          className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-[#132238] text-left flex items-center gap-2"
                         >
-                          <FileText className="w-3.5 h-3.5 text-slate-500" />
+                          <FileText className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                           <span>Edit Post</span>
                         </button>
                       )}
@@ -284,7 +286,7 @@ export default function ResearchPostCard({
                       {isOwner && onDeleteClick && (
                         <button
                           onClick={() => { onDeleteClick(post); setShowMenu(false); }}
-                          className="w-full px-4 py-2 hover:bg-rose-50 text-rose-600 text-left flex items-center gap-2"
+                          className="w-full px-4 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-left flex items-center gap-2"
                         >
                           <MoreHorizontal className="w-3.5 h-3.5" />
                           <span>Delete Post</span>
@@ -294,7 +296,7 @@ export default function ResearchPostCard({
                       {!isOwner && onReportClick && (
                         <button
                           onClick={() => { onReportClick(post); setShowMenu(false); }}
-                          className="w-full px-4 py-2 hover:bg-slate-50 text-left flex items-center gap-2 text-rose-600"
+                          className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-[#132238] text-left flex items-center gap-2 text-rose-600 dark:text-rose-400"
                         >
                           <MoreHorizontal className="w-3.5 h-3.5" />
                           <span>Report Post</span>
@@ -309,18 +311,18 @@ export default function ResearchPostCard({
 
           {/* Post Title */}
           {post.title && (
-            <h3 className="text-sm font-bold text-slate-900 mt-1 mb-1 leading-tight">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-[#F5F7FA] mt-1 mb-1 leading-tight">
               {post.title}
             </h3>
           )}
 
           {/* Post Content */}
-          <div className="text-[13px] text-slate-800 font-medium whitespace-pre-wrap leading-relaxed mt-1">
+          <div className="text-[13px] text-slate-800 dark:text-[#E2E8F0] font-medium whitespace-pre-wrap leading-relaxed mt-1">
             {isExpanded ? textContent : (textContent.length > 280 ? textContent.slice(0, 280) + '...' : textContent)}
             {textContent.length > 280 && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                className="text-[#0C4DA2] hover:underline font-bold ml-1 cursor-pointer"
+                className="text-[#0C4DA2] dark:text-[#3B82F6] hover:underline font-bold ml-1 cursor-pointer"
               >
                 {isExpanded ? 'Show less' : 'Read more'}
               </button>
@@ -329,16 +331,16 @@ export default function ResearchPostCard({
 
           {/* Journal Paper Box */}
           {(post.isPaper || post.paperInfo) && (
-            <div className="mt-3 p-3.5 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex items-center justify-between gap-3">
+            <div className="mt-3 p-3.5 bg-indigo-50/60 dark:bg-[#0B1728] rounded-2xl border border-indigo-100 dark:border-white/[0.08] flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600/10 flex items-center justify-center shrink-0">
-                  <BookOpen className="w-4 h-4 text-indigo-700" />
+                <div className="w-8 h-8 rounded-xl bg-indigo-600/10 dark:bg-indigo-600/20 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-4 h-4 text-indigo-700 dark:text-indigo-400" />
                 </div>
                 <div className="truncate">
-                  <p className="text-[11px] font-black text-indigo-950 truncate">
+                  <p className="text-[11px] font-black text-indigo-950 dark:text-[#F5F7FA] truncate">
                     {post.paperInfo?.journal || 'Peer-Reviewed Research Publication'}
                   </p>
-                  <p className="text-[10px] font-bold text-indigo-600 truncate mt-0.5">
+                  <p className="text-[10px] font-bold text-indigo-600 dark:text-[#38BDF8] truncate mt-0.5">
                     {post.paperInfo?.publisher || 'Academic Index'}
                   </p>
                 </div>
@@ -358,15 +360,15 @@ export default function ResearchPostCard({
                   href={att.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-between p-3 bg-slate-50 hover:bg-blue-50/50 rounded-2xl border border-slate-200/80 transition-all group"
+                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#0B1728] hover:bg-blue-50/50 dark:hover:bg-[#101D30] rounded-2xl border border-slate-200/80 dark:border-white/[0.08] transition-all group"
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden">
-                    <FileText className="w-4 h-4 text-[#0C4DA2] shrink-0" />
-                    <span className="text-xs font-bold text-slate-800 truncate group-hover:text-[#0C4DA2]">
+                    <FileText className="w-4 h-4 text-[#0C4DA2] dark:text-[#3B82F6] shrink-0" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-[#F5F7FA] truncate group-hover:text-[#0C4DA2] dark:group-hover:text-[#3B82F6]">
                       {att.name || 'Attachment'}
                     </span>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0C4DA2] shrink-0" />
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 dark:text-[#718096] group-hover:text-[#0C4DA2] dark:group-hover:text-[#3B82F6] shrink-0" />
                 </a>
               ))}
             </div>
@@ -378,7 +380,7 @@ export default function ResearchPostCard({
               {post.tags.map((tag: string, i: number) => (
                 <span
                   key={i}
-                  className="text-[12px] font-medium text-[#0C4DA2] hover:underline cursor-pointer"
+                  className="text-[12px] font-medium text-[#0C4DA2] dark:text-[#38BDF8] hover:underline cursor-pointer"
                 >
                   #{tag.replace(/^#/, '')}
                 </span>
@@ -392,10 +394,10 @@ export default function ResearchPostCard({
             <button
               onClick={handleLikeToggle}
               className={`flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium transition-all cursor-pointer group ${
-                isLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500 hover:bg-rose-50'
+                isLiked ? 'text-rose-500' : 'text-slate-500 dark:text-[#A7B3C5] hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
               }`}
             >
-              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-rose-50 transition-colors">
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-rose-50 dark:group-hover:bg-rose-950/30 transition-colors">
                 <Heart className={`w-4 h-4 transition-transform group-active:scale-75 ${isLiked ? 'fill-current' : ''}`} />
               </div>
               {likesCount > 0 && <span>{likesCount}</span>}
@@ -404,9 +406,9 @@ export default function ResearchPostCard({
             {/* Comment */}
             <button
               onClick={() => setShowComments(!showComments)}
-              className="flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium text-slate-500 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer group"
+              className="flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium text-slate-500 dark:text-[#A7B3C5] hover:text-blue-500 dark:hover:text-[#3B82F6] hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all cursor-pointer group"
             >
-              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-blue-50 transition-colors">
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-950/30 transition-colors">
                 <MessageSquare className="w-4 h-4 transition-transform group-active:scale-75" />
               </div>
               {(post.commentsCount ?? post._count?.comments ?? 0) > 0 && (
@@ -417,9 +419,9 @@ export default function ResearchPostCard({
             {/* Share */}
             <button
               onClick={(e) => { e.stopPropagation(); onShareClick?.(post); }}
-              className="flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium text-slate-500 hover:text-emerald-500 hover:bg-emerald-50 transition-all cursor-pointer group"
+              className="flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium text-slate-500 dark:text-[#A7B3C5] hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer group"
             >
-              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-emerald-50 transition-colors">
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/30 transition-colors">
                 <Share2 className="w-4 h-4 transition-transform group-active:scale-75" />
               </div>
             </button>
@@ -428,10 +430,10 @@ export default function ResearchPostCard({
             <button
               onClick={handleSaveToggle}
               className={`flex items-center gap-1.5 p-1.5 rounded-full text-[12px] font-medium transition-all cursor-pointer group ${
-                isSaved ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500 hover:bg-amber-50'
+                isSaved ? 'text-amber-500 dark:text-[#F4B740]' : 'text-slate-500 dark:text-[#A7B3C5] hover:text-amber-500 dark:hover:text-[#F4B740] hover:bg-amber-50 dark:hover:bg-amber-950/30'
               }`}
             >
-              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-amber-50 transition-colors">
+              <div className="flex items-center justify-center p-1 rounded-full group-hover:bg-amber-50 dark:group-hover:bg-amber-950/30 transition-colors">
                 <Bookmark className={`w-4 h-4 transition-transform group-active:scale-75 ${isSaved ? 'fill-current' : ''}`} />
               </div>
             </button>
@@ -442,14 +444,14 @@ export default function ResearchPostCard({
               disabled={isCollaborating || isOwner}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
                 isOwner 
-                  ? 'opacity-40 text-slate-500 cursor-not-allowed' 
+                  ? 'opacity-40 text-slate-500 dark:text-slate-600 cursor-not-allowed' 
                   : collabState === 'ACTIVE'
-                  ? 'bg-[#0C4DA2] text-white hover:bg-blue-800'
+                  ? 'bg-[#0C4DA2] dark:bg-[#2563EB] text-white hover:bg-blue-800'
                   : collabState === 'PENDING_SENT'
-                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200'
                   : collabState === 'PENDING_RECEIVED'
-                  ? 'bg-blue-100 text-[#0C4DA2] hover:bg-blue-200'
-                  : 'text-[#0C4DA2] hover:bg-[#0C4DA2]/10 active:bg-[#0C4DA2]/20'
+                  ? 'bg-blue-100 dark:bg-blue-950/40 text-[#0C4DA2] dark:text-blue-300 hover:bg-blue-200'
+                  : 'text-[#0C4DA2] dark:text-[#3B82F6] hover:bg-[#0C4DA2]/10 dark:hover:bg-blue-600/20 active:bg-[#0C4DA2]/20'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -464,7 +466,7 @@ export default function ResearchPostCard({
 
           {/* Comments Component Expand */}
           {showComments && (
-            <div className="mt-4 pt-3 border-t border-slate-100">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/[0.08]">
               <FeedComments threadId={post.id} />
             </div>
           )}

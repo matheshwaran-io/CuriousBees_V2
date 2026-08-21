@@ -3,7 +3,7 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useResearcherProfile } from '@/hooks/useResearchers';
-import { useFollowStatus, useFollowUser, useUnfollowUser, useToggleFollowNotifications } from '@/hooks/useFollow';
+
 import { useStore } from '@/store/useStore';
 import { 
   ArrowLeft,
@@ -18,15 +18,7 @@ export default function ResearcherProfilePage() {
   const id = params.id as string;
 
   const { data: researcher, isLoading: isLoadingProfile, isError: isProfileError, refetch: refetchProfile } = useResearcherProfile(id);
-  const { data: followStatus, isLoading: isLoadingFollow } = useFollowStatus(id);
-  
-  const followMutation = useFollowUser();
-  const unfollowMutation = useUnfollowUser();
-  const toggleNotifyMutation = useToggleFollowNotifications();
-
-  const status = followStatus as any;
-
-  if (isLoadingProfile || isLoadingFollow) {
+  if (isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center gap-2 text-slate-500">
         <Loader2 className="w-8 h-8 text-[#0C4DA2] animate-spin" />
@@ -60,18 +52,7 @@ export default function ResearcherProfilePage() {
     );
   }
 
-  const handleFollowToggle = () => {
-    if (status?.isFollowing) {
-      unfollowMutation.mutate(id);
-    } else {
-      followMutation.mutate(id);
-    }
-  };
 
-  const handleToggleNotifications = () => {
-    const nextState = !status?.notificationsEnabled;
-    toggleNotifyMutation.mutate({ userId: id, enabled: nextState });
-  };
 
   return (
     <div className="space-y-4">
@@ -88,10 +69,6 @@ export default function ResearcherProfilePage() {
       <AcademicProfileView
         user={researcher}
         isOwnProfile={currentUser?.id === id}
-        isFollowing={status?.isFollowing}
-        notificationsEnabled={status?.notificationsEnabled}
-        onFollowToggle={handleFollowToggle}
-        onToggleNotifications={handleToggleNotifications}
       />
     </div>
   );

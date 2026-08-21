@@ -25,25 +25,29 @@ export class NotificationsService {
    * Retrieves log of notifications dispatched to a user
    */
   async getNotifications(userId: string) {
-    return this.prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50
-    });
+    const [notifications, unreadCount] = await Promise.all([
+      this.prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+      }),
+      this.prisma.notification.count({ where: { userId, readAt: null } })
+    ]);
+    return { notifications, unreadCount };
   }
 
   async markAllAsRead(userId: string) {
     return this.prisma.notification.updateMany({
-      where: { userId, sentStatus: false },
-      data: { sentStatus: true, openedStatus: true }
+      where: { userId, readAt: null },
+      data: { readAt: new Date(), sentStatus: true, openedStatus: true }
     });
   }
 
   async markAsRead(userId: string, id: string) {
     try {
       return await this.prisma.notification.updateMany({
-        where: { id, userId },
-        data: { sentStatus: true, openedStatus: true }
+        where: { id, userId, readAt: null },
+        data: { readAt: new Date(), sentStatus: true, openedStatus: true }
       });
     } catch (e: any) {
       return { success: false };
@@ -110,7 +114,9 @@ export class NotificationsService {
         await this.sendNotification(
           'Scholar Registration Submitted',
           `${scholar.name || scholar.email} has requested you as their supervisor.`,
-          supervisorId
+          supervisorId,
+          'ADVISORY',
+          '/my-scholars?tab=requests'
         );
       }
     } catch (e: any) {
@@ -124,7 +130,9 @@ export class NotificationsService {
       await this.sendNotification(
         'Scholar Approved',
         `Your supervisor ${supervisor?.name || supervisor?.email || 'Faculty'} has approved your portal access.`,
-        scholarId
+        scholarId,
+        'ADVISORY',
+        '/scholar/my-research'
       );
     } catch (e: any) {
       this.logger.error(`notifyScholarApproved failed: ${e.message}`);
@@ -137,7 +145,9 @@ export class NotificationsService {
       await this.sendNotification(
         'Scholar Rejected',
         `Your supervisor request to ${supervisor?.name || supervisor?.email || 'Faculty'} was declined.`,
-        scholarId
+        scholarId,
+        'ADVISORY',
+        '/scholar/my-research'
       );
     } catch (e: any) {
       this.logger.error(`notifyScholarRejected failed: ${e.message}`);
@@ -155,7 +165,9 @@ export class NotificationsService {
           await this.sendNotification(
             'Supervisor Registration Submitted',
             `Faculty ${supervisor.name || supervisor.email} has registered and awaits approval.`,
-            admin.id
+            admin.id,
+            'SUPERVISION',
+            '/admin/approval-requests'
           );
         }
       }
@@ -169,7 +181,9 @@ export class NotificationsService {
       await this.sendNotification(
         'Supervisor Approved',
         `Institutional Admin has approved your supervisor access.`,
-        supervisorId
+        supervisorId,
+        'SUPERVISION',
+        '/supervisor'
       );
     } catch (e: any) {
       this.logger.error(`notifySupervisorApproved failed: ${e.message}`);
@@ -181,7 +195,9 @@ export class NotificationsService {
       await this.sendNotification(
         'Supervisor Rejected',
         `Your registration request as a supervisor was rejected.`,
-        supervisorId
+        supervisorId,
+        'SUPERVISION',
+        '/'
       );
     } catch (e: any) {
       this.logger.error(`notifySupervisorRejected failed: ${e.message}`);
@@ -195,7 +211,9 @@ export class NotificationsService {
         await this.notifyFollowersOfActivity(
           authorId,
           'New Research Opportunity',
-          `${opp.author?.name || 'A researcher you follow'} shared: ${opp.title}`
+          `${opp.author?.name || 'A researcher you follow'} shared: ${opp.title}`,
+          'OPPORTUNITY',
+          `/opportunities`
         );
       }
     } catch (e: any) {
@@ -206,7 +224,7 @@ export class NotificationsService {
   /**
    * Dispatches notifications to followers of a researcher who have notificationsEnabled === true
    */
-  async notifyFollowersOfActivity(authorId: string, title: string, body: string) {
+  async notifyFollowersOfActivity(authorId: string, title: string, body: string, type: string = 'POST', actionUrl: string = '/feed') {
     try {
       const follows = await this.prisma.userFollow.findMany({
         where: {
@@ -217,7 +235,7 @@ export class NotificationsService {
       });
 
       for (const f of follows) {
-        await this.sendNotification(title, body, f.followerId);
+        await this.sendNotification(title, body, f.followerId, type, actionUrl);
       }
     } catch (e: any) {
       this.logger.error(`notifyFollowersOfActivity failed: ${e.message}`);

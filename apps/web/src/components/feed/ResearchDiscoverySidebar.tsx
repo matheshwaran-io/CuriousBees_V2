@@ -58,25 +58,25 @@ export default function ResearchDiscoverySidebar({
   return (
     <aside className="w-full space-y-6 text-left pt-2 select-none">
 
-      {/* ─── 1. RESEARCHERS YOU MAY WANT TO FOLLOW ─── */}
-      <div className="bg-white/90 backdrop-blur-xl rounded-[28px] border border-slate-200/80 p-5 shadow-[0_8px_30px_rgb(12,77,162,0.03)]">
+      {/* ─── 1. RESEARCHERS YOU MAY KNOW ─── */}
+      <div className="bg-white/90 dark:bg-[#132238] backdrop-blur-xl rounded-[28px] border border-slate-200/80 dark:border-white/[0.08] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.25)]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
-              Researchers You May Want to Follow
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-[#F5F7FA] leading-tight">
+              Researchers You May Know
             </h3>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-[#718096] mt-0.5">
               Based on your research domain & interests
             </p>
           </div>
-          <Link href="/scholar/connections" className="text-[11px] font-bold text-[#0C4DA2] hover:underline shrink-0">
+          <Link href="/scholar/connections" className="text-[11px] font-bold text-[#0C4DA2] dark:text-[#3B82F6] hover:underline shrink-0">
             View All
           </Link>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {peers.length === 0 ? (
-            <p className="text-xs font-medium text-slate-400 italic py-2">
+            <p className="text-xs font-medium text-slate-400 dark:text-[#718096] italic py-2">
               Discovering relevant institutional researchers...
             </p>
           ) : (
@@ -84,61 +84,40 @@ export default function ResearchDiscoverySidebar({
               const name = peer.name || 'Scholar';
               const dept = peer.department || 'SRMIST';
               const roleLabel = peer.role || (peer.role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar');
-              const isFollowed = !!followedUserIds[peer.id] || peer.isFollowing;
               const avatar = getProfileImageUrl(peer);
               const domainsList: string[] = peer.domains || peer.researchInterests || [];
-              const reason = peer.reason || 'Active SRMIST Researcher';
 
               return (
-                <div key={peer.id} className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 transition-all flex flex-col gap-2.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <Link href={`/researchers/${peer.id}`} className="flex items-center gap-3 min-w-0 flex-1 group">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-white shadow-2xs shrink-0 bg-slate-200 ring-1 ring-slate-200 group-hover:ring-[#0C4DA2]/40 transition-all">
-                        <img src={avatar} alt={name} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="truncate min-w-0">
-                        <h4 className="text-xs font-extrabold text-slate-900 truncate leading-tight group-hover:text-[#0C4DA2] transition-colors">
-                          {name}
-                        </h4>
-                        <p className="text-[10px] font-bold text-slate-500 truncate mt-0.5">
-                          {roleLabel} · {dept}
-                        </p>
-                      </div>
-                    </Link>
-
-                    {/* Optimistic Follow / Following Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFollowUser(peer.id);
-                      }}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
-                        isFollowed 
-                          ? 'bg-slate-200/80 text-slate-700 hover:bg-slate-300' 
-                          : 'bg-[#0C4DA2] text-white hover:bg-[#042654] shadow-sm shadow-blue-900/20 active:scale-95'
-                      }`}
-                    >
-                      {isFollowed ? 'Following' : 'Follow'}
-                    </button>
+                <Link 
+                  key={peer.id} 
+                  href={`/researchers/${peer.id}`}
+                  className="p-3 rounded-2xl bg-slate-50/70 dark:bg-[#0B1728] border border-slate-100 dark:border-white/[0.06] hover:border-slate-200 dark:hover:border-white/[0.12] hover:bg-slate-100/60 dark:hover:bg-[#101D30] transition-all flex flex-col gap-2 group block"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-white dark:border-slate-700 shadow-2xs shrink-0 bg-slate-200 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:ring-[#0C4DA2]/40 transition-all">
+                      <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="truncate min-w-0 flex-1">
+                      <h4 className="text-xs font-extrabold text-slate-900 dark:text-[#F5F7FA] truncate leading-tight group-hover:text-[#0C4DA2] dark:group-hover:text-[#3B82F6] transition-colors">
+                        {name}
+                      </h4>
+                      <p className="text-[10px] font-bold text-slate-500 dark:text-[#A7B3C5] truncate mt-0.5">
+                        {roleLabel} · {dept}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Domains Pill Tags */}
                   {domainsList.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 mt-0.5">
                       {domainsList.slice(0, 3).map((domain, idx) => (
-                        <span key={idx} className="text-[9px] font-bold bg-white text-[#0C4DA2] border border-slate-200 px-2 py-0.5 rounded-md">
+                        <span key={idx} className="text-[9px] font-bold bg-white dark:bg-[#101D30] text-[#0C4DA2] dark:text-[#38BDF8] border border-slate-200 dark:border-white/[0.08] px-2 py-0.5 rounded-md">
                           {domain}
                         </span>
                       ))}
                     </div>
                   )}
-
-                  {/* Recommendation Context Reason */}
-                  <p className="text-[9px] font-bold text-[#0C4DA2] bg-blue-50/60 px-2 py-1 rounded-lg flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
-                    <span>{reason}</span>
-                  </p>
-                </div>
+                </Link>
               );
             })
           )}
@@ -146,13 +125,13 @@ export default function ResearchDiscoverySidebar({
       </div>
 
       {/* ─── 2. TRENDING RESEARCH TOPICS (#TAGS) ─── */}
-      <div className="bg-white/90 backdrop-blur-xl rounded-[28px] border border-slate-200/80 p-5 shadow-[0_8px_30px_rgb(12,77,162,0.03)]">
+      <div className="bg-white/90 dark:bg-[#132238] backdrop-blur-xl rounded-[28px] border border-slate-200/80 dark:border-white/[0.08] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.25)]">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-[#F5F7FA] leading-tight">
               Trending Research Topics
             </h3>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-[#718096] mt-0.5">
               Follow topics to personalize your feed
             </p>
           </div>
@@ -166,16 +145,16 @@ export default function ResearchDiscoverySidebar({
             return (
               <div
                 key={item.tag}
-                className="flex items-center justify-between hover:bg-slate-50/80 p-2.5 rounded-2xl border border-transparent hover:border-slate-100 transition-all group"
+                className="flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-[#101D30] p-2.5 rounded-2xl border border-transparent hover:border-slate-100 dark:hover:border-white/[0.06] transition-all group"
               >
                 <div 
                   onClick={() => onTagClick?.(item.tag)}
                   className="cursor-pointer min-w-0 flex-1 pr-2"
                 >
-                  <p className="text-xs font-black text-slate-900 group-hover:text-[#0C4DA2] truncate transition-colors">
+                  <p className="text-xs font-black text-slate-900 dark:text-[#F5F7FA] group-hover:text-[#0C4DA2] dark:group-hover:text-[#3B82F6] truncate transition-colors">
                     #{item.tag}
                   </p>
-                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-[#718096] mt-0.5">
                     {item.count} research interactions
                   </p>
                 </div>
@@ -187,8 +166,8 @@ export default function ResearchDiscoverySidebar({
                   }}
                   className={`px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
                     isTopicFollowed
-                      ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                      : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-[#0C4DA2] hover:text-white hover:border-[#0C4DA2]'
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/40 hover:bg-amber-100'
+                      : 'bg-slate-100 dark:bg-[#0B1728] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] hover:bg-[#0C4DA2] dark:hover:bg-[#2563EB] hover:text-white hover:border-[#0C4DA2]'
                   }`}
                 >
                   {isTopicFollowed ? 'Following' : '+ Follow'}

@@ -26,10 +26,7 @@ interface AcademicProfileViewProps {
   user: any;
   isOwnProfile?: boolean;
   onEditClick?: () => void;
-  onFollowToggle?: () => void;
-  isFollowing?: boolean;
-  notificationsEnabled?: boolean;
-  onToggleNotifications?: () => void;
+
 }
 
 export function AcademicProfileView({
