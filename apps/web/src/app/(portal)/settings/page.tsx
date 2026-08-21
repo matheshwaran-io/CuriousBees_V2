@@ -96,7 +96,7 @@ function UnifiedSettingsContent() {
   });
 
   // Supervisor specific state
-  const [supervisionCapacity, setSupervisionCapacity] = useState<number>(8);
+  const [supervisionCapacity, setSupervisionCapacity] = useState<number>(6);
   const [acceptingScholars, setAcceptingScholars] = useState<boolean>(true);
   const [labName, setLabName] = useState<string>('SRM Center for Advanced Intelligence & Systems');
 
@@ -467,13 +467,15 @@ function UnifiedSettingsContent() {
                         </label>
                         <select
                           {...register('department')}
-                          className="cb-input cursor-pointer font-medium"
+                          disabled
+                          className="cb-input bg-slate-50/80 text-slate-500 border-slate-200 cursor-not-allowed font-medium"
                         >
                           <option value="">Select Academic Department</option>
                           {SRM_DEPARTMENTS.map((dept) => (
                             <option key={dept} value={dept}>{dept}</option>
                           ))}
                         </select>
+                        <p className="text-[9px] text-slate-400 font-semibold">Managed via SRMIST institutional identity system</p>
                         {errors.department && (
                           <p className="text-[10px] text-rose-500 font-bold mt-1">
                             {errors.department.message as string}
@@ -1205,11 +1207,11 @@ function UnifiedSettingsContent() {
                       <div className="flex items-center gap-3">
                         <input
                           type="number"
-                          min={1}
-                          max={20}
+                          min={6}
+                          max={6}
+                          disabled
                           value={supervisionCapacity}
-                          onChange={(e) => setSupervisionCapacity(parseInt(e.target.value) || 1)}
-                          className="cb-input w-28 font-mono font-bold"
+                          className="cb-input w-28 font-mono font-bold bg-slate-50/80 text-slate-500 border-slate-200 cursor-not-allowed"
                         />
                         <span className="text-xs text-slate-500 font-medium">Scholars under primary supervision</span>
                       </div>

@@ -112,22 +112,15 @@ export default function PortalLayout({
 
     if (
       activeUser.status === 'PENDING' ||
-      activeUser.status === 'PENDING_SUPERVISOR_APPROVAL' ||
-      activeUser.status === 'PENDING_ADMIN_APPROVAL'
+      activeUser.status === 'PENDING_SUPERVISOR_APPROVAL'
     ) {
-      console.warn('[PortalLayout] User is pending approval. Redirecting to /verification-pending.');
+      console.warn('[PortalLayout] User is pending supervisor approval. Redirecting to /verification-pending.');
       router.push('/verification-pending');
       return;
     }
 
     if (activeUser.role === 'RESEARCH_SCHOLAR' && (!activeUser.approved || !activeUser.supervisorId)) {
       console.warn('[PortalLayout] Scholar is awaiting supervisor approval or assignment. Redirecting to /verification-pending.');
-      router.push('/verification-pending');
-      return;
-    }
-
-    if (activeUser.role === 'RESEARCH_SUPERVISOR' && !activeUser.approved) {
-      console.warn('[PortalLayout] Supervisor is awaiting admin approval. Redirecting to /verification-pending.');
       router.push('/verification-pending');
       return;
     }

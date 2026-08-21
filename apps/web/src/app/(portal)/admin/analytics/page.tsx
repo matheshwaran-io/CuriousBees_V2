@@ -1,214 +1,169 @@
 'use client';
 
-import React, { useEffect } from 'react';
+/**
+ * Institutional Governance Analytics & Metric Telemetry
+ */
+
+import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { useRouter } from 'next/navigation';
-import { BarChart3, TrendingUp, Users, BookOpen, FolderOpen, Calendar, Cpu } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
-
-const SIGNUP_DATA = [
-  { month: 'Jan', Scholars: 45, Supervisors: 12 },
-  { month: 'Feb', Scholars: 60, Supervisors: 15 },
-  { month: 'Mar', Scholars: 85, Supervisors: 22 },
-  { month: 'Apr', Scholars: 110, Supervisors: 28 },
-  { month: 'May', Scholars: 145, Supervisors: 32 },
-  { month: 'Jun', Scholars: 190, Supervisors: 40 }
-];
-
-const DEPT_DATA = [
-  { name: 'Computing', Publications: 64, Workspaces: 24 },
-  { name: 'Electronics', Publications: 45, Workspaces: 18 },
-  { name: 'Electrical', Publications: 28, Workspaces: 10 },
-  { name: 'BioTech', Publications: 52, Workspaces: 15 },
-  { name: 'Mechanical', Publications: 18, Workspaces: 8 }
-];
-
-const WORKSPACE_DATA = [
-  { name: 'Completed', value: 14 },
-  { name: 'Active', value: 38 },
-  { name: 'Delayed', value: 5 }
-];
-
-const COLORS = ['#10b981', '#0c4da2', '#ef4444'];
+import { BarChart3, TrendingUp, Users, BookOpen, MessageSquare, ShieldAlert, Loader2, Calendar } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AdminAnalyticsPage() {
-  const router = useRouter();
-  const { currentUser, adminUsers, fetchAdminUsers } = useStore();
+  const { fetchAdminAnalytics } = useStore();
+  const [range, setRange] = useState('30D');
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Guard against non-admin access
-  useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
-      router.replace('/dashboard');
+  const loadData = async (r = range) => {
+    setLoading(true);
+    try {
+      const res = await fetchAdminAnalytics(r);
+      setData(res);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-  }, [currentUser, router]);
+  };
 
   useEffect(() => {
-    if (currentUser?.role === 'INSTITUTE_ADMIN') {
-      fetchAdminUsers();
-    }
-  }, [currentUser, fetchAdminUsers]);
+    loadData(range);
+  }, [range]);
 
-  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
-    return null;
+  if (loading || !data) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-2 text-slate-400">
+        <Loader2 className="w-6 h-6 animate-spin text-[#0C4DA2]" />
+        <p className="text-xs font-bold">Aggregating institutional analytics...</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 text-left select-none">
-      
-      {/* 🚀 Header */}
-      <div className="border-b border-slate-100 pb-5">
-        <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
-          <BarChart3 className="w-4 h-4 text-primary" />
-          <span>University Analytics Hub</span>
-        </span>
-        <h1 className="cb-page-title mt-2 font-display">Academic Research Telemetry</h1>
-        <p className="cb-page-subtitle">
-          Real-time metrics on research publications velocity, scholar onboarding, and system utilization.
-        </p>
+    <div className="space-y-6 max-w-7xl mx-auto py-2 select-none">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.08] pb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200">
+              Institutional Intelligence
+            </span>
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-[#F5F7FA] tracking-tight mt-1">
+            Institutional Analytics
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-[#A7B3C5] font-semibold mt-0.5">
+            Real platform growth metrics, doctoral adoption rates, and departmental research output.
+          </p>
+        </div>
+
+        {/* Range Selector */}
+        <div className="flex items-center bg-slate-100 dark:bg-[#0B1728] p-1 rounded-xl border border-slate-200 dark:border-white/[0.08]">
+          {['7D', '30D', '6M', '1Y'].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer',
+                range === r
+                  ? 'bg-white dark:bg-[#132238] text-[#0C4DA2] dark:text-[#3B82F6] shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-[#A7B3C5]'
+              )}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 🚀 Metrics Matrix */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
-        {/* Card 1 */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Accounts</p>
-            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">
-              {adminUsers.length}
-            </h4>
-          </div>
-          <div className="w-10 h-10 bg-primary/5 text-primary border border-primary/10 rounded-lg flex items-center justify-center shrink-0">
-            <Users className="w-5 h-5" />
-          </div>
+      {/* Summary KPI Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4.5 shadow-2xs">
+          <span className="text-[11px] font-bold text-slate-400 block uppercase">Total Users</span>
+          <p className="text-2xl font-black text-slate-900 dark:text-[#F5F7FA] mt-1">{data.summary.totalUsers}</p>
+          <p className="text-[11px] text-emerald-600 font-bold mt-1">
+            {data.distribution.scholars} Scholars • {data.distribution.supervisors} Supervisors
+          </p>
         </div>
 
-        {/* Card 2 */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Supervisors</p>
-            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">
-              {adminUsers.filter((u) => u.role === 'RESEARCH_SUPERVISOR').length}
-            </h4>
-          </div>
-          <div className="w-10 h-10 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg flex items-center justify-center shrink-0">
-            <TrendingUp className="w-5 h-5" />
-          </div>
+        <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4.5 shadow-2xs">
+          <span className="text-[11px] font-bold text-slate-400 block uppercase">Publications Catalog</span>
+          <p className="text-2xl font-black text-emerald-600 mt-1">{data.summary.totalPublications}</p>
+          <p className="text-[11px] text-slate-400 mt-1">Verified scholarly works</p>
         </div>
 
-        {/* Card 3 */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Projects</p>
-            <h4 className="text-2xl font-extrabold text-[#0c4da2] mt-1 font-display leading-none">57</h4>
-          </div>
-          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg flex items-center justify-center shrink-0">
-            <FolderOpen className="w-5 h-5" />
-          </div>
+        <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4.5 shadow-2xs">
+          <span className="text-[11px] font-bold text-slate-400 block uppercase">Research Workspaces</span>
+          <p className="text-2xl font-black text-cyan-600 mt-1">{data.summary.totalWorkspaces}</p>
+          <p className="text-[11px] text-slate-400 mt-1">Active lab projects</p>
         </div>
 
-        {/* Card 4 */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">System Health</p>
-            <h4 className="text-2xl font-extrabold text-emerald-600 mt-1 font-display leading-none">99.9%</h4>
-          </div>
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg flex items-center justify-center shrink-0">
-            <Cpu className="w-5 h-5" />
-          </div>
+        <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4.5 shadow-2xs">
+          <span className="text-[11px] font-bold text-slate-400 block uppercase">Feed Discussions</span>
+          <p className="text-2xl font-black text-blue-600 mt-1">{data.summary.totalPosts}</p>
+          <p className="text-[11px] text-slate-400 mt-1">Academic interactions</p>
         </div>
-
       </div>
 
-      {/* 🚀 Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Chart 1: Signup Trends */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md space-y-4">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">Scholar vs. Supervisor Signups</h3>
-            <p className="text-[10px] text-slate-400 font-semibold">Onboarding rates over the last 6 months.</p>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={SIGNUP_DATA} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorScholars" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0c4da2" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#0c4da2" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                <Tooltip />
-                <Area type="monotone" dataKey="Scholars" stroke="#0c4da2" strokeWidth={2} fillOpacity={1} fill="url(#colorScholars)" />
-                <Area type="monotone" dataKey="Supervisors" stroke="#f59e0b" strokeWidth={2} fill="none" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* Activity Timeline Bar Chart Visual */}
+      <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-5 shadow-2xs space-y-4">
+        <h3 className="text-sm font-black text-slate-900 dark:text-[#F5F7FA]">
+          User Registrations & Post Volume ({range})
+        </h3>
 
-        {/* Chart 2: Department outputs */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md space-y-4">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">Academic Deliverables by Node</h3>
-            <p className="text-[10px] text-slate-400 font-semibold">Publications and workspaces registered per department.</p>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={DEPT_DATA} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                <Tooltip />
-                <Bar dataKey="Publications" fill="#0c4da2" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Workspaces" fill="#10b981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <div className="h-48 flex items-end gap-1.5 pt-6 pb-2 px-2 overflow-x-auto">
+          {data.timeline?.map((item: any) => {
+            const maxVal = Math.max(...data.timeline.map((t: any) => t.users + t.posts), 5);
+            const total = item.users + item.posts;
+            const heightPercent = Math.max((total / maxVal) * 100, 6);
 
-        {/* Chart 3: Project Status Distribution */}
-        <div className="cb-card p-5 bg-white/95 backdrop-blur-md space-y-4 lg:col-span-2 max-w-md mx-auto w-full">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">Workspace Milestone Completion</h3>
-            <p className="text-[10px] text-slate-400 font-semibold">Summary of active vs. resolved project milestones.</p>
-          </div>
-          <div className="h-64 flex items-center justify-center gap-6">
-            <div className="h-full w-1/2">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={WORKSPACE_DATA}
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {WORKSPACE_DATA.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="space-y-2">
-              {WORKSPACE_DATA.map((entry, index) => (
-                <div key={entry.name} className="flex items-center space-x-2 text-xs">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
-                  <span className="text-slate-500 font-semibold">{entry.name}:</span>
-                  <span className="font-bold text-slate-800">{entry.value}</span>
-                </div>
+            return (
+              <div key={item.date} className="flex-1 min-w-[14px] flex flex-col items-center gap-1 group">
+                <div
+                  style={{ height: `${heightPercent}%` }}
+                  className="w-full bg-gradient-to-t from-[#0C4DA2] to-blue-400 dark:from-blue-600 dark:to-blue-300 rounded-t-md transition-all group-hover:brightness-125"
+                  title={`${item.date}: ${item.users} users, ${item.posts} posts`}
+                />
+                <span className="text-[9px] text-slate-400 rotate-45 origin-left truncate hidden sm:block">
+                  {item.date.slice(5)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Department Breakdown Table */}
+      <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-5 shadow-2xs space-y-4">
+        <h3 className="text-sm font-black text-slate-900 dark:text-[#F5F7FA]">
+          Departmental Distribution & Engagement
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-[#0B1728] text-[11px] font-black uppercase tracking-wider text-slate-500">
+                <th className="py-3 px-4">Department</th>
+                <th className="py-3 px-4">Code</th>
+                <th className="py-3 px-4">Supervisors</th>
+                <th className="py-3 px-4">Scholars</th>
+                <th className="py-3 px-4">Total Users</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+              {data.departmentActivity?.map((dept: any) => (
+                <tr key={dept.code} className="hover:bg-slate-50/60 dark:hover:bg-[#0B1728]">
+                  <td className="py-3 px-4 font-bold text-slate-800 dark:text-[#F5F7FA]">{dept.name}</td>
+                  <td className="py-3 px-4 font-mono text-[11px] text-slate-500">{dept.code}</td>
+                  <td className="py-3 px-4 text-teal-600 font-bold">{dept.supervisorCount}</td>
+                  <td className="py-3 px-4 text-blue-600 font-bold">{dept.scholarCount}</td>
+                  <td className="py-3 px-4 font-bold text-slate-900 dark:text-[#F5F7FA]">{dept.userCount}</td>
+                </tr>
               ))}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
-
       </div>
-
     </div>
   );
 }

@@ -1,156 +1,306 @@
 'use client';
 
+/**
+ * Institutional System Configuration & Governance Settings
+ */
+
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { useRouter } from 'next/navigation';
-import { Settings, Shield, Globe, Lock, Save, ToggleLeft, ToggleRight, Check } from 'lucide-react';
+import { Settings, Shield, Mail, Lock, Server, Loader2, Check, Save } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AdminSettingsPage() {
-  const router = useRouter();
-  const { currentUser } = useStore();
+  const { fetchAdminSettings, updateAdminSetting } = useStore();
+  const [settings, setSettings] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'AUTH' | 'EMAIL' | 'SECURITY'>('GENERAL');
+  const [saving, setSaving] = useState(false);
 
-  // Settings State
-  const [domainLock, setDomainLock] = useState('srmist.edu.in');
-  const [restrictDomain, setRestrictDomain] = useState(true);
-  const [allowRegistration, setAllowRegistration] = useState(true);
-  const [auditLogsRetention, setAuditLogsRetention] = useState(90);
+  // Form states
+  const [formValues, setFormValues] = useState<any>({});
 
-  // Guard against non-admin access
-  useEffect(() => {
-    if (currentUser && currentUser.role !== 'INSTITUTE_ADMIN') {
-      router.replace('/dashboard');
+  const loadSettings = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAdminSettings();
+      setSettings(data);
+      setFormValues(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-  }, [currentUser, router]);
-
-  if (currentUser?.role !== 'INSTITUTE_ADMIN') {
-    return null;
-  }
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert('System variables successfully synchronized to database config node!');
   };
 
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const handleSaveCategory = async (category: string, key: string, val: any) => {
+    setSaving(true);
+    try {
+      await updateAdminSetting(key, val, category);
+      await loadSettings();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !settings) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-2 text-slate-400">
+        <Loader2 className="w-6 h-6 animate-spin text-[#0C4DA2]" />
+        <p className="text-xs font-bold">Loading institutional configurations...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 text-left select-none max-w-2xl">
-      
-      {/* 🚀 Header */}
-      <div className="border-b border-slate-100 pb-5">
-        <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
-          <Settings className="w-4 h-4 text-primary" />
-          <span>System Configurations</span>
-        </span>
-        <h1 className="cb-page-title mt-2 font-display">Institution Global Settings</h1>
-        <p className="cb-page-subtitle">
-          Manage security constraints, Google SSO domain locks, and database log retention policies.
+    <div className="space-y-6 max-w-4xl mx-auto py-2 select-none">
+      {/* Header */}
+      <div className="border-b border-slate-200/80 dark:border-white/[0.08] pb-4">
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200">
+            System Administration
+          </span>
+        </div>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-[#F5F7FA] tracking-tight mt-1">
+          Institutional System Settings
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-[#A7B3C5] font-semibold mt-0.5">
+          Configure institutional domains, authentication rules, Brevo email settings, and security retention.
         </p>
       </div>
 
-      {/* 🚀 Settings Form */}
-      <form onSubmit={handleSave} className="cb-card bg-white/95 backdrop-blur-md p-6 space-y-6">
-        
-        {/* Security Settings Section */}
-        <div className="space-y-4">
-          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-            <Shield className="w-4.5 h-4.5 text-primary" />
-            <span>SSO Authentication & Domain Constraints</span>
-          </h3>
-
-          <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-150 gap-4">
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-slate-805 block">Enforce Domain Restriction</span>
-              <span className="text-[10px] text-slate-400 font-semibold block leading-normal">
-                Only users authenticating with the authorized domain will be granted entry.
-              </span>
-            </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200/80 dark:border-white/[0.08] pb-1">
+        {[
+          { id: 'GENERAL', label: 'General Identity', icon: Settings },
+          { id: 'AUTH', label: 'Authentication & SSO', icon: Lock },
+          { id: 'EMAIL', label: 'Email & Brevo Gateway', icon: Mail },
+          { id: 'SECURITY', label: 'Security & Audit Retention', icon: Shield },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
             <button
-              type="button"
-              onClick={() => setRestrictDomain(!restrictDomain)}
-              className="text-primary hover:text-primary-dark transition-colors cursor-pointer shrink-0"
-            >
-              {restrictDomain ? (
-                <ToggleRight className="w-10 h-10 text-primary" />
-              ) : (
-                <ToggleLeft className="w-10 h-10 text-slate-300" />
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap',
+                activeTab === tab.id
+                  ? 'bg-[#0C4DA2] text-white dark:bg-[#2563EB] shadow-2xs'
+                  : 'text-slate-600 dark:text-[#A7B3C5] hover:bg-slate-100 dark:hover:bg-[#132238]'
               )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
             </button>
-          </div>
+          );
+        })}
+      </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-[9px] font-bold text-slate-450 uppercase tracking-widest">
-              Authorized Institution Email Domain
-            </label>
-            <div className="relative">
-              <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+      {/* Content Form Cards */}
+      <div className="bg-white dark:bg-[#07111F] border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-6 shadow-2xs space-y-6">
+        {activeTab === 'GENERAL' && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Institution Legal Name
+              </label>
               <input
                 type="text"
-                value={domainLock}
-                onChange={(e) => setDomainLock(e.target.value)}
-                disabled={!restrictDomain}
-                placeholder="e.g. srmist.edu.in"
-                className="cb-input pl-9 disabled:opacity-50 disabled:cursor-not-allowed"
+                value={formValues.general?.institutionName || ''}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    general: { ...formValues.general, institutionName: e.target.value },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA]"
               />
             </div>
-          </div>
-        </div>
 
-        {/* Global Access Controls */}
-        <div className="space-y-4 pt-4 border-t border-slate-100">
-          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-            <Lock className="w-4.5 h-4.5 text-primary" />
-            <span>Global Portal Sign-ups</span>
-          </h3>
-
-          <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-150 gap-4">
-            <div className="space-y-1">
-              <span className="text-xs font-bold text-slate-805 block">Allow New User Onboarding</span>
-              <span className="text-[10px] text-slate-400 font-semibold block leading-normal">
-                Toggle to temporarily pause new registrations while maintenance is active.
-              </span>
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Institution Code
+              </label>
+              <input
+                type="text"
+                value={formValues.general?.institutionCode || ''}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    general: { ...formValues.general, institutionCode: e.target.value },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA] uppercase"
+              />
             </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Primary Institution Domain
+              </label>
+              <input
+                type="text"
+                value={formValues.general?.domain || ''}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    general: { ...formValues.general, domain: e.target.value },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA]"
+              />
+            </div>
+
             <button
-              type="button"
-              onClick={() => setAllowRegistration(!allowRegistration)}
-              className="text-primary hover:text-primary-dark transition-colors cursor-pointer shrink-0"
+              onClick={() => handleSaveCategory('GENERAL', 'general', formValues.general)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#0C4DA2] text-white cursor-pointer"
             >
-              {allowRegistration ? (
-                <ToggleRight className="w-10 h-10 text-primary" />
-              ) : (
-                <ToggleLeft className="w-10 h-10 text-slate-300" />
-              )}
+              <Save className="w-3.5 h-3.5" />
+              <span>Save General Settings</span>
             </button>
           </div>
+        )}
 
-          <div className="space-y-1.5">
-            <label className="block text-[9px] font-bold text-slate-455 uppercase tracking-widest">
-              Security Audit Logs Retention (Days)
-            </label>
-            <select
-              value={auditLogsRetention}
-              onChange={(e) => setAuditLogsRetention(Number(e.target.value))}
-              className="w-full px-3 h-[42px] text-xs font-semibold rounded-lg bg-white border border-slate-200 focus:outline-none transition-all cursor-pointer"
+        {activeTab === 'AUTH' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#0B1728] rounded-xl border border-slate-200/80 dark:border-white/[0.08]">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-[#F5F7FA]">Google Workspace SSO</h4>
+                <p className="text-[11px] text-slate-400">Allow researchers to sign in via institutional Google accounts.</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(formValues.authentication?.googleOAuthEnabled)}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    authentication: {
+                      ...formValues.authentication,
+                      googleOAuthEnabled: e.target.checked,
+                    },
+                  })
+                }
+                className="w-4 h-4 text-[#0C4DA2]"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Allowed Email Domain Whitelist (comma separated)
+              </label>
+              <input
+                type="text"
+                value={formValues.authentication?.allowedDomains?.join(', ') || ''}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    authentication: {
+                      ...formValues.authentication,
+                      allowedDomains: e.target.value.split(',').map((s: string) => s.trim()),
+                    },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA]"
+              />
+            </div>
+
+            <button
+              onClick={() => handleSaveCategory('AUTH', 'authentication', formValues.authentication)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#0C4DA2] text-white cursor-pointer"
             >
-              <option value={30}>30 Days</option>
-              <option value={90}>90 Days</option>
-              <option value={180}>180 Days</option>
-              <option value={365}>365 Days</option>
-            </select>
+              <Save className="w-3.5 h-3.5" />
+              <span>Save Authentication Rules</span>
+            </button>
           </div>
-        </div>
+        )}
 
-        {/* Submit */}
-        <div className="flex justify-end pt-4 border-t border-slate-100">
-          <button
-            type="submit"
-            className="px-5 py-2.5 bg-primary hover:bg-primary/95 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-sm transition-all flex items-center space-x-1.5 cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Settings</span>
-          </button>
-        </div>
+        {activeTab === 'EMAIL' && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Brevo Sender Name
+              </label>
+              <input
+                type="text"
+                value={formValues.email?.senderName || ''}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    email: { ...formValues.email, senderName: e.target.value },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA]"
+              />
+            </div>
 
-      </form>
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Brevo Sender Email Address
+              </label>
+              <input
+                type="text"
+                value={formValues.email?.senderEmail || ''}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    email: { ...formValues.email, senderEmail: e.target.value },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA]"
+              />
+            </div>
 
+            <button
+              onClick={() => handleSaveCategory('EMAIL', 'email', formValues.email)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#0C4DA2] text-white cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Save Email Configuration</span>
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'SECURITY' && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-[#F5F7FA] block mb-1">
+                Audit Trail Retention Period (Days)
+              </label>
+              <input
+                type="number"
+                value={formValues.security?.auditRetentionDays || 365}
+                onChange={(e) =>
+                  setFormValues({
+                    ...formValues,
+                    security: {
+                      ...formValues.security,
+                      auditRetentionDays: Number(e.target.value),
+                    },
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-[#0B1728] border border-slate-200 dark:border-white/[0.08] rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-[#F5F7FA]"
+              />
+            </div>
+
+            <button
+              onClick={() => handleSaveCategory('SECURITY', 'security', formValues.security)}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#0C4DA2] text-white cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Save Security Policies</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

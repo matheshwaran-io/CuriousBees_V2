@@ -20,6 +20,8 @@ enum UserStatus {
   PENDING_SUPERVISOR_APPROVAL
   REJECTED
   SUSPENDED
+  DEACTIVATED
+  RESTRICTED
 }
 
 model User {
@@ -106,6 +108,7 @@ model User {
   // Integrations & Meetings relations
   integrationConnections  IntegrationConnection[]
   meetingsCreated         ResearchMeeting[]         @relation("MeetingCreator")
+  filedReports            ModerationReport[]        @relation("ReportedBy")
 
   @@index([departmentId])
   @@index([supervisorId])
@@ -186,6 +189,10 @@ model Thread {
   type      ThreadType @default(TEXT)
   isPaper   Boolean   @default(false)
   paperJournal String?
+  hidden    Boolean   @default(false)
+  moderatedAt DateTime?
+  moderatedBy String?
+  moderationReason String?
   authorId  String
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   tags      String[]
@@ -481,12 +488,30 @@ model WorkspaceAnnouncement {
 }
 
 model AuditLog {
-  id            String   @id @default(cuid())
-  userId        String?
-  action        String   // e.g. "APPROVE_SCHOLAR", "DELETE_POST", "WORKSPACE_CREATE"
-  details       String?  @db.Text
+  id            String    @id @default(cuid())
+  userId        String?   // legacy backward compat
+  actorId       String?
+  actorEmail    String?
+  actorName     String?
+  actorRole     String?
+  action        String    // e.g. "USER_SUSPENDED", "USER_REACTIVATED", "ROLE_CHANGED", "SUPERVISOR_REASSIGNED", "POST_HIDDEN", etc.
+  targetId      String?
+  targetType    String?   // e.g. "USER", "POST", "PUBLICATION", "REPORT", "FACULTY", "DEPARTMENT", "SYSTEM_SETTING"
+  category      String?   @default("GOVERNANCE") // e.g. "USER", "ACCESS", "ROLE", "MODERATION", "RESEARCH_GOVERNANCE", "SECURITY", "SYSTEM", "INSTITUTION", "NOTIFICATION"
+  severity      String?   @default("LOW") // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  details       String?   @db.Text
+  previousState Json?
+  newState      Json?
+  metadata      Json?
+  status        String    @default("SUCCESS") // "SUCCESS", "FAILED"
   ipAddress     String?
-  createdAt     DateTime @default(now())
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+
+  @@index([action])
+  @@index([actorId])
+  @@index([category])
+  @@index([createdAt])
 }
 
 model NotificationToken {
@@ -536,7 +561,7 @@ model SupervisorProfile {
   designation   String
   employeeId    String      @unique
   researchArea  String?
-  maxScholars   Int         @default(5)
+  maxScholars   Int         @default(6)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -593,6 +618,10 @@ model Publication {
   publisher   String?
   year        Int
   status      String   // e.g. "DRAFT" | "SUBMITTED" | "PUBLISHED" | "UNDER_REVIEW"
+  hidden      Boolean  @default(false)
+  moderatedAt DateTime?
+  moderatedBy String?
+  moderationReason String?
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
@@ -976,5 +1005,49 @@ model InstitutionIntegrationSetting {
   zoomWorkplaceEnabled   Boolean  @default(true)
   externalLinksEnabled   Boolean  @default(true)
   updatedAt              DateTime @updatedAt
+}
+
+model ModerationReport {
+  id            String    @id @default(cuid())
+  reporterId    String?
+  reporter      User?     @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: SetNull)
+  targetType    String    // "POST", "PUBLICATION", "USER", "COMMENT"
+  targetId      String
+  reason        String
+  description   String?   @db.Text
+  severity      String    @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  status        String    @default("OPEN")   // "OPEN", "UNDER_REVIEW", "RESOLVED", "DISMISSED"
+  resolvedById  String?
+  resolutionNote String?  @db.Text
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([targetType, targetId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Campus {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  location    String?
+  status      String   @default("ACTIVE") // "ACTIVE", "ARCHIVED"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  category    String   @default("GENERAL") // "GENERAL", "INSTITUTION", "AUTHENTICATION", "EMAIL", "NOTIFICATIONS", "SECURITY", "INTEGRATIONS", "MODERATION"
+  description String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
 }
 

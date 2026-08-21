@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Sidebar.tsx — Premium role-aware navigation with dynamic layouts.
+ * Sidebar.tsx — Institutional Governance & Role-Aware Navigation
  */
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -17,51 +17,113 @@ import {
   LogOut,
   Calendar as CalendarIcon,
   Users,
-  FolderOpen,
   Building,
   Shield,
-  UserCog,
   X,
-  ChevronRight,
-  ChevronDown,
   BookOpen,
   BarChart3,
-  Clock,
   GraduationCap,
-  Crown,
   Network,
   BookMarked,
-  Layers,
   Settings as SettingsIcon,
+  UserCheck,
+  ShieldAlert,
+  FileText,
+  Mail,
+  Lock,
+  History,
+  FolderGit2,
+  MapPin,
+  FileCheck2,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProfileImageUrl } from '@/lib/avatar';
 import Logo from '@/components/Logo';
-import SRMLogo from '@/components/SRMLogo';
-import { RoleBadge } from '../shared/role-badge';
 import type { UserRole } from '@curiousbees/types';
 
-// ─── Sidebar Dynamic Navigation Config ────────────────────────────────────────
-
-interface SidebarItem {
-  name: string;
-  href: string;
-  icon: React.ElementType;
+interface NavSection {
+  title?: string;
+  items: {
+    name: string;
+    href: string;
+    icon: React.ElementType;
+    badge?: string;
+  }[];
 }
 
-const getSidebarItems = (role: UserRole): SidebarItem[] => {
-  if (role === 'INSTITUTE_ADMIN') {
-    return [
+const getAdminNavSections = (): NavSection[] => [
+  {
+    title: 'OVERVIEW',
+    items: [
       { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-      { name: 'User Management', href: '/institute-admin/user-management', icon: Users },
-      { name: 'Faculties & Departments', href: '/admin/faculties-departments', icon: Building },
-      { name: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
-      { name: 'Announcements', href: '/admin/announcements', icon: MessageSquare },
-      { name: 'Portal Settings', href: '/settings', icon: SettingsIcon },
-      { name: 'System Settings', href: '/admin/settings', icon: Shield },
-    ];
-  }
+    ],
+  },
+  {
+    title: 'PEOPLE & ACCESS',
+    items: [
+      { name: 'Scholars', href: '/admin/users?tab=SCHOLARS', icon: GraduationCap },
+      { name: 'Supervisors', href: '/admin/users?tab=SUPERVISORS', icon: UserCheck },
+      { name: 'Administrators', href: '/admin/users?tab=ADMINS', icon: Shield },
+      { name: 'Roles & Permissions', href: '/admin/roles-permissions', icon: Lock },
+      { name: 'Suspended Accounts', href: '/admin/users?tab=SUSPENDED', icon: ShieldAlert },
+    ],
+  },
+  {
+    title: 'INSTITUTION',
+    items: [
+      { name: 'Faculties & Depts', href: '/admin/faculties-departments', icon: Building },
+      { name: 'Campuses', href: '/admin/campuses', icon: MapPin },
+      { name: 'Directory', href: '/admin/directory', icon: Users },
+    ],
+  },
+  {
+    title: 'RESEARCH GOVERNANCE',
+    items: [
+      { name: 'Research Activity', href: '/admin/research-activity', icon: BarChart3 },
+      { name: 'Workspaces', href: '/admin/research-workspaces', icon: FolderGit2 },
+      { name: 'Publications', href: '/admin/publications', icon: BookOpen },
+      { name: 'Compliance', href: '/admin/compliance', icon: FileCheck2 },
+    ],
+  },
+  {
+    title: 'CONTENT MODERATION',
+    items: [
+      { name: 'Posts & Discussions', href: '/admin/posts', icon: MessageSquare },
+      { name: 'Publication Review', href: '/admin/publication-moderation', icon: BookMarked },
+      { name: 'Reports & Queue', href: '/admin/moderation', icon: ShieldAlert },
+    ],
+  },
+  {
+    title: 'COMMUNICATION',
+    items: [
+      { name: 'Announcements', href: '/admin/announcements', icon: FileText },
+      { name: 'Notification Center', href: '/admin/notifications', icon: MessageSquare },
+      { name: 'Email Delivery (Brevo)', href: '/admin/email-delivery', icon: Mail },
+    ],
+  },
+  {
+    title: 'ANALYTICS',
+    items: [
+      { name: 'Institutional Analytics', href: '/admin/analytics', icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'SECURITY & AUDIT',
+    items: [
+      { name: 'Audit Center', href: '/admin/audit', icon: History },
+      { name: 'Security Events', href: '/admin/security', icon: Lock },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { name: 'System Settings', href: '/admin/settings', icon: SettingsIcon },
+    ],
+  },
+];
 
+const getStandardNavItems = (role: UserRole) => {
   if (role === 'RESEARCH_SUPERVISOR') {
     return [
       { name: 'Research Feed', href: '/feed', icon: MessageSquare },
@@ -87,8 +149,6 @@ const getSidebarItems = (role: UserRole): SidebarItem[] => {
   ];
 };
 
-// ─── Nav Item Component ────────────────────────────────────────────────────────
-
 function NavItem({
   name,
   href,
@@ -113,31 +173,34 @@ function NavItem({
       onMouseEnter={() => setHoveredItem(name)}
       onMouseLeave={() => setHoveredItem(null)}
       className={cn(
-        "relative flex items-center gap-3.5 px-4 py-3 rounded-full text-sm font-bold transition-all duration-150 select-none group",
-        active 
-          ? "bg-[#0C4DA2]/10 dark:bg-blue-600/15 text-[#0C4DA2] dark:text-[#F5F7FA] font-black" 
-          : "text-slate-700 dark:text-[#A7B3C5] hover:bg-slate-100/80 dark:hover:bg-[#132238] hover:text-slate-900 dark:hover:text-[#F5F7FA]"
+        'relative flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 select-none group',
+        active
+          ? 'bg-[#0C4DA2]/10 dark:bg-blue-600/15 text-[#0C4DA2] dark:text-[#F5F7FA] font-black'
+          : 'text-slate-600 dark:text-[#A7B3C5] hover:bg-slate-100/80 dark:hover:bg-[#132238] hover:text-slate-900 dark:hover:text-[#F5F7FA]'
       )}
     >
-      {/* Active Blue Left Pillar */}
       {active && (
         <motion.span
           layoutId="sidebar-active-indicator"
-          className="absolute left-1 top-2.5 bottom-2.5 w-[4px] bg-[#0C4DA2] dark:bg-[#3B82F6] rounded-full z-10"
+          className="absolute left-1 top-2 bottom-2 w-[3px] bg-[#0C4DA2] dark:bg-[#3B82F6] rounded-full z-10"
           transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         />
       )}
 
       <Icon
         className={cn(
-          'w-5 h-5 shrink-0 transition-transform duration-150 relative z-10 group-hover:scale-105',
-          active ? 'text-[#0C4DA2] dark:text-[#3B82F6]' : 'text-slate-500 dark:text-[#718096] group-hover:text-slate-900 dark:group-hover:text-[#F5F7FA]'
+          'w-4 h-4 shrink-0 transition-transform duration-150 relative z-10 group-hover:scale-105',
+          active
+            ? 'text-[#0C4DA2] dark:text-[#3B82F6]'
+            : 'text-slate-400 dark:text-[#718096] group-hover:text-slate-900 dark:group-hover:text-[#F5F7FA]'
         )}
       />
       <span
         className={cn(
-          'truncate leading-none relative z-10 text-[14px]',
-          active ? 'text-[#0C4DA2] dark:text-[#F5F7FA] font-extrabold tracking-tight' : 'text-slate-700 dark:text-[#A7B3C5] group-hover:text-slate-900 dark:group-hover:text-[#F5F7FA]'
+          'truncate leading-none relative z-10 text-[13px]',
+          active
+            ? 'text-[#0C4DA2] dark:text-[#F5F7FA] font-extrabold tracking-tight'
+            : 'text-slate-600 dark:text-[#A7B3C5] group-hover:text-slate-900 dark:group-hover:text-[#F5F7FA]'
         )}
       >
         {name}
@@ -146,28 +209,32 @@ function NavItem({
   );
 }
 
-// ─── Sidebar Content ──────────────────────────────────────────────────────────
-
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { currentUser, logout } = useStore();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  
+
   const role = currentUser?.role || 'RESEARCH_SCHOLAR';
-  const items = getSidebarItems(role);
+  const isAdmin = role === 'INSTITUTE_ADMIN';
 
   const isActive = (href: string) => {
-    if (href === '/dashboard' || href === '/admin') {
-      return pathname === href;
-    }
-    return pathname === href || pathname.startsWith(href + '/');
+    const [pathPart, queryPart] = href.split('?');
+    if (pathname !== pathPart) return false;
+    if (!queryPart) return true;
+
+    // Check query tab parameter
+    const params = new URLSearchParams(queryPart);
+    const targetTab = params.get('tab');
+    const currentTab = searchParams.get('tab');
+    return targetTab === currentTab;
   };
 
   return (
-    <div className="flex flex-col h-full py-4 bg-white dark:bg-[#091525] border-r border-slate-200/80 dark:border-white/[0.08]">
-      {/* Brand + Close (mobile) */}
-      <div className="flex items-center justify-between px-5 mb-4">
-        <Logo showText={true} size={32} />
+    <div className="flex flex-col h-full py-4 bg-white dark:bg-[#07111F] border-r border-slate-200/80 dark:border-white/[0.08] select-none">
+      {/* Brand Header */}
+      <div className="flex items-center justify-between px-5 mb-2">
+        <Logo showText={true} size={30} />
         {onClose && (
           <button
             onClick={onClose}
@@ -178,31 +245,61 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 flex flex-col gap-1.5 scrollbar-thin mt-2">
-        <div className="flex flex-col gap-0.5">
-          {items.map((item) => (
-            <NavItem
-              key={item.href + item.name}
-              {...item}
-              active={isActive(item.href)}
-              onClick={onClose}
-              hoveredItem={hoveredItem}
-              setHoveredItem={setHoveredItem}
-            />
-          ))}
+      {/* Admin Governance Subheader Badge */}
+      {isAdmin && (
+        <div className="px-5 mb-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-[#0E1E33] border border-slate-200/60 dark:border-white/[0.08] rounded-lg">
+            <Shield className="w-3.5 h-3.5 text-[#0C4DA2] dark:text-[#3B82F6]" />
+            <span className="text-[10px] font-black tracking-wider uppercase text-slate-700 dark:text-slate-300">
+              Institutional Governance
+            </span>
+          </div>
         </div>
+      )}
+
+      {/* Navigation Zone */}
+      <nav className="flex-1 overflow-y-auto px-3.5 flex flex-col gap-3 scrollbar-thin">
+        {isAdmin ? (
+          getAdminNavSections().map((section, idx) => (
+            <div key={idx} className="space-y-0.5">
+              {section.title && (
+                <p className="px-3 pt-2 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-550">
+                  {section.title}
+                </p>
+              )}
+              {section.items.map((item) => (
+                <NavItem
+                  key={item.href + item.name}
+                  {...item}
+                  active={isActive(item.href)}
+                  onClick={onClose}
+                  hoveredItem={hoveredItem}
+                  setHoveredItem={setHoveredItem}
+                />
+              ))}
+            </div>
+          ))
+        ) : (
+          <div className="flex flex-col gap-0.5 mt-2">
+            {getStandardNavItems(role).map((item) => (
+              <NavItem
+                key={item.href + item.name}
+                {...item}
+                active={pathname === item.href || pathname.startsWith(item.href + '/')}
+                onClick={onClose}
+                hoveredItem={hoveredItem}
+                setHoveredItem={setHoveredItem}
+              />
+            ))}
+          </div>
+        )}
       </nav>
 
-      {/* User mini-profile pill */}
-      <div className="px-3 pt-3 mt-auto border-t border-slate-100 dark:border-white/[0.08]">
+      {/* User Mini-Profile & Logout */}
+      <div className="px-3.5 pt-3 mt-auto border-t border-slate-100 dark:border-white/[0.08]">
         {currentUser && (
-          <Link
-            href={role === 'RESEARCH_SCHOLAR' ? '/scholar/profile' : '/profile'}
-            onClick={onClose}
-            className="p-2.5 rounded-full hover:bg-slate-100/90 dark:hover:bg-[#132238] transition-all flex items-center gap-3 border border-slate-200/60 dark:border-white/[0.08] dark:bg-[#0B1728] mb-2 group cursor-pointer"
-          >
-            <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800">
+          <div className="p-2 rounded-xl bg-slate-50 dark:bg-[#0B1728] border border-slate-200/60 dark:border-white/[0.08] mb-2 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800">
               <img
                 src={getProfileImageUrl(currentUser)}
                 alt={currentUser.name || 'User'}
@@ -210,12 +307,18 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-slate-900 dark:text-[#F5F7FA] truncate leading-tight group-hover:text-[#0C4DA2] dark:group-hover:text-[#3B82F6]">{currentUser.name || 'Researcher'}</p>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-[#718096] truncate mt-0.5">
-                {currentUser.department || (role === 'INSTITUTE_ADMIN' ? 'Institute Admin' : role === 'RESEARCH_SUPERVISOR' ? 'Research Supervisor' : 'Research Scholar')}
+              <p className="text-xs font-black text-slate-900 dark:text-[#F5F7FA] truncate leading-tight">
+                {currentUser.name || 'Administrator'}
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-[#718096] truncate">
+                {isAdmin
+                  ? 'Institute Admin'
+                  : role === 'RESEARCH_SUPERVISOR'
+                  ? 'Research Supervisor'
+                  : 'Research Scholar'}
               </p>
             </div>
-          </Link>
+          </div>
         )}
 
         {role === 'RESEARCH_SUPERVISOR' && (
@@ -223,79 +326,68 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             href="/my-scholars"
             onClick={onClose}
             className={cn(
-              "p-2.5 rounded-full transition-all flex items-center gap-3 border mb-2 cursor-pointer",
-              isActive('/my-scholars')
-                ? "bg-[#0C4DA2] dark:bg-[#2563EB] text-white border-[#0C4DA2] dark:border-transparent shadow-sm shadow-[#0C4DA2]/25"
-                : "bg-[#0C4DA2]/10 dark:bg-blue-600/15 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] dark:text-[#3B82F6] border-[#0C4DA2]/25 dark:border-blue-500/30"
+              'p-2.5 rounded-xl transition-all flex items-center gap-3 border mb-2 cursor-pointer',
+              pathname === '/my-scholars'
+                ? 'bg-[#0C4DA2] dark:bg-[#2563EB] text-white border-[#0C4DA2] dark:border-transparent shadow-sm'
+                : 'bg-[#0C4DA2]/10 dark:bg-blue-600/15 hover:bg-[#0C4DA2]/15 text-[#0C4DA2] dark:text-[#3B82F6] border-[#0C4DA2]/25 dark:border-blue-500/30'
             )}
           >
-            <div className={cn(
-              "w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm transition-colors",
-              isActive('/my-scholars') ? "bg-white text-[#0C4DA2]" : "bg-[#0C4DA2] dark:bg-[#2563EB] text-white"
-            )}>
-              <GraduationCap className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[#0C4DA2] dark:bg-[#2563EB] text-white shadow-sm">
+              <GraduationCap className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className={cn("text-xs font-black leading-tight", isActive('/my-scholars') ? "text-white" : "text-[#0C4DA2] dark:text-[#F5F7FA]")}>Supervision Panel</p>
-              <p className={cn("text-[10px] font-bold mt-0.5", isActive('/my-scholars') ? "text-blue-100" : "text-slate-400 dark:text-[#718096]")}>Manage Scholars & Advisory</p>
+              <p className="text-xs font-black leading-tight">Supervision Panel</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-[#718096]">Manage Scholars & Advisory</p>
             </div>
           </Link>
         )}
 
         <button
-          onClick={() => { logout(); onClose?.(); }}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-extrabold text-slate-500 dark:text-[#718096] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all cursor-pointer text-left"
+          onClick={() => {
+            logout();
+            onClose?.();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold text-slate-500 dark:text-[#718096] hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all cursor-pointer text-left"
         >
-          <LogOut className="w-4 h-4 shrink-0" />
+          <LogOut className="w-3.5 h-3.5 shrink-0" />
           <span>Exit Portal</span>
         </button>
-
-        {/* SRM Institutional Branding */}
-        <div className="mt-3 pt-3 border-t border-slate-100/80 dark:border-white/[0.08] flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity">
-          <SRMLogo variant="full" theme="dark" size={32} />
-        </div>
       </div>
     </div>
   );
 }
-
-// ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
   const { showMobileSidebar, setMobileSidebar } = useStore();
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-[260px] bg-white dark:bg-[#091525] border-r border-borderStroke dark:border-white/[0.08] h-screen sticky top-0 z-40 shrink-0 font-sans">
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:flex md:w-64 md:flex-col shrink-0 sticky top-0 h-screen z-30">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Drawer Overlay */}
+      {/* Mobile Drawer Navigation */}
       <AnimatePresence>
         {showMobileSidebar && (
-          <>
-            {/* Backdrop */}
+          <div className="fixed inset-0 z-50 md:hidden flex">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]"
               onClick={() => setMobileSidebar(false)}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
-
-            {/* Drawer */}
-            <motion.aside
-              initial={{ x: '-100%' }}
+            <motion.div
+              initial={{ x: -280 }}
               animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-              className="md:hidden fixed left-0 top-0 bottom-0 z-[51] w-[280px] bg-white dark:bg-[#091525] border-r border-borderStroke dark:border-white/[0.08] shadow-2xl font-sans"
+              exit={{ x: -280 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              className="relative w-72 max-w-[85vw] h-full shadow-2xl z-10"
             >
               <SidebarContent onClose={() => setMobileSidebar(false)} />
-            </motion.aside>
-          </>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

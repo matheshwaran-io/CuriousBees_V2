@@ -1032,7 +1032,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
         /* ==================================================
            3. EMPTY STATE — ZERO COLLABORATIONS
            ================================================== */
-        <div className="w-full max-w-4xl mx-auto py-10 space-y-8 text-left">
+        <div className="w-full max-w-none px-6 md:px-10 py-10 space-y-8 text-left">
           
           {/* Header */}
           <div className="border-b border-slate-200 pb-4">
@@ -1068,17 +1068,31 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
               <Network className="w-8 h-8" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-lg font-extrabold text-slate-900">No active research collaborations</h3>
+              <h3 className="text-lg font-extrabold text-slate-900">
+                {stats.activeProjectsCount > 0 ? "No active 1:1 collaborations" : "No active research collaborations"}
+              </h3>
               <p className="text-xs md:text-sm text-slate-550 leading-relaxed font-semibold max-w-md mx-auto">
-                Once you establish an approved research collaboration, your research discussions, updates and collaboration activity will appear here.
+                {stats.activeProjectsCount > 0
+                  ? "You have an active research project, but no 1:1 research collaborations. Connect with researchers to start collaborating."
+                  : "Once you establish an approved research collaboration, your research discussions, updates and collaboration activity will appear here."}
               </p>
             </div>
-            <Link
-              href="/researchers"
-              className="px-5 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 font-sans"
-            >
-              Explore Researchers →
-            </Link>
+            {stats.activeProjectsCount > 0 && workspaces && workspaces.length > 0 ? (
+              <Link
+                href={`/workspace/${workspaces[0].id}`}
+                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 font-sans"
+              >
+                <FolderGit2 className="w-4 h-4" />
+                Open Active Project Workspace
+              </Link>
+            ) : (
+              <Link
+                href="/researchers"
+                className="px-5 py-2.5 bg-[#0C4DA2] hover:bg-[#042654] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 font-sans"
+              >
+                Explore Researchers →
+              </Link>
+            )}
           </div>
 
         </div>
@@ -1086,7 +1100,7 @@ export function CuriousNexusHub({ initialView = 'messages', initialUserId }: { i
         /* ==================================================
            4. ACTIVE COLLABORATIONS STATE
            ================================================== */
-        <div className="w-full max-w-6xl mx-auto py-6 space-y-8 text-left">
+        <div className="w-full max-w-none px-6 md:px-10 py-6 space-y-8 text-left">
           
           {/* Header */}
           <div className="border-b border-slate-200 pb-4">

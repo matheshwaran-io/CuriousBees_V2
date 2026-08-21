@@ -218,13 +218,51 @@ interface AppState {
   // Admin / Governance
   fetchAdminUsers: () => Promise<User[]>;
   fetchAdminAuditLogs: () => Promise<AuditLog[]>;
-  changeUserRole: (userId: string, role: UserRole) => Promise<User>;
+  changeUserRole: (userId: string, role: UserRole, reason?: string) => Promise<User>;
 
   // Admin User CRUD & Import Actions
   createAdminUser: (data: { name: string; email: string; role: UserRole; departmentId?: string; supervisorId?: string }) => Promise<User>;
   updateAdminUser: (id: string, data: { name?: string; email?: string; role?: UserRole; status?: string; departmentId?: string; supervisorId?: string }) => Promise<User>;
-  deleteAdminUser: (id: string) => Promise<void>;
+  deleteAdminUser: (id: string, reason?: string) => Promise<void>;
   importAdminUsers: (formData: FormData) => Promise<any>;
+
+  // Comprehensive Governance Actions
+  fetchAdminDashboardStats: () => Promise<any>;
+  fetchAdminNeedsAttention: () => Promise<any[]>;
+  fetchAdminUsersPaginated: (query?: any) => Promise<{ items: any[]; pagination: any }>;
+  fetchAdminUserGovernanceProfile: (id: string) => Promise<any>;
+  suspendUser: (userId: string, reason: string) => Promise<any>;
+  reactivateUser: (userId: string, reason: string) => Promise<any>;
+  deactivateUser: (userId: string, reason: string) => Promise<any>;
+  reassignSupervisor: (scholarId: string, supervisorId: string, reason: string) => Promise<any>;
+  fetchAdminModerationReports: (query?: any) => Promise<{ items: any[]; pagination: any }>;
+  resolveModerationReport: (id: string, resolutionNote: string) => Promise<any>;
+  dismissModerationReport: (id: string, reason: string) => Promise<any>;
+  fetchAdminPosts: (query?: any) => Promise<{ items: any[]; pagination: any }>;
+  hideAdminPost: (id: string, reason: string) => Promise<any>;
+  restoreAdminPost: (id: string, reason?: string) => Promise<any>;
+  deleteAdminPost: (id: string, reason: string) => Promise<any>;
+  fetchAdminPublicationsList: (query?: any) => Promise<{ items: any[]; pagination: any }>;
+  hideAdminPublication: (id: string, reason: string) => Promise<any>;
+  restoreAdminPublication: (id: string, reason?: string) => Promise<any>;
+  fetchAdminFaculties: () => Promise<any[]>;
+  createAdminFaculty: (name: string) => Promise<any>;
+  updateAdminFaculty: (id: string, name: string) => Promise<any>;
+  fetchAdminDepartments: () => Promise<any[]>;
+  createAdminDepartment: (data: any) => Promise<any>;
+  updateAdminDepartment: (id: string, data: any) => Promise<any>;
+  fetchAdminCampuses: () => Promise<any[]>;
+  createAdminCampus: (data: any) => Promise<any>;
+  updateAdminCampus: (id: string, data: any) => Promise<any>;
+  fetchAdminAuditLogsPaginated: (query?: any) => Promise<{ items: any[]; pagination: any }>;
+  fetchAdminSecurityEvents: (query?: any) => Promise<{ items: any[]; pagination: any }>;
+  fetchAdminAnalytics: (range?: string) => Promise<any>;
+  fetchAdminRolesMatrix: () => Promise<any>;
+  fetchAdminSettings: () => Promise<any>;
+  updateAdminSetting: (key: string, value: any, category?: string) => Promise<any>;
+  fetchAdminEmailStats: () => Promise<any>;
+  fetchAdminResearchGovernance: () => Promise<any>;
+  fetchAdminWorkspaces: (query?: any) => Promise<{ items: any[]; pagination: any }>;
 
   // Supervisor Actions (New flow)
   fetchPendingScholars: () => Promise<User[]>;
@@ -2153,11 +2191,13 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  deleteAdminUser: async (id) => {
+  deleteAdminUser: async (id, reason = 'Administrative account deletion') => {
     set({ isLoading: true });
     try {
       const res = await apiFetch(`/api/admin/users/${id}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
       });
       if (!res.ok) throw new Error(await readApiError(res));
       set((state) => ({
@@ -2184,25 +2224,572 @@ export const useStore = create<AppState>((set, get) => ({
         headers: cleanedHeaders,
         body: formData,
       });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        let parsedError = errorText;
-        try {
-          const json = JSON.parse(errorText);
-          parsedError = json.message || json.error || errorText;
-        } catch { }
-        throw new Error(parsedError);
-      }
-
-      const report = await res.json();
-      get().addToast(`Bulk import complete. Success: ${report.successCount}, Failed: ${report.failedCount}`, 'info');
-      return report;
+      if (!res.ok) throw new Error(await readApiError(res));
+      const data = await res.json();
+      await get().fetchAdminUsers();
+      get().addToast('Bulk user import completed', 'success');
+      return data;
     } catch (err: any) {
       get().addToast(err.message, 'error');
       throw err;
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  // ─── COMPREHENSIVE GOVERNANCE IMPLEMENTATIONS ─────────────────────────────
+
+  fetchAdminDashboardStats: async () => {
+    try {
+      const res = await apiFetch('/api/admin/dashboard/stats');
+      if (res.ok) return await res.json();
+      return {
+        totalUsers: 0,
+        activeScholars: 0,
+        activeSupervisors: 0,
+        activeAdmins: 0,
+        suspendedAccounts: 0,
+        activeWorkspaces: 0,
+        publications: 0,
+        posts: 0,
+        openReports: 0,
+      };
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  fetchAdminNeedsAttention: async () => {
+    try {
+      const res = await apiFetch('/api/admin/dashboard/needs-attention');
+      if (res.ok) return await res.json();
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  fetchAdminUsersPaginated: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/users?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    }
+  },
+
+  fetchAdminUserGovernanceProfile: async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/users/${id}/profile`);
+      if (res.ok) return await res.json();
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  suspendUser: async (userId: string, reason: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/admin/users/${userId}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const data = await res.json();
+      get().addToast('User suspended with audit record', 'info');
+      return data;
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  reactivateUser: async (userId: string, reason: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/admin/users/${userId}/reactivate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const data = await res.json();
+      get().addToast('User reactivated with audit record', 'success');
+      return data;
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  deactivateUser: async (userId: string, reason: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/admin/users/${userId}/deactivate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const data = await res.json();
+      get().addToast('User deactivated with audit record', 'info');
+      return data;
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  reassignSupervisor: async (scholarId: string, supervisorId: string, reason: string) => {
+    set({ isLoading: true });
+    try {
+      const res = await apiFetch(`/api/admin/users/${scholarId}/reassign-supervisor`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ supervisorId, reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      const data = await res.json();
+      get().addToast('Supervisor reassigned and parties notified', 'success');
+      return data;
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchAdminModerationReports: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/moderation/reports?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    }
+  },
+
+  resolveModerationReport: async (id: string, resolutionNote: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/moderation/reports/${id}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolutionNote }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Report resolved', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  dismissModerationReport: async (id: string, reason: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/moderation/reports/${id}/dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Report dismissed', 'info');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminPosts: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/content/posts?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    }
+  },
+
+  hideAdminPost: async (id: string, reason: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/content/posts/${id}/hide`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Post hidden from public feed', 'info');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  restoreAdminPost: async (id: string, reason = '') => {
+    try {
+      const res = await apiFetch(`/api/admin/content/posts/${id}/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Post restored to public feed', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  deleteAdminPost: async (id: string, reason: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/content/posts/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Post permanently deleted', 'info');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminPublicationsList: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/content/publications?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    }
+  },
+
+  hideAdminPublication: async (id: string, reason: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/content/publications/${id}/hide`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Publication hidden for policy review', 'info');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  restoreAdminPublication: async (id: string, reason = '') => {
+    try {
+      const res = await apiFetch(`/api/admin/content/publications/${id}/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Publication restored to active catalog', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminFaculties: async () => {
+    try {
+      const res = await apiFetch('/api/admin/institution/faculties');
+      if (res.ok) return await res.json();
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  createAdminFaculty: async (name: string) => {
+    try {
+      const res = await apiFetch('/api/admin/institution/faculties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Faculty created', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  updateAdminFaculty: async (id: string, name: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/institution/faculties/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Faculty updated', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminDepartments: async () => {
+    try {
+      const res = await apiFetch('/api/admin/institution/departments');
+      if (res.ok) return await res.json();
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  createAdminDepartment: async (data: any) => {
+    try {
+      const res = await apiFetch('/api/admin/institution/departments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Department created', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  updateAdminDepartment: async (id: string, data: any) => {
+    try {
+      const res = await apiFetch(`/api/admin/institution/departments/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Department updated', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminCampuses: async () => {
+    try {
+      const res = await apiFetch('/api/admin/institution/campuses');
+      if (res.ok) return await res.json();
+      return [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  },
+
+  createAdminCampus: async (data: any) => {
+    try {
+      const res = await apiFetch('/api/admin/institution/campuses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Campus created', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  updateAdminCampus: async (id: string, data: any) => {
+    try {
+      const res = await apiFetch(`/api/admin/institution/campuses/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Campus updated', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminAuditLogsPaginated: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/audit/logs?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 25, totalPages: 1 } };
+    }
+  },
+
+  fetchAdminSecurityEvents: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/audit/security-events?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    }
+  },
+
+  fetchAdminAnalytics: async (range = '30D') => {
+    try {
+      const res = await apiFetch(`/api/admin/analytics?range=${range}`);
+      if (res.ok) return await res.json();
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  fetchAdminRolesMatrix: async () => {
+    try {
+      const res = await apiFetch('/api/admin/roles-permissions');
+      if (res.ok) return await res.json();
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  fetchAdminSettings: async () => {
+    try {
+      const res = await apiFetch('/api/admin/settings');
+      if (res.ok) return await res.json();
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  updateAdminSetting: async (key: string, value: any, category = 'GENERAL') => {
+    try {
+      const res = await apiFetch(`/api/admin/settings/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value, category }),
+      });
+      if (!res.ok) throw new Error(await readApiError(res));
+      get().addToast('Settings updated', 'success');
+      return await res.json();
+    } catch (e: any) {
+      get().addToast(e.message, 'error');
+      throw e;
+    }
+  },
+
+  fetchAdminEmailStats: async () => {
+    try {
+      const res = await apiFetch('/api/admin/settings/email-delivery');
+      if (res.ok) return await res.json();
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  fetchAdminResearchGovernance: async () => {
+    try {
+      const res = await apiFetch('/api/admin/research-governance/overview');
+      if (res.ok) return await res.json();
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  },
+
+  fetchAdminWorkspaces: async (query = {}) => {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(query).forEach((k) => {
+        if (query[k] !== undefined && query[k] !== null && query[k] !== '') {
+          params.append(k, String(query[k]));
+        }
+      });
+      const res = await apiFetch(`/api/admin/research-governance/workspaces?${params.toString()}`);
+      if (res.ok) return await res.json();
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
+    } catch (e) {
+      console.error(e);
+      return { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
     }
   },
 
@@ -2564,7 +3151,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (prevCount === 0) return; // Idempotency check
 
     set(state => ({
-      notifications: state.notifications.map(n => ({ ...n, isRead: true, readAt: n.readAt || new Date().toISOString(), openedStatus: true })),
+      notifications: state.notifications.map(n => ({ ...n, isRead: true, readAt: (n as any).readAt || new Date().toISOString(), openedStatus: true })),
       unreadCount: 0
     }));
     
